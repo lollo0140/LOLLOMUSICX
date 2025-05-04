@@ -1,0 +1,351 @@
+@font-face {
+    font-family: 'Lexend';
+    /* Name your font family */
+    src: url('other/Lexend-VariableFont_wght.ttf');
+    /* Locate the .ttf file within your directory*/
+}
+
+#app {
+    overflow: hidden;
+}
+
+body {
+    overflow: hidden;
+}
+
+* {
+    font-family: 'Lexend';
+}
+
+.bottone {
+    width: 100%;
+    height: 50px;
+
+    cursor: pointer;
+}
+
+.imgCanzone {
+    height: 40px;
+    width: 40px;
+
+    float: left;
+    margin-left: -1px;
+    pointer-events: none;
+}
+
+.imgCanzoneYT {
+    height: 40px;
+    width: 71.28px;
+
+    float: left;
+    margin-left: -1px;
+    pointer-events: none;
+}
+
+.titolo {
+    position: absolute;
+    left: 70px;
+
+    opacity: 1;
+
+    color: rgb(0, 0, 0);
+
+    transform: translateY(-10px);
+
+    font-weight: 900;
+    text-wrap: none;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    pointer-events: none;
+}
+
+.titoloYT {
+    position: absolute;
+    left: 100px;
+
+    opacity: 1;
+
+    color: rgb(0, 0, 0);
+
+    transform: translateY(-10px);
+
+    font-weight: 900;
+
+    text-wrap: none;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    pointer-events: none;
+}
+
+.artista {
+    position: absolute;
+    left: 70px;
+    opacity: 1;
+
+    color: rgb(0, 0, 0);
+    transform: translateY(10px);
+
+    text-wrap: none;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    pointer-events: none;
+}
+
+.artistaYT {
+    position: absolute;
+    left: 100px;
+    opacity: 1;
+
+    color: rgb(0, 0, 0);
+    transform: translateY(10px);
+
+    text-wrap: none;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    pointer-events: none;
+}
+
+
+.albumbutton {
+
+    vertical-align: top;
+
+    height: 250px;
+    width: 200px;
+
+    overflow: hidden;
+
+    margin-right: 10px;
+
+    cursor: pointer;
+}
+
+.albumimg {
+    pointer-events: none;
+    position: relative;
+    left: 0px;
+    top: 0px;
+    margin: 0px;
+
+    width: 100%;
+
+    object-fit: cover;
+}
+
+.albumtitle {
+    position: relative;
+    left: 0px;
+    top: -10px;
+    text-align: left;
+
+    text-wrap: none;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    pointer-events: none;
+}
+
+.albumartist {
+    position: relative;
+    left: 0px;
+    top: -20px;
+    text-align: left;
+
+    text-wrap: none;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    pointer-events: none;
+}
+
+.artimg {
+    position: relative;
+    left: 0px;
+    top: 0px;
+    margin: 0px;
+
+    width: 100%;
+
+    border-radius: 100px;
+    pointer-events: none;
+
+    object-fit: cover;
+}
+
+
+.PLAYERimg {
+    margin: 0px;
+
+    position: absolute;
+
+    left: 12px;
+    top: 12px;
+    right: 12px;
+
+    height: 276px;
+    width: 276px;
+
+    opacity: 1;
+
+    background-position: center;
+    background-size: cover;
+
+    border-radius: 5px;
+
+    transition: all 600ms;
+
+    object-fit: cover;
+}
+
+.PLAYERtitle {
+    position: absolute;
+    top: 311px;
+    left: 12px;
+    font-size: 25px;
+    font-weight: bold;
+
+    text-wrap: none;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    width: 276px;
+
+    pointer-events: none;
+}
+
+.PLAYERart {
+    position: absolute;
+    top: 368px;
+    left: 7px;
+    font-size: 20px;
+    font-weight: 600;
+
+    text-wrap: none;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    background: transparent;
+    border: none;
+
+    cursor: pointer;
+
+}
+
+.PLAYERart:hover {
+    text-decoration: underline;
+}
+
+.PLAYERalbum {
+    position: absolute;
+    top: 397px;
+    left: 7px;
+    font-size: 16px;
+    font-weight: 600;
+
+    text-wrap: none;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    width: 276px;
+
+    background: transparent;
+    border: none;
+
+    cursor: pointer;
+}
+
+.PLAYERalbum:hover {
+    text-decoration: underline;
+}
+
+.PLAYERvideo {
+    position: absolute;
+    height: 485px;
+    top: 0px;
+
+    left: 50%;
+    transform: translateX(-50%);
+
+    mask-image: url('./gradient.png');
+
+    opacity: 0;
+
+}
+
+.contextmenu {
+    position: absolute;
+    display: block;
+
+    width: auto;
+    height: auto;
+
+    opacity: 0;
+
+    transition: opacity 300ms;
+
+    z-index: 999999;
+
+
+    background: rgb(158, 25, 170);
+}
+
+.songalbum {
+    float: right;
+}
+
+.--TITLEDATA {
+    pointer-events: none;
+}
+
+.--ARTISTDATA {
+    pointer-events: none;
+}
+
+.--ALBUMDATA {
+    pointer-events: none;
+}
+
+.--IMGDATA {
+    pointer-events: none;
+    object-fit: cover;
+}
+
+.--PLAYLISTNAMEDATA {
+    pointer-events: none;
+}
+
+.--PLAYLISTINDEXDATA {
+    display: none;
+}
+
+.--ITEMINDEXDATA {
+    display: none;
+}
+
+.--FOLDERINDEX {
+    display: none;
+}
+
+.--SUBFOLDERINDEX {
+    display: none;
+}
+
+.hidden {
+    display: none;
+}
