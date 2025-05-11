@@ -7,10 +7,7 @@ import * as MM from 'node-id3'
 import { Innertube } from 'youtubei.js'
 const sharp = require('sharp')
 import fetch from 'node-fetch'
-import ffmpeg from 'fluent-ffmpeg'
-import temp from 'temp'
-import ytdl from 'ytdl-core'
-import { spawn } from 'child_process'
+//import ytdl from 'ytdl-core'
 
 const ytmusicApi = require('ytmusic-api')
 const ytm = new ytmusicApi()
@@ -1018,13 +1015,38 @@ const preserveSpecialChars = (text) => {
 
 // Funzione per ottenere l'URL di streaming da YouTube
 async function getStreamingUrl(videoId) {
+  // Installa prima: npm install yt-dlp-exec
+  const ytDlp = require('yt-dlp-exec')
+
   try {
-    // Usa Innertube per ottenere l'URL di streaming
-    const youtube = await Innertube.create()
-    const streamingData = await youtube.getStreamingData(videoId)
-    return streamingData.url
+    const output = await ytDlp(`https://www.youtube.com/watch?v=${videoId}`, {
+      dumpSingleJson: true,
+      noWarnings: true,
+      noCallHome: true,
+      preferFreeFormats: true,
+      audioFormat: 'best'
+    })
+
+    // Trova il formato audio con la qualità migliore
+    const audioFormats = output.formats.filter(
+      (format) => format.acodec !== 'none' && format.vcodec === 'none'
+    )
+
+    if (audioFormats.length > 0) {
+      // Ordina per qualità (bitrate)
+      audioFormats.sort((a, b) => b.abr - a.abr)
+      return audioFormats[0].url
+    }
+
+    // Fallback a qualsiasi formato con audio
+    const formatWithAudio = output.formats.find((format) => format.acodec !== 'none')
+    if (formatWithAudio) {
+      return formatWithAudio.url
+    }
+
+    throw new Error('Nessun formato audio trovato')
   } catch (error) {
-    console.error("Errore nell'ottenere l'URL di streaming:", error)
+    console.error('Errore nel recupero URL:', error)
     throw error
   }
 }
@@ -1074,90 +1096,6 @@ function isSubstring(needle, haystack) {
   return normalizeText(haystack).includes(normalizeText(needle))
 }
 
-// Funzione per trovare la migliore corrispondenza tra i risultati
-function findBestMatch(results, title, artist) {
-  // Versioni normalizzate e preservate dei termini di ricerca
-  const normalizedTitle = normalizeText(title)
-  const normalizedArtist = normalizeText(artist)
-  const preservedTitle = preserveSpecialChars(title)
-  const preservedArtist = preserveSpecialChars(artist)
-
-  console.log(`Cerco corrispondenza per: "${preservedTitle}" di "${preservedArtist}"`)
-  console.log(`Versione normalizzata: "${normalizedTitle}" di "${normalizedArtist}"`)
-
-  // Assegna un punteggio a ciascun risultato
-  const scoredResults = results.map((result) => {
-    const resultTitle = normalizeText(result.name)
-    const resultArtist = normalizeText(result.artist.name)
-    const preservedResultTitle = preserveSpecialChars(result.name)
-    const preservedResultArtist = preserveSpecialChars(result.artist.name)
-
-    // Calcola la somiglianza del titolo e dell'artista
-    const titleSimilarity = calculateSimilarity(normalizedTitle, resultTitle)
-    const artistSimilarity = calculateSimilarity(normalizedArtist, resultArtist)
-
-    // Verifica corrispondenze esatte con caratteri speciali
-    const exactPreservedTitleMatch = preservedTitle === preservedResultTitle ? 0.3 : 0
-    const exactPreservedArtistMatch = preservedArtist === preservedResultArtist ? 0.3 : 0
-
-    // Verifica se il titolo originale è contenuto nel risultato e viceversa
-    const titleInResult = isSubstring(preservedTitle, preservedResultTitle) ? 0.15 : 0
-    const resultInTitle = isSubstring(preservedResultTitle, preservedTitle) ? 0.1 : 0
-
-    // Punteggio complessivo (pesa di più la corrispondenza dell'artista)
-    const baseSimilarityScore = titleSimilarity * 0.6 + artistSimilarity * 0.4
-
-    // Bonus per corrispondenze esatte normalizzate
-    const exactNormalizedTitleMatch = normalizedTitle === resultTitle ? 0.2 : 0
-    const exactNormalizedArtistMatch = normalizedArtist === resultArtist ? 0.2 : 0
-
-    // Penalità per risultati con titoli molto più lunghi (potrebbero essere remix o versioni estese)
-    const lengthPenalty = resultTitle.length > normalizedTitle.length * 1.5 ? 0.1 : 0
-
-    // Penalità per risultati con titoli troppo brevi rispetto alla ricerca
-    const shortTitlePenalty = resultTitle.length < normalizedTitle.length * 0.7 ? 0.15 : 0
-
-    const finalScore =
-      baseSimilarityScore +
-      exactNormalizedTitleMatch +
-      exactNormalizedArtistMatch +
-      exactPreservedTitleMatch +
-      exactPreservedArtistMatch +
-      titleInResult +
-      resultInTitle -
-      lengthPenalty -
-      shortTitlePenalty
-
-    return {
-      ...result,
-      score: finalScore,
-      debug: {
-        titleSimilarity,
-        artistSimilarity,
-        exactNormalizedTitleMatch,
-        exactNormalizedArtistMatch,
-        exactPreservedTitleMatch,
-        exactPreservedArtistMatch,
-        titleInResult,
-        resultInTitle,
-        lengthPenalty,
-        shortTitlePenalty
-      }
-    }
-  })
-
-  // Ordina i risultati per punteggio
-  scoredResults.sort((a, b) => b.score - a.score)
-
-  console.log('Risultati ordinati per rilevanza:')
-  scoredResults.slice(0, 3).forEach((r, i) => {
-    console.log(`${i + 1}. "${r.name}" di "${r.artist.name}" (Score: ${r.score.toFixed(2)})`)
-    console.log(`   Debug: ${JSON.stringify(r.debug)}`)
-  })
-
-  return scoredResults[0]
-}
-
 // Funzione per creare query di ricerca ottimizzate
 function createSearchQueries(title, artist) {
   const queries = [
@@ -1197,14 +1135,124 @@ ipcMain.handle('basicSearch', async (event, query) => {
   return await getStreamingUrl(id)
 })
 
-// Handler principale
-ipcMain.handle('GetYTlink', async (event, SearchD) => {
-  let infos = SearchD.split(' | ')
+// Funzione per trovare la migliore corrispondenza tra i risultati
+function findBestMatch(results, title, artist, album) {
+  // Versioni normalizzate e preservate dei termini di ricerca
+  const normalizedTitle = normalizeText(title)
+  const normalizedArtist = normalizeText(artist)
+  const normalizedAlbum = album ? normalizeText(album) : ''
+  const preservedTitle = preserveSpecialChars(title)
+  const preservedArtist = preserveSpecialChars(artist)
+  const preservedAlbum = album ? preserveSpecialChars(album) : ''
 
-  const title = infos[0] || ''
-  const artist = infos[1] || ''
-  const album = infos[2] || ''
+  console.log(
+    `Cerco corrispondenza per: "${preservedTitle}" di "${preservedArtist}"${album ? ` dall'album "${preservedAlbum}"` : ''}`
+  )
+  console.log(
+    `Versione normalizzata: "${normalizedTitle}" di "${normalizedArtist}"${album ? ` dall'album "${normalizedAlbum}"` : ''}`
+  )
 
+  // Assegna un punteggio a ciascun risultato
+  const scoredResults = results.map((result) => {
+    const resultTitle = normalizeText(result.name)
+    const resultArtist = normalizeText(result.artist.name)
+    // Utilizza la descrizione se disponibile, altrimenti stringa vuota
+    const resultDescription = result.description ? normalizeText(result.description) : ''
+    // Utilizza anche il campo subtitle se disponibile (potrebbe contenere info sull'album)
+    const resultSubtitle = result.subtitle ? normalizeText(result.subtitle) : ''
+    const preservedResultTitle = preserveSpecialChars(result.name)
+    const preservedResultArtist = preserveSpecialChars(result.artist.name)
+
+    // Calcola la somiglianza del titolo e dell'artista
+    const titleSimilarity = calculateSimilarity(normalizedTitle, resultTitle)
+    const artistSimilarity = calculateSimilarity(normalizedArtist, resultArtist)
+
+    // Verifica corrispondenze esatte con caratteri speciali
+    const exactPreservedTitleMatch = preservedTitle === preservedResultTitle ? 0.3 : 0
+    const exactPreservedArtistMatch = preservedArtist === preservedResultArtist ? 0.3 : 0
+
+    // Verifica se il titolo originale è contenuto nel risultato e viceversa
+    const titleInResult = isSubstring(preservedTitle, preservedResultTitle) ? 0.15 : 0
+    const resultInTitle = isSubstring(preservedResultTitle, preservedTitle) ? 0.1 : 0
+
+    // Punteggio complessivo (pesa di più la corrispondenza dell'artista)
+    const baseSimilarityScore = titleSimilarity * 0.6 + artistSimilarity * 0.4
+
+    // Bonus per corrispondenze esatte normalizzate
+    const exactNormalizedTitleMatch = normalizedTitle === resultTitle ? 0.2 : 0
+    const exactNormalizedArtistMatch = normalizedArtist === resultArtist ? 0.2 : 0
+
+    // Penalità per risultati con titoli molto più lunghi (potrebbero essere remix o versioni estese)
+    const lengthPenalty = resultTitle.length > normalizedTitle.length * 1.5 ? 0.1 : 0
+
+    // Penalità per risultati con titoli troppo brevi rispetto alla ricerca
+    const shortTitlePenalty = resultTitle.length < normalizedTitle.length * 0.7 ? 0.15 : 0
+
+    // NUOVO: Bonus per album nella descrizione o nel sottotitolo
+    let albumInDescriptionBonus = 0
+    if (normalizedAlbum) {
+      // Controlla se l'album è menzionato nella descrizione
+      if (resultDescription && isSubstring(normalizedAlbum, resultDescription)) {
+        // Assegna un bonus significativo (0.4 punti) se l'album è menzionato nella descrizione
+        albumInDescriptionBonus = 0.4
+        console.log(`Album "${album}" trovato nella descrizione di "${result.name}": +0.4 punti`)
+      }
+      // Controlla anche nel sottotitolo (spesso contiene info sull'album)
+      else if (resultSubtitle && isSubstring(normalizedAlbum, resultSubtitle)) {
+        // Bonus più piccolo per album nel sottotitolo
+        albumInDescriptionBonus = 0.2
+        console.log(`Album "${album}" trovato nel sottotitolo di "${result.name}": +0.2 punti`)
+      }
+    }
+
+    const finalScore =
+      baseSimilarityScore +
+      exactNormalizedTitleMatch +
+      exactNormalizedArtistMatch +
+      exactPreservedTitleMatch +
+      exactPreservedArtistMatch +
+      titleInResult +
+      resultInTitle +
+      albumInDescriptionBonus - // Aggiungi il bonus per l'album nella descrizione
+      lengthPenalty -
+      shortTitlePenalty
+
+    return {
+      ...result,
+      score: finalScore,
+      debug: {
+        titleSimilarity,
+        artistSimilarity,
+        exactNormalizedTitleMatch,
+        exactNormalizedArtistMatch,
+        exactPreservedTitleMatch,
+        exactPreservedArtistMatch,
+        titleInResult,
+        resultInTitle,
+        albumInDescriptionBonus, // Aggiungi il debug per il bonus album
+        lengthPenalty,
+        shortTitlePenalty
+      }
+    }
+  })
+
+  // Ordina i risultati per punteggio
+  scoredResults.sort((a, b) => b.score - a.score)
+
+  console.log('Risultati ordinati per rilevanza:')
+  scoredResults.slice(0, 3).forEach((r, i) => {
+    console.log(`${i + 1}. "${r.name}" di "${r.artist.name}" (Score: ${r.score.toFixed(2)})`)
+    console.log(`   Debug: ${JSON.stringify(r.debug)}`)
+    // Evidenzia se l'album è stato trovato nella descrizione
+    if (r.debug.albumInDescriptionBonus > 0) {
+      console.log(`   ✓ Album "${album}" trovato nella descrizione/sottotitolo`)
+    }
+  })
+
+  return scoredResults[0]
+}
+
+async function GetYoutubeLink(title, artist, album) {
   try {
     console.log(`Ricerca per: Titolo="${title}", Artista="${artist}", Album="${album}"`)
 
@@ -1215,7 +1263,8 @@ ipcMain.handle('GetYTlink', async (event, SearchD) => {
       ytLinkCache[cacheKey].timestamp > Date.now() - 7 * 24 * 60 * 60 * 1000
     ) {
       console.log(`Usando risultato in cache per "${cacheKey}"`)
-      return ytLinkCache[cacheKey].url
+      // Estrai l'ID dal link in cache (assumendo che sia memorizzato l'URL completo)
+      return ytLinkCache[cacheKey].videoId
     }
 
     // Assicurati che ytmusic-api sia inizializzato
@@ -1224,6 +1273,12 @@ ipcMain.handle('GetYTlink', async (event, SearchD) => {
     // Crea diverse query di ricerca
     const searchQueries = createSearchQueries(title, artist)
     let allResults = []
+
+    // NUOVO: Crea una query specifica che includa l'album se disponibile
+    if (album) {
+      searchQueries.unshift(`${title} ${artist} ${album}`) // Aggiungi in prima posizione
+      console.log(`Aggiunta query con album: "${title} ${artist} ${album}"`)
+    }
 
     // Esegui le ricerche con diverse query
     for (const query of searchQueries) {
@@ -1244,39 +1299,65 @@ ipcMain.handle('GetYTlink', async (event, SearchD) => {
       throw new Error('Nessun risultato trovato con nessuna delle query')
     }
 
-    // Trova la migliore corrispondenza tra tutti i risultati raccolti
-    const bestMatch = findBestMatch(allResults, title, artist)
-    const videoId = bestMatch.videoId
+    // NUOVO: Se abbiamo l'album, proviamo a cercare informazioni aggiuntive
+    if (album) {
+      // Crea una query specifica per trovare video con l'album nella descrizione
+      const albumQuery = `${title} ${artist} ${album} "album"`
+      console.log(`Cercando video con album nella descrizione: "${albumQuery}"`)
 
-    if (bestMatch.name === title && bestMatch.artist.name === artist) {
+      try {
+        const albumResults = await ytm.searchSongs(albumQuery)
+        if (albumResults && albumResults.length > 0) {
+          console.log(
+            `Trovati ${albumResults.length} risultati con possibile riferimento all'album`
+          )
+
+          // Aggiungi questi risultati all'array principale, evitando duplicati
+          albumResults.forEach((result) => {
+            if (!allResults.some((r) => r.videoId === result.videoId)) {
+              // Aggiungi un campo per indicare che questo risultato è stato trovato con la query album
+              result.fromAlbumQuery = true
+              allResults.push(result)
+            }
+          })
+        }
+      } catch (albumSearchError) {
+        console.warn(`Errore nella ricerca con album: ${albumSearchError}`)
+      }
+    }
+
+    // Trova la migliore corrispondenza tra tutti i risultati raccolti
+    // Passa anche l'album alla funzione findBestMatch
+    const bestMatch = findBestMatch(allResults, title, artist, album)
+    let videoID = bestMatch.videoId
+
+    if (bestMatch.name !== title || bestMatch.artist.name !== artist) {
+      videoID = await PerformBasicSearch(searchQueries[0])
+    } else {
       console.log(
         `Miglior risultato trovato: "${bestMatch.name}" di "${bestMatch.artist.name}" (Score: ${bestMatch.score.toFixed(2)})`
       )
-
-      // Ottieni l'URL di streaming
-      const streamingUrl = await getStreamingUrl(videoId)
-
-      // Salva in cache
-      ytLinkCache[cacheKey] = {
-        url: streamingUrl,
-        timestamp: Date.now()
+      // Se il risultato è stato trovato con la query album, evidenzialo
+      if (bestMatch.fromAlbumQuery) {
+        console.log(
+          `✓ Questo risultato è stato trovato usando la query che include l'album "${album}"`
+        )
       }
-
-      return streamingUrl
-    } else {
-      const videoID = await PerformBasicSearch(searchQueries[0])
-
-      // Ottieni l'URL di streaming
-      const streamingUrl = await getStreamingUrl(videoID)
-
-      // Salva in cache
-      ytLinkCache[cacheKey] = {
-        url: streamingUrl,
-        timestamp: Date.now()
+      // Se l'album è stato trovato nella descrizione, evidenzialo
+      if (bestMatch.debug && bestMatch.debug.albumInDescriptionBonus > 0) {
+        console.log(`✓ Album "${album}" rilevato nei metadati del video`)
       }
-
-      return streamingUrl
     }
+
+    // Salva l'ID in cache
+    if (!ytLinkCache[cacheKey]) {
+      ytLinkCache[cacheKey] = {
+        videoId: videoID,
+        timestamp: Date.now()
+      }
+    }
+
+    return videoID
   } catch (error) {
     console.error('Errore nella ricerca YouTube Music:', error)
 
@@ -1295,10 +1376,8 @@ ipcMain.handle('GetYTlink', async (event, SearchD) => {
 
       if (fallbackResults && fallbackResults.length > 0) {
         // Usa ancora findBestMatch anche per i risultati del fallback
-        const bestFallbackMatch = findBestMatch(fallbackResults, title, artist)
-        const videoId = bestFallbackMatch.videoId
-        const streamingUrl = await getStreamingUrl(videoId)
-        return streamingUrl
+        const bestFallbackMatch = findBestMatch(fallbackResults, title, artist, album)
+        return bestFallbackMatch.videoId
       } else {
         // Ultimo tentativo: cerca solo per artista e filtra manualmente
         const artistResults = await ytm.searchSongs(artist)
@@ -1309,10 +1388,8 @@ ipcMain.handle('GetYTlink', async (event, SearchD) => {
           )
 
           if (filteredResults.length > 0) {
-            const bestArtistMatch = findBestMatch(filteredResults, title, artist)
-            const videoId = bestArtistMatch.videoId
-            const streamingUrl = await getStreamingUrl(videoId)
-            return streamingUrl
+            const bestArtistMatch = findBestMatch(filteredResults, title, artist, album)
+            return bestArtistMatch.videoId
           }
         }
 
@@ -1323,6 +1400,31 @@ ipcMain.handle('GetYTlink', async (event, SearchD) => {
       throw fallbackError
     }
   }
+}
+
+// Handler principale
+ipcMain.handle('GetYTlink', async (event, SearchD) => {
+  let infos = SearchD.split(' | ')
+
+  const title = infos[0] || ''
+  const artist = infos[1] || ''
+  const album = infos[2] || ''
+
+  return await getStreamingUrl(await GetYoutubeLink(title, artist, album))
+})
+
+ipcMain.handle('GetYTID', async (event, SearchD) => {
+  let infos = SearchD.split(' | ')
+
+  const title = infos[0] || ''
+  const artist = infos[1] || ''
+  const album = infos[2] || ''
+
+  return await GetYoutubeLink(title, artist, album)
+})
+
+ipcMain.handle('SearchYTVideo', async (event, query) => {
+  return await PerformBasicSearch(query)
 })
 
 ipcMain.handle('GetYTlinkFromID', async (event, id) => {
@@ -2326,200 +2428,116 @@ ipcMain.handle('readLocalLibrary', async () => {
   return await readLocalLibrary()
 })
 
-async function findBestMatchID(title, album, artist) {
+ipcMain.handle('downloadTrack', async (event, URL, data, savePath) => {
+  const fs = require('fs')
+  const path = require('path')
+
+  console.log('URL di download:', URL)
+  console.log('Dati brano:', data)
+
+  // Normalizza il nome del file per evitare caratteri non validi
+  const safeArtist = normalizeText(data.artist)
+  const safeTitle = normalizeText(data.title)
+  const videoPath = path.join(savePath, `${safeArtist} - ${safeTitle}`)
+
   try {
-    console.log(`Ricerca per: Titolo="${title}", Artista="${artist}", Album="${album}"`)
+    console.log(`Avvio download in: ${videoPath}`)
 
-    // Verifica se la query è già in cache
-    const cacheKey = `${artist} - ${title}`
-    if (
-      ytLinkCache[cacheKey] &&
-      ytLinkCache[cacheKey].timestamp > Date.now() - 7 * 24 * 60 * 60 * 1000
-    ) {
-      console.log(`Usando risultato in cache per "${cacheKey}"`)
-      return ytLinkCache[cacheKey].url
+    // Verifica se la directory esiste
+    const dir = path.dirname(videoPath)
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true })
     }
 
-    // Assicurati che ytmusic-api sia inizializzato
-    await ensureYtmInitialized()
+    // Avvia il download
+    await downloadYoutubeVideo(URL, videoPath)
+    AddMetadata(data, videoPath)
 
-    // Crea diverse query di ricerca
-    const searchQueries = createSearchQueries(title, artist)
-    let allResults = []
-
-    // Esegui le ricerche con diverse query
-    for (const query of searchQueries) {
-      console.log(`Cercando con query: "${query}"`)
-      const results = await ytm.searchSongs(query)
-
-      if (results && results.length > 0) {
-        // Aggiungi i risultati all'array complessivo, evitando duplicati
-        results.forEach((result) => {
-          if (!allResults.some((r) => r.videoId === result.videoId)) {
-            allResults.push(result)
-          }
-        })
-      }
-    }
-
-    if (allResults.length === 0) {
-      throw new Error('Nessun risultato trovato con nessuna delle query')
-    }
-
-    // Trova la migliore corrispondenza tra tutti i risultati raccolti
-    const bestMatch = findBestMatch(allResults, title, artist)
-    const videoId = bestMatch.videoId
-
-    if (bestMatch.name === title && bestMatch.artist.name === artist) {
-      console.log(
-        `Miglior risultato trovato: "${bestMatch.name}" di "${bestMatch.artist.name}" (Score: ${bestMatch.score.toFixed(2)})`
-      )
-
-      // Ottieni l'URL di streaming
-      const streamingUrl = await getStreamingUrl(videoId)
-
-      // Salva in cache
-      ytLinkCache[cacheKey] = {
-        url: streamingUrl,
-        timestamp: Date.now()
-      }
-
-      return streamingUrl
-    } else {
-      const videoID = await PerformBasicSearch(searchQueries[0])
-
-      // Ottieni l'URL di streaming
-      const streamingUrl = await getStreamingUrl(videoID)
-
-      // Salva in cache
-      ytLinkCache[cacheKey] = {
-        url: streamingUrl,
-        timestamp: Date.now()
-      }
-
-      return streamingUrl
-    }
+    console.log('Download completato con successo')
+    return { success: true, path: videoPath }
   } catch (error) {
-    console.error('Errore nella ricerca YouTube Music:', error)
+    console.error('Errore nel processo di download:', error)
 
-    // Fallback: prova una ricerca estrema con caratteri speciali preservati
+    // Pulisci eventuali file parziali
     try {
-      console.log('Tentativo di fallback con ricerca speciale')
-
-      // Assicurati che ytmusic-api sia inizializzato
-      await ensureYtmInitialized()
-
-      // Costruisci una query estremamente specifica
-      const fallbackQuery = `"${preserveSpecialChars(title)}" "${preserveSpecialChars(artist)}"`
-      console.log(`Query fallback: ${fallbackQuery}`)
-
-      const fallbackResults = await ytm.searchSongs(fallbackQuery)
-
-      if (fallbackResults && fallbackResults.length > 0) {
-        // Usa ancora findBestMatch anche per i risultati del fallback
-        const bestFallbackMatch = findBestMatch(fallbackResults, title, artist)
-        const videoId = bestFallbackMatch.videoId
-        const streamingUrl = await getStreamingUrl(videoId)
-        return streamingUrl
-      } else {
-        // Ultimo tentativo: cerca solo per artista e filtra manualmente
-        const artistResults = await ytm.searchSongs(artist)
-        if (artistResults && artistResults.length > 0) {
-          // Filtra manualmente per trovare corrispondenze del titolo
-          const filteredResults = artistResults.filter((result) =>
-            isSubstring(normalizeText(title), normalizeText(result.name))
-          )
-
-          if (filteredResults.length > 0) {
-            const bestArtistMatch = findBestMatch(filteredResults, title, artist)
-            const videoId = bestArtistMatch.videoId
-            return videoId
-          }
-        }
-
-        throw new Error('Nessun risultato trovato anche con tutti i fallback')
+      if (fs.existsSync(videoPath)) {
+        fs.unlinkSync(videoPath)
       }
-    } catch (fallbackError) {
-      console.error('Errore anche nel fallback:', fallbackError)
-      throw fallbackError
+    } catch (e) {
+      console.error('Errore nella pulizia del file parziale:', e)
     }
-  }
 
+    throw error
+  }
+})
+
+async function AddMetadata(data, path) {
+  console.log(path + '.jpg')
+
+  try {
+    const imgResponse = await fetch(data.img)
+    const arrayBuffer = await imgResponse.arrayBuffer()
+    const imageBuffer = Buffer.from(arrayBuffer)
+
+    fs.writeFileSync(path + '.png', imageBuffer)
+
+    const tags = {
+      title: data.title,
+      artist: data.artist,
+      album: data.album,
+      APIC: `${path}.png`,
+      comment: {
+        language: 'eng',
+        text: 'Downloaded with LOLLOMUSICX'
+      }
+    }
+
+    MM.write(tags, `${path}.mp3`)
+
+    fs.unlinkSync(`${path}.png`)
+  } catch (e) {
+    console.log(e)
+  }
 }
 
+async function downloadVideoById(videoId, outputPath, options = {}) {
+  const ytDlp = require('yt-dlp-exec')
 
-ipcMain.handle('downloadTrack', async (event, data, savePath) => {
-  //const https = require('https');
-  const fs = require('fs');
-  const path = require('path');
-  //const { PassThrough } = require('stream');
+  // Costruisci l'URL di YouTube dall'ID del video
+  const videoUrl = `https://www.youtube.com/watch?v=${videoId}`
 
-  let VideoID;
+  console.log(`Avvio download del video: ${videoId}`)
 
-  if (data.video === false) {
-    VideoID = await findBestMatchID(data.title, data.album, data.artist);
-  } else {
-    VideoID = await PerformBasicSearch(data.title);
+  // Opzioni predefinite
+  const defaultOptions = {
+    output: outputPath,
+    noWarnings: true,
+    noCallHome: true,
+    preferFreeFormats: true
   }
 
-  const videoPath = path.join(savePath, `${data.artist} - ${normalizeText(data.title)}.mp4`);
+  // Unisci le opzioni predefinite con quelle fornite dall'utente
+  const downloadOptions = { ...defaultOptions, ...options }
 
-  // Implementazione personalizzata per ottenere lo stream video
   try {
+    // Esegui yt-dlp per il download
+    await ytDlp(videoUrl, downloadOptions)
 
-    
+    console.log(`Download completato: ${outputPath}`)
+    console.log('aggiungo i metadata')
 
-    await downloadYoutubeVideo(VideoID, videoPath);
-
-    // Verifica che il file esista
-    if (!fs.existsSync(videoPath)) {
-      throw new Error('Download fallito - file non trovato');
-    }
-
-    return { success: true, path: videoPath };
-  } catch (error) {
-    console.error('Errore nel processo di download:', error);
-    throw error;
+    return { success: true, path: outputPath }
+  } catch {
+    console.log('done')
   }
-});
-
+}
 // Funzione per scaricare il video
 async function downloadYoutubeVideo(videoId, outputPath) {
-  // Qui dovrai implementare la logica per:
-  // 1. Ottenere i metadati del video e l'URL del file MP4
-  // 2. Scaricare il file MP4
-
-  // Esempio semplificato di download da un URL
-
-  const https = require('https');
-
-  return new Promise((resolve, reject) => {
-    const file = fs.createWriteStream(outputPath);
-    const videoUrl = `https://www.youtube.com/watch?v=${videoId}`// Dovrai implementare questa funzione
-
-    https.get(videoUrl, (response) => {
-      if (response.statusCode !== 200) {
-        reject(new Error(`Failed to download video, status code: ${response.statusCode}`));
-        return;
-      }
-
-      response.pipe(file);
-
-      file.on('finish', () => {
-        file.close();
-        resolve();
-      });
-    }).on('error', (err) => {
-
-      try {
-        fs.unlink(outputPath, () => { }); // Rimuovi il file parziale
-        reject(err);
-      } catch {
-        console.log('impossibile scaricare il video');
-        
-      }
-
-      
-    });
-  });
+  return downloadVideoById(videoId, outputPath, {
+    extractAudio: true,
+    audioFormat: 'mp3',
+    audioQuality: 0, // 0 è la migliore qualità
+    embedThumbnail: true,
+    addMetadata: true
+  })
 }

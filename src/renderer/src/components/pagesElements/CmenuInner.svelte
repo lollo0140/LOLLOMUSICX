@@ -1,4 +1,5 @@
-<script>/* eslint-disable prettier/prettier */
+<script>
+  /* eslint-disable prettier/prettier */
   import { createEventDispatcher } from 'svelte'
   const dispatch = createEventDispatcher()
 
@@ -136,20 +137,26 @@
           const temp = await ipcRenderer.invoke('getAlbumInfo', album, artista)
           console.log(temp.album)
 
-          for (const item of temp.album.tracks.track) {
-            const songMeta = {
-              title: item.name || '',
-              album: album || '',
-              artist: artista || '',
-              img: immagine || '',
-              duration: 0,
-              FMurl: '',
-              YTurl: ''
-            }
 
-            albumTracks.push(songMeta)
-            albumTracks.push(songMeta)
-            track = albumTracks
+          const songs = temp.album.tracks.track
+
+          albumTracks = []
+          albumTracks = []
+
+          for (let index = 0; index < songs.length; index++) {
+            const songMeta = {
+                title: songs[index].name || '',
+                album: album || '',
+                artist: artista || '',
+                img: immagine || '',
+                duration: 0,
+                FMurl: '',
+                YTurl: ''
+              }
+
+              
+              albumTracks.push(songMeta)
+              track = albumTracks
           }
         } else {
           const library = await ipcRenderer.invoke('readLocalLibrary')
@@ -339,11 +346,15 @@
         >
       {/if}
 
-      <button onmouseenter={() => ShowPlistMenu()} class="CmenuButton">aggiungi alla playlist</button>
+      <button onmouseenter={() => ShowPlistMenu()} class="CmenuButton"
+        >aggiungi alla playlist</button
+      >
 
       <button class="CmenuButton" onclick={() => AddToQuewe()}>aggiungi in coda</button>
 
-      <button class="CmenuButton" onclick={() => OnCall({ query: artista, type: 'artist' })}>vai all artista</button>
+      <button class="CmenuButton" onclick={() => OnCall({ query: artista, type: 'artist' })}
+        >vai all artista</button
+      >
 
       <span></span>
 
@@ -380,7 +391,6 @@
       {#if !local}
         <button class="CmenuButton" onclick={() => DOWNLOAD()}>download</button>
       {/if}
-      
     {:else if ifplaylist}
       <button class="CmenuButton" onclick={() => PlayShuffled()}>riproduci casuale</button>
       <button class="CmenuButton" onclick={() => AddToQuewe()}>aggiungi alla coda</button>

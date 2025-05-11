@@ -68,12 +68,12 @@ class shared {
 
   async addDownloadTraksquewe(tracks) {
     // Aggiungi i nuovi brani alla coda
-    this.downloadQuewe.push(...tracks);
+    this.downloadQuewe.push(...tracks)
 
     // Avvia il download se non è già in corso
     if (!this.downloading) {
-      this.downloading = true;
-      await this.startDownloadProcess();
+      this.downloading = true
+      await this.startDownloadProcess()
     }
   }
 
@@ -82,14 +82,30 @@ class shared {
       while (this.downloadQuewe.length > 0) {
         const track = this.downloadQuewe[0]
         try {
-          console.log(`Elaborazione di: ${track.title} - ${track.artist}`);
-          const metadata = {
+          let metadata
+
+          let URL
+
+          console.log(`Elaborazione di: ${track.title} - ${track.artist}`)
+          metadata = {
             title: track.title,
             artist: track.artist,
             album: track.album,
             img: track.img
           }
-          await ipcRenderer.invoke('downloadTrack', metadata, track.path)
+
+          if (track.video === false || track.video === undefined) {
+            URL = await ipcRenderer.invoke('SearchYTVideo', track.artist + ' ' + metadata.title)
+            console.log('ricerca base' + URL)
+          } else {
+            URL = await ipcRenderer.invoke(
+              'GetYTID',
+              `${metadata.title} | ${metadata.artist} | ${metadata.album}`
+            )
+            console.log('ricerca avanzata' + URL)
+          }
+
+          await ipcRenderer.invoke('downloadTrack', URL, metadata, track.path)
         } catch (err) {
           console.log(err)
         } finally {
@@ -102,7 +118,6 @@ class shared {
     } finally {
       // Assicurati che lo stato di download venga sempre reimpostato
       this.downloading = false
-      this.emit('download:complete', this.failedDownloads || [])
     }
   }
 
@@ -179,14 +194,14 @@ class shared {
     return data
   }
 
-  async GetYTlink(query) {
+  async GetYTlink(query, ID = false) {
     try {
       const info = query.split(' | ')
 
       console.log(query)
       console.log(info)
 
-      const response = await ipcRenderer.invoke('SearchLocalSong', info[0], info[1], info[2])
+      const response = await ipcRenderer.invoke('SearchLocalSong', info[0], info[1], info[2], ID)
 
       console.log(response)
 
@@ -702,7 +717,20 @@ class shared {
   // user
 
   async SaveTrack() {
-    ipcRenderer.invoke('LikeSong', this.Player)
+
+    let infos = {
+      title: this.Player.title,
+      artist: this.Player.artist,
+      album: this.Player.album
+    }
+
+    if (Array.isArray(this.Player.img)) {
+      infos.img = this.Player.img[0]
+    } else {
+      infos.img = this.Player.img
+    }
+
+    ipcRenderer.invoke('LikeSong', infos)
   }
 
   async dislikeTrack() {
@@ -710,7 +738,15 @@ class shared {
   }
 
   async SaveTrackExt(title, artist, album, img, video = false) {
-    ipcRenderer.invoke('LikeSong', { title, artist, album, img, video })
+    let immage
+
+    if (Array.isArray(img)) {
+      immage = img[0]
+    } else {
+      immage = img
+    }
+
+    ipcRenderer.invoke('LikeSong', { title, artist, album, immage, video })
   }
 
   async dislikeTrackExt(title, artist, album, img) {
