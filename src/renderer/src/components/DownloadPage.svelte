@@ -53,8 +53,11 @@
     }
 
     shared.addDownloadTraksquewe(TosendObj)
+    Closedwpannel()
 
   }
+
+
 
 </script>
 

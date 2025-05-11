@@ -336,15 +336,25 @@
 
   {#if !FullScreen}
     <div id="mainContent">
-      <NavBar pag={pagindex} on:changePage={(e) => (pagindex = e.detail)} />
+      <NavBar
+        pag={pagindex}
+        on:changePage={(e) => (pagindex = e.detail)}
+        on:cambia-variabile={(e) => CallItem(e.detail)}
+      />
 
       <div id="content">
+        <Search
+          on:changePage={(e) => (pagindex = e.detail)}
+          on:cambia-variabile={(e) => CallItem(e.detail)}
+          {pagindex}
+        />
+
         {#if pagindex === 0}
           <Homepage on:cambia-variabile={(e) => CallItem(e.detail)} />
         {:else if pagindex === 1}
           <Album {AlbumQuery} on:cambia-variabile={(e) => CallItem(e.detail)} />
         {:else if pagindex === 2}
-          <Search on:cambia-variabile={(e) => CallItem(e.detail)} />
+          <p class="hidden">search</p>
         {:else if pagindex === 3}
           <UserLibrary on:cambia-variabile={(e) => CallItem(e.detail)} />
         {:else if pagindex === 4}

@@ -1,5 +1,4 @@
-<script>
-  /* eslint-disable prettier/prettier */
+<script>/* eslint-disable prettier/prettier */
   import { createEventDispatcher } from 'svelte'
   const dispatch = createEventDispatcher()
 
@@ -10,6 +9,8 @@
   let albumTracks = []
   let PlaylistTraks = []
   let LikedTraks = []
+
+  let Pinned = $state(false)
 
   let track = []
 
@@ -193,8 +194,16 @@
       if (ifplaylist) {
         const Playlists = await ipcRenderer.invoke('ReadPlaylist')
 
+
+        if (await shared.checkpin(playlistindex - 1)) {
+          Pinned = true
+        } else {
+          Pinned = false
+        }
+         
         for (const item of Playlists[playlistindex - 1].tracks) {
           let songMeta
+
 
           if (item.video) {
             songMeta = {
@@ -328,6 +337,20 @@
     await shared.removeFromPlaylist(itemindex, playlistindex)
   }
 
+  async function PinPlaylist() {
+    const index = playlistindex
+
+    
+    await shared.Pin(index)
+  }
+
+  async function UnPinPlaylist() {
+    const index = playlistindex
+
+    
+    await shared.UnPin(index)
+  }
+
   //console.log(titolo + '  ' + artista + '  ' + album)
 </script>
 
@@ -401,7 +424,14 @@
       <button class="CmenuButton" onclick={() => DOWNLOAD()}>download</button>
 
       {#if playlistindex !== '0'}
-        <button class="CmenuButton" onclick={() => dellPlaylist(playlistindex)}>elimina</button>
+
+        {#if !Pinned}
+          <button class="CmenuButton" onclick={ () => PinPlaylist()}>pin</button>
+        {:else}
+          <button class="CmenuButton" onclick={ () => UnPinPlaylist()}>unpin</button>
+        {/if}
+
+        <button class="CmenuButton" onclick={() => dellPlaylist(playlistindex - 1)}>elimina</button>
       {/if}
     {/if}
   {/if}

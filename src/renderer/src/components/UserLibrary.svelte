@@ -1,5 +1,7 @@
 <script>/* eslint-disable prettier/prettier */
 
+    
+
     import { onMount } from 'svelte';
     import * as renderer from '../main.js';
     import { createEventDispatcher } from 'svelte';

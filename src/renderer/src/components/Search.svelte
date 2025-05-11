@@ -3,6 +3,9 @@ import { onMount } from 'svelte'
 import "../assets/main.css";
 import * as renderer from '../main.js'
 import { createEventDispatcher } from 'svelte';
+const dispatch = createEventDispatcher()
+let { pagindex } = $props()
+
 
 let loading = $state(true)
 let recentSearchs = $state([])
@@ -100,7 +103,7 @@ function loadImmages() {
 }
 
 async function handleSearch() {
-
+    dispatch('changePage', 2)
     searching = true
     
 
@@ -142,7 +145,7 @@ async function PlayYTtrack(id) {
     shared.PlaySongYT(id)
 }
 
-const dispatch = createEventDispatcher()
+
 
 function CallItem(query, Type) {
     dispatch('cambia-variabile', query, Type);
@@ -155,13 +158,14 @@ async function SearchFromRecent(keyword) {
 
 </script>
 
-<div class="home">
+<div class={pagindex ? 'home': 'homesmall'}>
   <input type="text" bind:value={searchkey}>
   <button onclick={handleSearch} aria-label="cerca">
     cerca: "{searchkey}"
   </button>
 
-  {#if !loading}
+  {#if pagindex === 2}
+    {#if !loading}
     <div id="searchResult">
     {#await searchResoult}
         <p>loading...</p>
@@ -243,5 +247,16 @@ async function SearchFromRecent(keyword) {
 
     {/each}
   {/if}
+  {/if}
+
+  
   
 </div>
+
+<style>
+    .homesmall {
+        overflow: hidden;
+        height: 30px;
+        width: 100%;
+    }
+</style>

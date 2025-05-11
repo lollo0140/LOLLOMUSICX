@@ -64,6 +64,26 @@ class shared {
     this.downloading = false
   }
 
+  //pin playlists
+
+  async Pin(index) {
+    await ipcRenderer.invoke('PinPlaylists', index)
+  }
+
+  async UnPin(index) {
+    await ipcRenderer.invoke('UnpinPlaylists', index)
+  }
+
+  async checkpin(index) {
+    if ((await ipcRenderer.invoke('CheckPin', index)) === true) {
+      console.log('playlist pinnata')
+      return true
+    } else {
+      console.log('playlist non pinnata')
+      return false
+    }
+  }
+
   //downloader`
 
   async addDownloadTraksquewe(tracks) {
@@ -717,7 +737,6 @@ class shared {
   // user
 
   async SaveTrack() {
-
     let infos = {
       title: this.Player.title,
       artist: this.Player.artist,
@@ -819,6 +838,7 @@ class shared {
     const data = {
       name,
       img,
+      pinned: false,
       tracks: []
     }
 

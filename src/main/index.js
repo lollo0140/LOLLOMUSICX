@@ -2541,3 +2541,62 @@ async function downloadYoutubeVideo(videoId, outputPath) {
     addMetadata: true
   })
 }
+
+//pin playlists
+
+ipcMain.handle('PinPlaylists', async (event, index) => {
+  await PinPlaylists(index)
+})
+
+async function PinPlaylists(index) {
+  const playlists = await separateObj(JSON.parse(fs.readFileSync(userPlaylists)))
+  playlists[index - 1].pinned = true
+
+  const ToWrite = joinObj(playlists, 'playlist')
+  fs.writeFileSync(userPlaylists, JSON.stringify(ToWrite), 'utf8')
+}
+
+ipcMain.handle('UnpinPlaylists', async (event, index) => {
+  await UnpinPlaylists(index)
+})
+
+async function UnpinPlaylists(index) {
+  const playlists = await separateObj(JSON.parse(fs.readFileSync(userPlaylists)))
+  playlists[index - 1].pinned = false
+
+  const ToWrite = joinObj(playlists, 'playlist')
+
+  //console.log('-------------------------------------------------------------------------------')
+  //console.log(playlists[index - 1])
+  //console.log('-------------------------------------------------------------------------------')
+
+  fs.writeFileSync(userPlaylists, JSON.stringify(ToWrite), 'utf8')
+}
+
+ipcMain.handle('CheckPin', async (event, index) => {
+  const pin = await CheckPin(index)
+
+  console.log(pin)
+
+  if (pin === true) {
+    return true
+  } else {
+    return false
+  }
+})
+
+async function CheckPin(index) {
+  const playlists = await separateObj(JSON.parse(fs.readFileSync(userPlaylists)))
+
+  //console.log('-------------------------------------------------------------------------------')
+  //console.log(playlists[index])
+  //console.log('-------------------------------------------------------------------------------')
+
+  if (playlists[index].pinned === true) {
+    //console.log(true)
+    return true
+  } else {
+    //console.log(false)
+    return false
+  }
+}
