@@ -54,7 +54,7 @@
   {#if !loading}
 
     <p>Brani preferiti</p>
-    <p>{numOfSongs} canzoni</p>  
+    <p>{numOfSongs / 2} canzoni</p>  
 
     <div id="likedListDiv">
       {#each songs as song,i}

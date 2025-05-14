@@ -66,12 +66,14 @@
   }
 
   #NavBar {
-    background-color: orange;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.27);
+    border-radius: 15px;
     margin: 0px;
     position: absolute;
-    left: 0px;
-    top: 0px;
-    bottom: 0px;
+    left: 4px;
+    top: 4px;
+    bottom: 4px;
     width: 70px;
     border-radius: 15px;
   }

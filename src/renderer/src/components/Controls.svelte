@@ -108,7 +108,9 @@
 
 <style>
   .Controlls {
-    background-color: red;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.27);
+    border-radius: 15px;
     position: absolute;
     height: 60px;
     left: 25px;

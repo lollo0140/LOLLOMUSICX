@@ -1,6 +1,6 @@
 <script>/* eslint-disable prettier/prettier */
 
-    
+    const LIKE = new URL('../assets/like.png', import.meta.url).href
 
     import { onMount } from 'svelte';
     import * as renderer from '../main.js';
@@ -90,7 +90,7 @@
         <div class="playlists">
 
             <button type="button" class="albumbutton contextMenuLiked" onclick="{ () => CallItem({query:'', type: 'liked'})}">
-                <img style="object-fit: cover;" class="--IMGDATA albumimg" src="./src/assets/appLabel.png" alt="img">
+                <img style="object-fit: cover;" class="--IMGDATA albumimg" src={LIKE} alt="img">
                 <p class="--PLAYLISTNAMEDATA albumtitle">preferiti</p>
                 <p class="--PLAYLISTINDEXDATA">0</p>
             </button>

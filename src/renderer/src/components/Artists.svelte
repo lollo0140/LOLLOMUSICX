@@ -1,8 +1,8 @@
 <script>/* eslint-disable prettier/prettier */
+  const defSongPng = new URL('../assets/defaultSongCover.png', import.meta.url).href
   import { onMount } from 'svelte'
   import { createEventDispatcher } from 'svelte'
   import * as renderer from '../main.js'
-  import IsLocal from './pagesElements/IsLocal.svelte'
 
   let Saved = $state(false)
 
@@ -18,7 +18,7 @@
 
   const dispatch = createEventDispatcher()
 
-  let traks = [], images = [], traksalbums = []
+  let traks = []
 
   function CallItem(object) {
     dispatch('cambia-variabile', object)
@@ -43,7 +43,6 @@
       setTimeout(() => {
         hidetraks()
         hideAlbum()
-        loadImmages()
       }, 0)
     } catch (error) {
       console.error("Errore nel caricamento dei dati dell'artista:", error)
@@ -54,45 +53,6 @@
     }
   })
 
-  function loadImmages() {
-    if (!AllData || !AllData.TopTraks) return;
-
-    const immagini = document.querySelectorAll('.imgCanzone')
-
-    let index = 0
-    for (const img of immagini) {
-      const song = AllData.TopTraks[index]
-
-      const title = song.name
-      const artist = AllData.artInfo.name
-
-      if (!title || !artist) {
-        console.error("Titolo o artista mancante per la canzone all'indice", index)
-        index++
-        continue
-      }
-      // Usa una IIFE (Immediately Invoked Function Expression) per mantenere i valori corretti in ogni iterazione
-      ;((currentIndex, currentImg) => {
-        setTimeout(async () => {
-          try {
-            const info = await shared.getInfo(title, artist)
-
-            if (info.track.album.image !== undefined && info.track.album.image !== '') {
-              currentImg.src = info.track.album.image
-            }
-
-            images.push(info.track.album.image)
-            traksalbums.push(info.track.album.title)
-
-          } catch (error) {
-            console.log(error)
-          }
-        }, 100 * currentIndex) // Aggiungi un ritardo progressivo per evitare troppe richieste simultanee
-      })(index, img)
-
-      index++
-    }
-  }
 
   async function hideAlbum() {
     const ToHideAlbum = document.querySelectorAll('.Albhidden')
@@ -131,7 +91,19 @@
   }
 
   async function Playtoptraks(index) {
-    shared.PlayPlaylist(traks, index, images, traksalbums)
+
+    let NewTracks = []
+
+    for (const track of traks) {
+      NewTracks.push({
+        title: track.title || track.name,
+        artist: AllData.artInfo.name,
+        album: track.album,
+        video: false
+      })
+    }
+
+    shared.PlayPlaylistS(traks, index)
   }
 
 
@@ -184,15 +156,27 @@
     {#each AllData.TopTraks as item, i}
       {#if i < 7}
         <button class="bottone contextMenuSong" onclick={() => Playtoptraks(i)}>
-          <p class="--TITLEDATA titolo">{item.name}</p>
+          <p class="--TITLEDATA titolo">{item.title || item.name}</p>
           <p class="--ARTISTDATA artista">{AllData.artInfo.name}</p>
-          <img class="--IMGDATA imgCanzone" src="" alt="copertina" data-index={i} />
+
+          {#if item.img}
+            <img class="--IMGDATA imgCanzone" src={item.img} alt="copertina" data-index={i} />
+            {:else}
+            <img class="--IMGDATA imgCanzone" src={defSongPng} alt="copertina" data-index={i} />
+          {/if}
+
         </button>
       {:else}
         <button class="bottone Trhidden contextMenuSong" onclick={() => Playtoptraks(i)}>
-          <p class="--TITLEDATA titolo">{item.name}</p>
+          <p class="--TITLEDATA titolo">{item.title || item.name}</p>
           <p class="--ARTISTDATA artista">{AllData.artInfo.name}</p>
-          <img class="--IMGDATA imgCanzone" src="" alt="copertina" data-index={i} />
+          
+          {#if item.img}
+            <img class="--IMGDATA imgCanzone" src={item.img} alt="copertina" data-index={i} />
+            {:else}
+            <img class="--IMGDATA imgCanzone" src={defSongPng} alt="copertina" data-index={i} />
+          {/if}
+
         </button>
       {/if}
     {/each}
@@ -208,7 +192,14 @@
           onclick={() => CallItem({ query: album.artist.name + ' - ' + album.name, type: 'album' })}
           class="albumbutton contextMenuAlbum"
         >
-          <img class="--IMGDATA albumimg" src={album.image[3]['#text']} alt="" />
+
+          {#if album.image[3]['#text']}
+            <img class="--IMGDATA albumimg" src={album.image[3]['#text']} alt="" />
+            {:else}
+            <img class="--IMGDATA albumimg" src={defSongPng} alt="" />
+          {/if}
+
+          
           <p class="--ALBUMDATA albumtitle">{album.name}</p>
           <p class="--ARTISTDATA albumartist">{album.artist.name}</p>
         </button>
@@ -217,7 +208,14 @@
           onclick={() => CallItem({ query: album.artist.name + ' - ' + album.name, type: 'album' })}
           class="albumbutton Albhidden contextMenuAlbum"
         >
-          <img class="--IMGDATA albumimg" src={album.image[3]['#text']} alt="" />
+
+          {#if album.image[3]['#text']}
+            <img class="--IMGDATA albumimg" src={album.image[3]['#text']} alt="" />
+            {:else}
+            <img class="--IMGDATA albumimg" src={defSongPng} alt="" />
+          {/if}
+
+          
           <p class="--ALBUMDATA albumtitle">{album.name}</p>
           <p class="--ARTISTDATA albumartist">{album.artist.name}</p>
         </button>
@@ -233,7 +231,12 @@
     {#each AllData.similarArtists as artist, i}
       {#if i < 6}
         <button class="albumbutton contextMenuArtist" onclick={() => CallItem({query: artist.name, type: 'artist'})}>
-          <img class="--IMGDATA artimg" src={artist.image[4]['#text']} alt="">
+          
+          {#if artist.image[4]['#text']}
+            <img class="--IMGDATA artimg" src={artist.image[4]['#text']} alt="">
+          {:else}
+            <img class="--IMGDATA artimg" src={defSongPng} alt="">
+          {/if}  
           <p class="--ARTISTDATA">{artist.name}</p>
         </button>
       {/if}

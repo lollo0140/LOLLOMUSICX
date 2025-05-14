@@ -17,6 +17,7 @@
   import Settings from './components/Settings.svelte'
   import LocalAlbum from './components/LocalAlbum.svelte'
   import DownloadPage from './components/DownloadPage.svelte'
+  import Background from './components/Background.svelte'
 
   const ipcRenderer = window.electron.ipcRenderer
   //imports
@@ -151,6 +152,16 @@
       oldalbum = playerLocal.album
       url = playerLocal.YTurl
 
+
+      if (!playerLocal.img.startsWith('https://') || !playerLocal.img.startsWith('http://')) {
+        
+        if (!playerLocal.img.startsWith('file:///')) {
+          const temp = 'file:///' + playerLocal.img
+          playerLocal.img = temp
+        }
+
+      } 
+
       // Rimuoviamo il loading qui perché lo gestiamo in PlayPlayer
 
       initializePlayer()
@@ -255,6 +266,7 @@
       // Avviamo la riproduzione
       await mediaElement.play()
       shared.WriteLastListened()
+      shared.SaveListen()
       shared.LoadPreviousUrl()
       shared.LoadNextUrl()
       loading = false
@@ -326,7 +338,7 @@
 </script>
 
 {#if !Pageloading}
-  <button onclick={() => (FullScreen = !FullScreen)}>fullscreen</button>
+  <Background img={playerLocal.img || ''} />
 
   <div id="videoContainer">
     <video id="MediaPlayer" bind:volume bind:currentTime={sec} bind:duration={dur}>
@@ -389,28 +401,37 @@
 {/if}
 
 <style>
+  @media only screen and (max-width: 600px) {
+    #mainContent {
+      opacity: 0;
+    }
+
+
+
+  }
+
   #videoContainer {
     display: none;
   }
 
   #mainContent {
     position: absolute;
-    background: blue;
     left: 25px;
-    top: 25px;
+    top: 50px;
     bottom: 110px;
     right: 349px;
     border-radius: 15px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.27);
+    transition: all 500ms;
   }
 
   #content {
     position: absolute;
-    left: 80px;
+    left: 91px;
     top: 0px;
     right: 0px;
     bottom: 0px;
-    background: pink;
-    border-radius: 15px;
     overflow-y: scroll;
     overflow-x: hidden;
   }

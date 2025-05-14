@@ -94,7 +94,7 @@
 <dir class="{FullScreen ? 'FSNowPlayng' : 'NowPlayng'}" style="transition: all 600ms;">
   <div
     class="contextMenuSong"
-    style="background-color: red; positio: absolute; top: 0px; left: 0px; height: 430px; width: 100%;"
+    style="positio: absolute; top: 0px; left: 0px; height: 430px; width: 100%;"
   >
     <img
       id="Img"
@@ -246,8 +246,11 @@
   }
 
   .NowPlayng {
+    color: white;
     position: absolute;
-    background: purple;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.27);
+    border-radius: 15px;
 
     overflow: hidden;
 
@@ -255,7 +258,7 @@
 
     bottom: 110px;
     right: 25px;
-    top: 25px;
+    top: 50px;
 
     margin: 0px;
     padding: 0px;
@@ -285,6 +288,60 @@
 
     transition: all 600ms;
   }
+
+
+  @media only screen and (max-width: 600px) {
+    .NowPlayng {
+      position: absolute;
+      bottom: 0px;
+      left: 50%;
+      top: 0px;
+      
+      transform: translateX(-50%);
+
+      background: transparent;
+      border: none;
+
+      height: 100%;
+      width: 352px;
+    }
+
+    .PLAYERtitle {
+      transform: translateY(20px);
+    }
+
+    .PLAYERart {
+      transform: translateY(20px);
+    }
+
+    .PLAYERalbum {
+      transform: translateY(20px);
+    }
+
+    .PLAYERimg {
+      width: 326px;
+      height: 326px;
+    }
+
+    .likeButton {
+      display: none;
+    }
+
+    .FSNowPlayng {
+      bottom: 0px;
+      right: 0px;
+      top: 0px;
+
+      background: transparent;
+      border: none;
+
+      height: 100%;
+      width: 100%;
+    }
+
+  }
+
+  
 
   #quewePannel {
     position: absolute;

@@ -23,6 +23,12 @@
     songs = await ipcRenderer.invoke('GetLocalSongs')
     library = await ipcRenderer.invoke('readLocalLibrary')
 
+    for (let index = 0; index < songs.length; index++) {
+
+      songs[index].img = 'local:///' + songs[index].img
+
+    }
+
     console.log(library)
 
     loading = false
@@ -130,7 +136,7 @@
               title={song.title}
               artist={song.artist}
               album={song.album}
-              img={'local:///' + song.img}
+              img={song.img}
               video={false}
             />
           </button>
@@ -147,7 +153,7 @@
             <p class="YTvideo hidden"></p>
             <img
               class="--IMGDATA imgCanzone"
-              src={`local:///` + song.img}
+              src={song.img}
               alt="copertina"
               data-index={i}
             />
@@ -156,7 +162,7 @@
               title={song.title}
               artist={song.artist}
               album={song.album}
-              img={`local:///` + song.img}
+              img={song.img}
               video={song.video}
             />
           </button>

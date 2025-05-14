@@ -765,7 +765,11 @@ class shared {
       immage = img
     }
 
-    ipcRenderer.invoke('LikeSong', { title, artist, album, immage, video })
+    console.log('immagine canzone' + immage)
+
+    const SendData = { title, artist, album, img: immage, video }
+
+    ipcRenderer.invoke('LikeSong', SendData)
   }
 
   async dislikeTrackExt(title, artist, album, img) {
@@ -815,7 +819,7 @@ class shared {
   }
 
   async SaveListen() {
-    ipcRenderer.invoke('writeRecent', this.Player)
+    await ipcRenderer.invoke('writeRecent', this.SongsQuewe[this.PlayngIndex])
   }
 
   async loadHomePage() {

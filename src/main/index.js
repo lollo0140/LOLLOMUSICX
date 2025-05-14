@@ -7,8 +7,7 @@ import * as MM from 'node-id3'
 import { Innertube } from 'youtubei.js'
 const sharp = require('sharp')
 import fetch from 'node-fetch'
-//import ytdl from 'ytdl-core'
-
+import { ytUrls } from './yt-urls.js'
 const ytmusicApi = require('ytmusic-api')
 const ytm = new ytmusicApi()
 
@@ -20,20 +19,103 @@ var ytengine
 
 const LASTFM_API_KEY = '81d1abb0e9e24219499ba934854bd3d7'
 const LASTFM_API_URL = ' http://ws.audioscrobbler.com/2.0/'
-let LikedsongsPath,
-  recentListens,
-  userPlaylists,
-  LikedalbumsPath,
-  LikedartistsPath,
-  recentSearchs,
-  SettingsPath,
-  localDataDir
+const userDataPath = app.getPath('userData')
+const dataFolder = path.join(userDataPath, 'data')
+
+const binPath = app.isPackaged ? process.resourcesPath : app.getAppPath()
+
+// Assicurati che la directory data esista
+if (!fs.existsSync(dataFolder)) {
+  fs.mkdirSync(dataFolder, { recursive: true })
+}
+
+// Definisci i percorsi dei file
+let LikedsongsPath = path.join(dataFolder, 'liked.json')
+let LikedalbumsPath = path.join(dataFolder, 'likedalbums.json')
+let LikedartistsPath = path.join(dataFolder, 'likedartists.json')
+let recentListens = path.join(dataFolder, 'recent.json')
+let userPlaylists = path.join(dataFolder, 'userPlaylist.json')
+let recentSearchs = path.join(dataFolder, 'recentSearchs.json')
+let SettingsPath = path.join(dataFolder, 'Settings.json')
+let localDataDir = path.join(dataFolder, 'LocalData')
+
+console.log(SettingsPath)
+
+// Assicurati che la directory LocalData esista
+if (!fs.existsSync(localDataDir)) {
+  fs.mkdirSync(localDataDir, { recursive: true })
+}
+
+// Funzione per inizializzare i file di configurazione
+function initializeConfigFiles() {
+  // Definisci i file da controllare e i loro valori predefiniti
+  const configFiles = [
+    { path: LikedsongsPath, defaultValue: {} },
+    { path: LikedalbumsPath, defaultValue: {} },
+    { path: LikedartistsPath, defaultValue: {} },
+    { path: recentListens, defaultValue: {} },
+    { path: userPlaylists, defaultValue: {}},
+    { path: recentSearchs, defaultValue: {} },
+    {
+      path: SettingsPath, defaultValue: `{
+    "playerSettings": {
+        "general": {
+            "appName": "LOLLOMUSICX",
+            "version": "1.0.0",
+            "startMinimized": false,
+            "minimizeToTray": true,
+            "autoPlayOnStart": false
+        },
+        "audio": {
+            "volume": 80,
+            "rememberListen": true,
+            "rememberShuffle": true
+        },
+        "library": {
+            "scanPaths": [],
+            "scanOnStartup": true
+        },
+        "interface": {
+            "showLyrics": true,
+            "showVideo": true,
+            "showPlaylistInSideBar": true,
+            "LiteMode": false,
+            "Zoom": 1
+        },
+        "hotkeys": {
+            "playPause": "Space",
+            "next": "Ctrl+Right",
+            "previous": "Ctrl+Left",
+            "volumeUp": "Ctrl+Up",
+            "volumeDown": "Ctrl+Down",
+            "mute": "Ctrl+M"
+        }
+    }
+}`}
+  ]
+
+  // Crea i file se non esistono
+  configFiles.forEach((file) => {
+    if (!fs.existsSync(file.path)) {
+      try {
+        fs.writeFileSync(file.path, JSON.stringify(file.defaultValue, null, 2))
+        console.log(`File creato: ${file.path}`)
+      } catch (error) {
+        console.error(`Errore nella creazione del file ${file.path}:`, error)
+      }
+    }
+  })
+}
+
+// Inizializza i file di configurazione
+initializeConfigFiles()
 
 function createWindow() {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     width: 900,
     height: 670,
+    minWidth: 378,
     show: false,
     autoHideMenuBar: true,
     //...(process.platform === 'linux' ? { icon } : {}),
@@ -43,9 +125,66 @@ function createWindow() {
     }
   })
 
+  function createFiles() {
+    if (!fs.existsSync(dataFolder)) {
+      fs.mkdirSync(dataFolder)
+    }
+
+    if (!fs.existsSync(dataFolder + '\\albumCovers')) {
+      fs.mkdirSync(dataFolder + '\\albumCovers')
+    }
+
+    if (!fs.existsSync(dataFolder + '\\LocalData')) {
+      fs.mkdirSync(dataFolder + '\\LocalData')
+    }
+
+    if (!fs.existsSync(dataFolder + '\\LocalData\\LocalLibrary.json')) {
+      fs.writeFileSync(dataFolder + '\\LocalData\\LocalLibrary.json', '{}', 'utf8')
+    }
+
+    if (!fs.existsSync(dataFolder + '\\LocalData\\tracks.json')) {
+      fs.writeFileSync(dataFolder + '\\LocalData\\tracks.json', '{}', 'utf8')
+    }
+
+    if (!fs.existsSync(LikedsongsPath)) {
+      fs.writeFileSync(LikedsongsPath, '{}', 'utf8')
+    }
+
+    if (!fs.existsSync(recentListens)) {
+      fs.writeFileSync(recentListens, '{}', 'utf8')
+    }
+
+    if (!fs.existsSync(userPlaylists)) {
+      fs.writeFileSync(userPlaylists, '{}', 'utf8')
+    }
+
+    if (!fs.existsSync(LikedalbumsPath)) {
+      fs.writeFileSync(LikedalbumsPath, '{}', 'utf8')
+    }
+
+    if (!fs.existsSync(LikedartistsPath)) {
+      fs.writeFileSync(LikedartistsPath, '{}', 'utf8')
+    }
+
+    if (!fs.existsSync(recentSearchs)) {
+      fs.writeFileSync(recentSearchs, '{}', 'utf8')
+    }
+
+    if (!fs.existsSync(SettingsPath)) {
+      fs.writeFileSync(SettingsPath, '{}', 'utf8')
+    }
+
+    if (!fs.existsSync(localDataDir)) {
+      fs.writeFileSync(localDataDir, '{}', 'utf8')
+    }
+  }
+
   mainWindow.on('ready-to-show', () => {
     app.userAgentFallback = 'LOLLOMUSICX/0.0.1 (lorenzo.orl06@gmail.com)'
     ScanForMedia()
+
+    createFiles()
+
     mainWindow.show()
   })
 
@@ -61,19 +200,14 @@ function createWindow() {
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
-}
 
-function getAppPath() {
-  // Controlla se l'app è in modalità debug
-  const isDebug = process.env.NODE_ENV === 'development' || process.env.DEBUG === 'true'
-
-  if (isDebug) {
-    // Restituisce una directory personalizzata se in debug
-    return 'D:\\VScode\\repos\\svelte\\LOLLOMUSICX'
-  } else {
-    // Restituisce il percorso dell'eseguibile in produzione
-    return process.execPath
-  }
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    // Ctrl+Shift+I (o Cmd+Shift+I su macOS)
+    if ((input.control || input.meta) && input.shift && input.key.toLowerCase() === 'i') {
+      mainWindow.webContents.toggleDevTools()
+      event.preventDefault()
+    }
+  })
 }
 
 async function initializeyt() {
@@ -101,18 +235,6 @@ async function initializeyt() {
 
   console.log('inizializzato')
 }
-const appPath = getAppPath()
-
-const dataFolder = appPath + '\\' + 'data'
-
-LikedsongsPath = dataFolder + '\\' + 'liked.json'
-LikedalbumsPath = dataFolder + '\\' + 'likedalbums.json'
-LikedartistsPath = dataFolder + '\\' + 'likedartists.json'
-recentListens = dataFolder + '\\' + 'recent.json'
-userPlaylists = dataFolder + '\\' + 'userPlaylist.json'
-recentSearchs = dataFolder + '\\' + 'recentSearchs.json'
-SettingsPath = dataFolder + '\\' + 'Settings.json'
-localDataDir = dataFolder + '\\' + 'LocalData'
 
 app.whenReady().then(async () => {
   // Set app user model id for windows
@@ -237,7 +359,7 @@ function joinObj(array, keyword = 'song') {
 //media scanning
 
 ipcMain.handle('GetTracks', async () => {
-  return separateObj(JSON.parse(fs.readFileSync(appPath + '\\tracks.lol')))
+  return separateObj(JSON.parse(fs.readFileSync(localDataDir + '\\tracks.json')))
 })
 
 //axios
@@ -257,9 +379,40 @@ async function GetArtistHomePage(artName) {
   const albumresponse = await fetch(albumsUrl)
   const albumsData = await albumresponse.json()
 
-  const topTracksurl = `${LASTFM_API_URL}?method=artist.gettoptracks&artist=${artist}&api_key=${LASTFM_API_KEY}&format=json&limit=50`
+  const topTracksurl = `${LASTFM_API_URL}?method=artist.gettoptracks&artist=${artist}&api_key=${LASTFM_API_KEY}&format=json&limit=20`
   const traksresponse = await fetch(topTracksurl)
   const topTraksData = await traksresponse.json()
+
+  let NewSongs = []
+
+  for (const song of topTraksData.toptracks.track) {
+    const infos = await getTrack(song.name, artName)
+
+    console.log('--------------------------------------------------------------')
+    console.log(infos.track)
+    console.log('--------------------------------------------------------------')
+
+    try {
+      NewSongs.push({
+        title: song.name,
+        artist: artName,
+        img:
+          infos.track.album.image ||
+          infos.track.album.image[3]['#text'] ||
+          infos.track.album.image[2]['#text'] ||
+          infos.track.album.image[1]['#text'] ||
+          infos.track.album.image[0]['#text'] ||
+          undefined,
+        album: infos.track.album.name || ''
+      })
+    } catch {
+      NewSongs.push({
+        title: song.title,
+        artist: song.artist,
+        img: undefined
+      })
+    }
+  }
 
   const similarurl = `${LASTFM_API_URL}?method=artist.getsimilar&artist=${artist}&api_key=${LASTFM_API_KEY}&format=json&limit=10`
   const similarresponse = await fetch(similarurl)
@@ -310,7 +463,7 @@ async function GetArtistHomePage(artName) {
   }
 
   let result = {
-    TopTraks: topTraksData.toptracks.track,
+    TopTraks: NewSongs,
     albums: albumsData.topalbums.album,
     similarArtists: similarDataResult,
     artInfo: infoData.artist
@@ -491,14 +644,14 @@ async function getTrack(title, artist) {
   const responseLFM = await fetch(searchUrlLFM)
   const dataLFM = await responseLFM.json()
 
-  console.log(dataLFM)
+  //console.log(dataLFM)
 
   // Estrai l'immagine da Last.fm (se disponibile)
   let LFMimg
   try {
     LFMimg = dataLFM.track.album.image[dataLFM.track.album.image.length - 1]['#text']
-  } catch (error) {
-    console.log(error)
+  } catch {
+    //console.log(error)
 
     LFMimg = undefined
   }
@@ -546,9 +699,9 @@ async function getTrack(title, artist) {
         }
       }
     }
-  } catch (error) {
+  } catch {
     // In caso di errore, usa solo i dati di Last.fm
-    console.log(error)
+    //console.log(error)
     return {
       track: {
         name: title,
@@ -948,8 +1101,41 @@ async function SearchYtVideos(query) {
 
 ipcMain.handle('searchsong', async (event, keyword) => {
   const Songs = await SearchSong(keyword)
-  console.clear()
-  return Songs
+
+  let NewSongs = []
+
+  for (const song of Songs) {
+    const infos = await getTrack(song.title, song.artist)
+
+    console.log('--------------------------------------------------------------')
+    console.log(infos.track)
+    console.log('--------------------------------------------------------------')
+
+    try {
+      NewSongs.push({
+        title: song.title,
+        artist: song.artist,
+        img:
+          infos.track.album.image ||
+          infos.track.album.image[3]['#text'] ||
+          infos.track.album.image[2]['#text'] ||
+          infos.track.album.image[1]['#text'] ||
+          infos.track.album.image[0]['#text'] ||
+          undefined
+      })
+    } catch {
+      NewSongs.push({
+        title: song.title,
+        artist: song.artist,
+        img: undefined
+      })
+    }
+  }
+
+  console.log('--------------------------------------------------------------')
+  console.log(NewSongs[0])
+  console.log('--------------------------------------------------------------')
+  return NewSongs
 })
 
 ipcMain.handle('searchYT', async (event, keyword) => {
@@ -1013,38 +1199,12 @@ const preserveSpecialChars = (text) => {
   return text.toLowerCase().trim()
 }
 
-// Funzione per ottenere l'URL di streaming da YouTube
+const youtubeUrls = new ytUrls(binPath)
+
 async function getStreamingUrl(videoId) {
-  // Installa prima: npm install yt-dlp-exec
-  const ytDlp = require('yt-dlp-exec')
-
   try {
-    const output = await ytDlp(`https://www.youtube.com/watch?v=${videoId}`, {
-      dumpSingleJson: true,
-      noWarnings: true,
-      noCallHome: true,
-      preferFreeFormats: true,
-      audioFormat: 'best'
-    })
-
-    // Trova il formato audio con la qualità migliore
-    const audioFormats = output.formats.filter(
-      (format) => format.acodec !== 'none' && format.vcodec === 'none'
-    )
-
-    if (audioFormats.length > 0) {
-      // Ordina per qualità (bitrate)
-      audioFormats.sort((a, b) => b.abr - a.abr)
-      return audioFormats[0].url
-    }
-
-    // Fallback a qualsiasi formato con audio
-    const formatWithAudio = output.formats.find((format) => format.acodec !== 'none')
-    if (formatWithAudio) {
-      return formatWithAudio.url
-    }
-
-    throw new Error('Nessun formato audio trovato')
+    const url = await youtubeUrls.GetUrl(videoId)
+    return url
   } catch (error) {
     console.error('Errore nel recupero URL:', error)
     throw error
@@ -1793,6 +1953,8 @@ ipcMain.handle('checkIfLikedArtist', async (event, artist) => {
 
 ipcMain.handle('writeRecent', async (event, data) => {
   try {
+    console.log(data)
+
     let listens = []
 
     if (fs.existsSync(recentListens)) {
@@ -2429,117 +2591,15 @@ ipcMain.handle('readLocalLibrary', async () => {
 })
 
 ipcMain.handle('downloadTrack', async (event, URL, data, savePath) => {
-  const fs = require('fs')
-  const path = require('path')
+  DownloadTrack(URL, data, savePath)
+})
 
-  console.log('URL di download:', URL)
-  console.log('Dati brano:', data)
-
-  // Normalizza il nome del file per evitare caratteri non validi
+async function DownloadTrack(URL, data, savePath) {
   const safeArtist = normalizeText(data.artist)
   const safeTitle = normalizeText(data.title)
   const videoPath = path.join(savePath, `${safeArtist} - ${safeTitle}`)
 
-  try {
-    console.log(`Avvio download in: ${videoPath}`)
-
-    // Verifica se la directory esiste
-    const dir = path.dirname(videoPath)
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true })
-    }
-
-    // Avvia il download
-    await downloadYoutubeVideo(URL, videoPath)
-    AddMetadata(data, videoPath)
-
-    console.log('Download completato con successo')
-    return { success: true, path: videoPath }
-  } catch (error) {
-    console.error('Errore nel processo di download:', error)
-
-    // Pulisci eventuali file parziali
-    try {
-      if (fs.existsSync(videoPath)) {
-        fs.unlinkSync(videoPath)
-      }
-    } catch (e) {
-      console.error('Errore nella pulizia del file parziale:', e)
-    }
-
-    throw error
-  }
-})
-
-async function AddMetadata(data, path) {
-  console.log(path + '.jpg')
-
-  try {
-    const imgResponse = await fetch(data.img)
-    const arrayBuffer = await imgResponse.arrayBuffer()
-    const imageBuffer = Buffer.from(arrayBuffer)
-
-    fs.writeFileSync(path + '.png', imageBuffer)
-
-    const tags = {
-      title: data.title,
-      artist: data.artist,
-      album: data.album,
-      APIC: `${path}.png`,
-      comment: {
-        language: 'eng',
-        text: 'Downloaded with LOLLOMUSICX'
-      }
-    }
-
-    MM.write(tags, `${path}.mp3`)
-
-    fs.unlinkSync(`${path}.png`)
-  } catch (e) {
-    console.log(e)
-  }
-}
-
-async function downloadVideoById(videoId, outputPath, options = {}) {
-  const ytDlp = require('yt-dlp-exec')
-
-  // Costruisci l'URL di YouTube dall'ID del video
-  const videoUrl = `https://www.youtube.com/watch?v=${videoId}`
-
-  console.log(`Avvio download del video: ${videoId}`)
-
-  // Opzioni predefinite
-  const defaultOptions = {
-    output: outputPath,
-    noWarnings: true,
-    noCallHome: true,
-    preferFreeFormats: true
-  }
-
-  // Unisci le opzioni predefinite con quelle fornite dall'utente
-  const downloadOptions = { ...defaultOptions, ...options }
-
-  try {
-    // Esegui yt-dlp per il download
-    await ytDlp(videoUrl, downloadOptions)
-
-    console.log(`Download completato: ${outputPath}`)
-    console.log('aggiungo i metadata')
-
-    return { success: true, path: outputPath }
-  } catch {
-    console.log('done')
-  }
-}
-// Funzione per scaricare il video
-async function downloadYoutubeVideo(videoId, outputPath) {
-  return downloadVideoById(videoId, outputPath, {
-    extractAudio: true,
-    audioFormat: 'mp3',
-    audioQuality: 0, // 0 è la migliore qualità
-    embedThumbnail: true,
-    addMetadata: true
-  })
+  await youtubeUrls.DownloadFromUrl(URL, videoPath, data)
 }
 
 //pin playlists

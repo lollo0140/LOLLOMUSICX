@@ -11,6 +11,7 @@
 
 body {
     overflow: hidden;
+    background: black;
 }
 
 * {
@@ -186,14 +187,16 @@ body {
 .PLAYERimg {
     margin: 0px;
 
+    border: 1px solid rgba(255, 255, 255, 0.27);
+
     position: absolute;
 
     left: 12px;
     top: 12px;
     right: 12px;
 
-    height: 276px;
-    width: 276px;
+    height: 274px;
+    width: 274px;
 
     opacity: 1;
 
@@ -222,6 +225,8 @@ body {
 
     width: 276px;
 
+    color: white;
+
     pointer-events: none;
 }
 
@@ -243,6 +248,7 @@ body {
 
     cursor: pointer;
 
+    color: white;
 }
 
 .PLAYERart:hover {
@@ -268,6 +274,8 @@ body {
     border: none;
 
     cursor: pointer;
+
+    color: white;
 }
 
 .PLAYERalbum:hover {
