@@ -22,6 +22,10 @@
   const ipcRenderer = window.electron.ipcRenderer
   //imports
 
+  var paused = $state()
+  var shuffle = $state()
+  var repeat = $state()
+
   var sturtup = true
 
   var contextmenu = $state(false)
@@ -205,6 +209,9 @@
       mediaElement.addEventListener('timeupdate', () => {
         dur = mediaElement.duration
         sec = mediaElement.currentTime
+        paused = mediaElement.paused ? true : false
+        shuffle = shared.repeat
+        repeat = shared.Shuffled
       })
 
       mediaElement.addEventListener('ended', () => {
@@ -391,7 +398,7 @@
   {/if}
 
   <NowPlayng {FullScreen} {loading} {playerLocal} on:cambia-variabile={(e) => CallItem(e.detail)} />
-  <Controls max={dur} {sec} {FullScreen} />
+  <Controls max={dur} {sec} {FullScreen} {paused} shuffled={shuffle} {repeat} />
 
   {#if contextmenu}
     <ContextMenu {menuX} {menuY} {clickedElement} on:cambia-variabile={(e) => CallItem(e.detail)} />

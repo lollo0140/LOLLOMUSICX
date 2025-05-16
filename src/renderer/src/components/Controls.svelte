@@ -1,8 +1,19 @@
 <script>/* eslint-disable prettier/prettier */
   import { onMount } from 'svelte'
   import * as renderer from '../main.js'
+  
+  let { sec, max, paused, shuffled, repeat } = $props()
 
-  let { sec, max } = $props()
+  const PLAYimg = new URL('../assets/play.png', import.meta.url).href
+  const PAUSEimg = new URL('../assets/pause.png', import.meta.url).href
+  const NEXTimg = new URL('../assets/next.png', import.meta.url).href
+  const PREVIOUSimg = new URL('../assets/previous.png', import.meta.url).href
+
+  const REPEATimg = new URL('../assets/repeat.png', import.meta.url).href
+  const REPEAT1img = new URL('../assets/repear1.png', import.meta.url).href
+  const SHUFFLEDimg = new URL('../assets/shuffle.png', import.meta.url).href
+  const LINEARimg = new URL('../assets/linear.png', import.meta.url).href
+
 
   // Variabile temporanea per memorizzare il valore durante il trascinamento
   let tempValue = $state(sec)
@@ -89,9 +100,9 @@
     type="range"
   />
 
-  <button onclick={() => shared.previous()}>precedente</button>
-  <button onclick={() => shared.PlayPause()}>pausa/Play</button>
-  <button onclick={() => shared.next()}>prossima</button>
+  <button class="Cbutton PreviousButton" onclick={() => shared.previous()}><img class="previous" src={ PREVIOUSimg } alt="next"></button>
+  <button class="Cbutton PlayButton" onclick={() => shared.PlayPause()}> <img class="PlayPouse" src={ !paused ? PAUSEimg : PLAYimg} alt="play"> </button>
+  <button class="Cbutton nextButton" onclick={() => shared.next()}> <img class="next" src={NEXTimg} alt="next"> </button>
 
   <button onclick={() => shared.setrepeat()}>repeat</button>
   <button onclick={() => shared.ShuffleQuewe()}>shuffle</button>
@@ -107,6 +118,69 @@
 </div>
 
 <style>
+
+  .Cbutton {
+    background: transparent;
+    position: absolute;
+
+    width: auto;
+    height: auto;
+
+    border: none;
+  }
+
+  .PreviousButton {
+    top: 10px;
+    right: 396px;
+    width: 40px;
+    height: 40px;
+  }
+  .PlayButton {
+    top: 5px;
+    right: 347px;
+    width: 50px;
+    height: 50px;
+  }
+  .nextButton {
+    top: 10px;
+    right: 304px;
+    width: 40px;
+    height: 40px;
+  }
+
+
+  .PlayPouse {
+
+    position: absolute;
+    top: 0px;
+    left: 0px;
+
+    margin: 0px;
+    width: 50px;
+    height: 50px;
+  }
+
+  .previous {
+
+        position: absolute;
+    top: 0px;
+    left: 0px;
+    margin: 0px;
+    width: 40px;
+    height: 40px;
+  }
+
+  .next {
+
+        position: absolute;
+    top: 0px;
+    left: 0px;
+    margin: 0px;
+    width: 40px;
+    height: 40px;
+  }
+
+
   .Controlls {
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.27);
