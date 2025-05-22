@@ -56,7 +56,7 @@ class shared {
     this.PlayngIndex = 0
     this.Player = {}
     this.paused = true
-    this.repeat = false
+    this.repeat = 2
     this.Shuffled = false
     this.onUpdate = null
     this.settings = undefined
@@ -291,8 +291,13 @@ class shared {
   }
 
   async setrepeat() {
-    this.repeat = !this.repeat
-    console.log(this.repeat)
+    if (this.repeat === 0) {
+      this.repeat = 1
+    } else if (this.repeat === 1) {
+      this.repeat = 2
+    } else {
+      this.repeat = 0
+    }
   }
 
   async ChangeQueweIndex(index) {
@@ -687,26 +692,74 @@ class shared {
   }
 
   async next() {
-    if (this.PlayngIndex + 1 > this.SongsQuewe.length - 1) {
-      if (this.repeat === true) {
-        this.PlayngIndex = 0
+    const player = document.getElementById('MediaPlayer')
+
+    if (this.repeat !== 1) {
+      if (this.PlayngIndex + 1 > this.SongsQuewe.length - 1) {
+        if (this.repeat === 0) {
+          this.PlayngIndex = 0
+          await this.preloadAndUpdatePlayer(this.PlayngIndex)
+        }
+      } else {
+        this.PlayngIndex++
         await this.preloadAndUpdatePlayer(this.PlayngIndex)
       }
     } else {
-      this.PlayngIndex++
-      await this.preloadAndUpdatePlayer(this.PlayngIndex)
+      if (player.currentTime > 5) {
+        const temp = this.Player
+
+        player.pause()
+
+        this.Player = {
+          title: '',
+          album: '',
+          artist: '',
+          img: '',
+          duration: 0,
+          FMurl: '',
+          YTurl: ''
+        }
+
+        setTimeout(() => {
+          this.Player = temp
+        }, 200)
+      }
     }
   }
 
   async previous() {
-    if (this.PlayngIndex - 1 < 0) {
-      if (this.repeat === true) {
-        this.PlayngIndex = this.SongsQuewe.length - 1
+    const player = document.getElementById('MediaPlayer')
+
+    if (this.repeat !== 1) {
+      if (this.PlayngIndex - 1 < 0) {
+        if (this.repeat === 0) {
+          this.PlayngIndex = this.SongsQuewe.length - 1
+          await this.preloadAndUpdatePlayer(this.PlayngIndex)
+        }
+      } else {
+        this.PlayngIndex--
         await this.preloadAndUpdatePlayer(this.PlayngIndex)
       }
     } else {
-      this.PlayngIndex--
-      await this.preloadAndUpdatePlayer(this.PlayngIndex)
+      if (player.currentTime > 5) {
+        const temp = this.Player
+
+        player.pause()
+
+        this.Player = {
+          title: '',
+          album: '',
+          artist: '',
+          img: '',
+          duration: 0,
+          FMurl: '',
+          YTurl: ''
+        }
+
+        setTimeout(() => {
+          this.Player = temp
+        }, 200)
+      }
     }
   }
 

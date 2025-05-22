@@ -139,7 +139,7 @@
           downloadPannel = false
         }
       }
-    }, 100)
+    }, 500)
   }
 
   let oldtitle, oldartist, oldalbum
@@ -156,15 +156,16 @@
       oldalbum = playerLocal.album
       url = playerLocal.YTurl
 
-
-      if (!playerLocal.img.startsWith('https://') || !playerLocal.img.startsWith('http://')) {
-        
-        if (!playerLocal.img.startsWith('file:///')) {
-          const temp = 'file:///' + playerLocal.img
-          playerLocal.img = temp
+      try {
+        if (!playerLocal.img.startsWith('https://') || !playerLocal.img.startsWith('http://')) {
+          if (!playerLocal.img.startsWith('file:///')) {
+            const temp = 'file:///' + playerLocal.img
+            playerLocal.img = temp
+          }
         }
-
-      } 
+      } catch {
+        //console.log()
+      }
 
       // Rimuoviamo il loading qui perché lo gestiamo in PlayPlayer
 
@@ -395,10 +396,16 @@
         <DownloadPage {trackToDownload} on:cambia-variabile={(e) => CallItem(e.detail)} />
       {/if}
     </div>
-  {/if}
 
-  <NowPlayng {FullScreen} {loading} {playerLocal} on:cambia-variabile={(e) => CallItem(e.detail)} />
-  <Controls max={dur} {sec} {FullScreen} {paused} shuffled={shuffle} {repeat} />
+    <NowPlayng
+      {FullScreen}
+      {loading}
+      {playerLocal}
+      on:cambia-variabile={(e) => CallItem(e.detail)}
+    />
+
+    <Controls max={dur} {sec} {FullScreen} {paused} shuffled={shuffle} {repeat} />
+  {/if}
 
   {#if contextmenu}
     <ContextMenu {menuX} {menuY} {clickedElement} on:cambia-variabile={(e) => CallItem(e.detail)} />
@@ -412,9 +419,6 @@
     #mainContent {
       opacity: 0;
     }
-
-
-
   }
 
   #videoContainer {
@@ -435,10 +439,10 @@
 
   #content {
     position: absolute;
-    left: 91px;
-    top: 0px;
-    right: 0px;
-    bottom: 0px;
+    left: 66px;
+    top: 5px;
+    right: 5px;
+    bottom: 5px;
     overflow-y: scroll;
     overflow-x: hidden;
   }

@@ -4,6 +4,12 @@
   // eslint-disable-next-line no-unused-vars
   let { pag } = $props()
 
+  const SEARCHimg = new URL('../assets/search.png', import.meta.url).href
+  const HOMEimg = new URL('../assets/home.png', import.meta.url).href
+  const LIBRARYimg = new URL('../assets/library.png', import.meta.url).href
+  const FILESimg = new URL('../assets/files.png', import.meta.url).href
+  const SETTINGSimg = new URL('../assets/settings.png', import.meta.url).href
+
   const dispatch = createEventDispatcher()
   const dispatch2 = createEventDispatcher()
 
@@ -29,40 +35,139 @@
 </script>
 
 <div id="NavBar">
-  <button onclick={() => dispatch('changePage', 2)}> SEARCH </button>
-  <button onclick={() => dispatch('changePage', 0)}> HOME </button>
-  <button onclick={() => dispatch('changePage', 3)}> LIBRARY </button>
-  <button onclick={() => dispatch('changePage', 5)}> LOCAL FILES </button>
+  <button style="left:2.5px ; top:2.5px ;" class="navButton" onclick={() => dispatch('changePage', 2)}> 
+    <img class="buttonImg" src={SEARCHimg} alt="">
+  </button>
+  <button style="left:2.5px ; top:57.5px ;" class="navButton" onclick={() => dispatch('changePage', 0)}>  
+    <img class="buttonImg" src={HOMEimg} alt="">
+  </button>
+  <button style="left:2.5px ; top:113px ;" class="navButton" onclick={() => dispatch('changePage', 3)}>  
+    <img class="buttonImg" src={LIBRARYimg} alt="">
+  </button>
+  <button style="left:2.5px ; top:168px ;" class="navButton" onclick={() => dispatch('changePage', 5)}> 
+    <img class="buttonImg" src={FILESimg} alt="">
+  </button>
 
-  {#each Playlists as P, i}
-    {#if P.pinned === true}
-      <button class="Plbutton" onclick={() => CallPlaylist(i)}>
-        <img class="Plimg" style="object-fit: cover;" src={P.img} alt="pimg" />
-      </button>
-    {/if}
-  {/each}
+  <div style="left: 18.5px; top: 220px;" class="divider"></div>
 
-  <button
+  <div class="PlaylistsContainer">
+    {#each Playlists as P, i}
+      {#if P.pinned === true}
+        <button class="Plbutton" onclick={() => CallPlaylist(i)}>
+          <img class="Plimg" style="object-fit: cover;" src={P.img} alt="pimg" />
+        </button>
+      {/if}
+    {/each}
+  </div>
+
+  <div style="left: 18.5px; bottom: 57.5px;" class="divider"></div>
+
+  <button class="navButton"
     onclick={() => dispatch('changePage', 8)}
-    style="position:absolute; bottom:0px; left:0px;"
+    style="position:absolute; bottom:2.5px; left:2.5px;"
   >
-    settings
+    <img class="buttonImg" src={SETTINGSimg} alt="">
   </button>
 </div>
 
 <style>
 
-  .Plbutton {
-    width: 46px;
-    height: 46px;
+  .divider {
+    position: absolute;
+
+    height: 3px;
+    width: 18px;
+
+    border-radius: 10px;
+
+    background-color: rgba(255, 255, 255, 0.1);
   }
 
-  .Plimg {
+  .PlaylistsContainer {
+    position: absolute;
+    
+    left: 6px;
+    right: 6.5px;
+
+    top: 235px;
+    bottom: 73px;
+
+    background: transparent;
+
+    overflow: hidden;
+  }
+
+  .navButton {
+    
+    
+
+    position: absolute;
+
+
+    padding: 0px;
+
+
+    height: 50px;
+    width: 50px;
+
+    border: none;
+    background: transparent;
+
+    cursor: pointer;
+
+    opacity: 0.7;
+
+    transition: all 200ms;
+
+  }
+  
+  .navButton:hover {
+    opacity: 1;
+  }
+
+  .buttonImg {
+
     margin: 0px;
     padding: 0px;
 
-    width: 46px;
-    height: 46px;
+    position: relative;
+    left: 0px;
+    top: 0px;
+
+    height: 50px;
+    width: 50px;
+  }
+
+
+  .Plbutton {
+
+    cursor: pointer;
+
+    padding: 0px;
+
+    width: 40px;
+    height: 40px;
+
+    background: transparent;
+
+    border: none;
+    
+
+  }
+
+  .Plimg {
+
+    border: 1px rgba(255, 255, 255, 0.27) solid;
+
+    border-radius: 3px;
+
+    position: relative;
+
+    left: -0.5px;
+    top: -1px;
+
+    width: 40px;
+    height: 40px;
   }
 
   #NavBar {
@@ -74,7 +179,8 @@
     left: 4px;
     top: 4px;
     bottom: 4px;
-    width: 70px;
-    border-radius: 15px;
+    width: 55px;
+    border-radius: 10px;
+    overflow: hidden;
   }
 </style>

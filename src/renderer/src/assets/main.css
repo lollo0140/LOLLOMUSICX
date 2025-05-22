@@ -16,42 +16,195 @@ body {
 
 * {
     font-family: 'Lexend';
+    color: white;
+}
+
+::-webkit-scrollbar {
+    width: 8px;
+    height: 12px;
+    background-color: transparent;
+
+
+
+    transition: all 200ms;
+}
+
+
+
+::-webkit-scrollbar-track {
+
+    margin-top: 40px;
+
+    margin-bottom: 40px;
+
+    appearance: none;
+    -webkit-appearance: none;
+    background: rgba(255, 255, 255, 0.05);
+    /* Colore dello sfondo della traccia */
+    border-radius: 15px;
+    /* Bordi arrotondati per la traccia */
+
+    transition: all 200ms;
+}
+
+::-webkit-scrollbar-thumb {
+    appearance: none;
+    -webkit-appearance: none;
+    background: rgba(255, 255, 255, 0.1);
+    /* Colore del "pollice" della scrollbar */
+    border-radius: 10px;
+    /* Bordi arrotondati per il pollice */
+
+    cursor: ns-resize;
+
+    transition: all 200ms;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    appearance: none;
+    -webkit-appearance: none;
+    background: rgba(255, 255, 255, 0.15);
+    /* Colore del pollice al passaggio del mouse */
+}
+
+.TogleQueweButton {
+    position: absolute;
+    left: 12px;
+    bottom: 12px;
+
+    width: 30px;
+    height: 30px;
+
+    border: none;
+    background: transparent;
+    padding: 0px;
+
+    cursor: pointer;
+
+    transition: all 200ms;
+}
+
+.TogleQueweButton:hover {
+    transform: scale(1.1);
+}
+
+.TogleQueweButtonimg {
+
+    margin: 0px;
+
+
+    width: 30px;
+    height: 30px;
+}
+
+.likeButton {
+    position: absolute;
+    top: 340px;
+    right: 15px;
+
+    background: transparent;
+    border: 0px;
+
+    height: 30px;
+    width: 30px;
+
+    cursor: pointer;
+
+    padding: 0px;
+
+    transition: all 200ms;
+}
+
+.likeButton:hover {
+    transform: scale(1.1);
+}
+
+.likeNPbuttonImg {
+
+    margin: 0px;
+
+    height: 30px;
+    width: 30px;
 }
 
 .bottone {
     width: 100%;
     height: 50px;
 
+    margin-bottom: 5px;
+
+    border: solid 1px rgba(255, 255, 255, 0.27);
+    background: rgba(255, 255, 255, 0.1);
+
+    border-radius: 10px;
+
     cursor: pointer;
+
+    padding: 0px;
+
+    transition: all 200ms;
+}
+
+.bottone:hover {
+    background: rgba(255, 255, 255, 0.2);
 }
 
 .imgCanzone {
+
+    position: relative;
+
+    margin-top: 2px;
+    left: 4px;
+
+    border: solid 1px rgba(255, 255, 255, 0.27);
+    background: rgba(255, 255, 255, 0.1);
+
+
+
     height: 40px;
     width: 40px;
 
     float: left;
     margin-left: -1px;
     pointer-events: none;
+
+    border-radius: 6px;
 }
 
 .imgCanzoneYT {
+    position: relative;
+
+    top: 0.5px;
+    left: 4px;
+
+    border: solid 1px rgba(255, 255, 255, 0.27);
+    background: rgba(255, 255, 255, 0.1);
+
+
+
     height: 40px;
-    width: 71.28px;
 
     float: left;
     margin-left: -1px;
     pointer-events: none;
+
+    border-radius: 6px;
 }
 
 .titolo {
     position: absolute;
-    left: 70px;
+    left: 55px;
 
     opacity: 1;
 
-    color: rgb(0, 0, 0);
+    font-size: 17px;
+    font-weight: 800;
 
-    transform: translateY(-10px);
+    width: 450px;
+
+    color: white;
+
+    transform: translateY(-15px);
 
     font-weight: 900;
     text-wrap: none;
@@ -64,16 +217,19 @@ body {
 
 .titoloYT {
     position: absolute;
-    left: 100px;
+    left: 85px;
+
 
     opacity: 1;
 
-    color: rgb(0, 0, 0);
+    font-size: 17px;
+    font-weight: 800;
 
-    transform: translateY(-10px);
+    color: white;
+
+    transform: translateY(-17px);
 
     font-weight: 900;
-
     text-wrap: none;
     text-align: left;
     white-space: nowrap;
@@ -84,11 +240,14 @@ body {
 
 .artista {
     position: absolute;
-    left: 70px;
+
+    margin-left: 55px;
     opacity: 1;
 
-    color: rgb(0, 0, 0);
-    transform: translateY(10px);
+    font-size: 12px;
+    font-weight: 400;
+
+    transform: translateY(13px);
 
     text-wrap: none;
     text-align: left;
@@ -99,12 +258,16 @@ body {
 }
 
 .artistaYT {
+
     position: absolute;
-    left: 100px;
+
+    margin-left: 85px;
     opacity: 1;
 
-    color: rgb(0, 0, 0);
-    transform: translateY(10px);
+    font-size: 12px;
+    font-weight: 400;
+
+    transform: translateY(13px);
 
     text-wrap: none;
     text-align: left;
@@ -114,38 +277,66 @@ body {
     pointer-events: none;
 }
 
+.ShowButton {
+    background: transparent;
+    border: none;
+}
+
+.ShowButton:hover {
+    text-decoration: underline;
+    cursor: pointer;
+}
 
 .albumbutton {
 
+    border: solid 1px rgba(255, 255, 255, 0.27);
+    background: rgba(255, 255, 255, 0.1);
+
+    border-radius: 10px;
+
     vertical-align: top;
 
-    height: 250px;
-    width: 200px;
+    height: 211px;
+    width: 163px;
 
     overflow: hidden;
 
     margin-right: 10px;
+    margin-bottom: 5px;
 
     cursor: pointer;
+    padding: 0px;
+
+    transition: all 200ms;
+}
+
+.albumbutton:hover {
+    background: rgba(255, 255, 255, 0.2);
 }
 
 .albumimg {
     pointer-events: none;
     position: relative;
-    left: 0px;
-    top: 0px;
-    margin: 0px;
 
-    width: 100%;
+    top: 4px;
+
+    width: 150px;
+    height: 150px;
 
     object-fit: cover;
+
+    border: solid 1px rgba(255, 255, 255, 0.27);
+    border-radius: 5px;
 }
 
 .albumtitle {
     position: relative;
-    left: 0px;
-    top: -10px;
+    left: 6px;
+    top: -13px;
     text-align: left;
+
+    font-weight: 600;
+    font-size: 18px;
 
     text-wrap: none;
     text-align: left;
@@ -157,9 +348,11 @@ body {
 
 .albumartist {
     position: relative;
-    left: 0px;
-    top: -20px;
+    left: 6px;
+    top: -30px;
     text-align: left;
+
+    color: rgba(255, 255, 255, 0.50);
 
     text-wrap: none;
     text-align: left;
@@ -172,17 +365,43 @@ body {
 .artimg {
     position: relative;
     left: 0px;
-    top: 0px;
-    margin: 0px;
+    top: 4px;
 
-    width: 100%;
+    width: 151px;
+    height: 187px;
 
-    border-radius: 100px;
+    border: solid 1px rgba(255, 255, 255, 0.27);
+    border-bottom: none;
+
+
+    border-radius: 6px;
     pointer-events: none;
 
     object-fit: cover;
+
+    mask-image: url('albumgradient.png');
 }
 
+.artName {
+
+    color: rgba(255, 255, 255, 0.50);
+
+    transform: translateY(-22px);
+
+    width: 153px;
+
+    font-weight: 600;
+    font-size: 14px;
+
+    margin-left: 6px;
+
+    text-wrap: none;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    pointer-events: none;
+}
 
 .PLAYERimg {
     margin: 0px;
@@ -223,7 +442,7 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
 
-    width: 276px;
+    width: 246px;
 
     color: white;
 
@@ -314,7 +533,118 @@ body {
 }
 
 .songalbum {
-    float: right;
+
+    position: relative;
+
+    line-height: 0px;
+
+    top: 9px;
+    left: 480px;
+
+    width: 200px;
+    transform: translate(0px, -0px);
+    text-align: left;
+
+    color: rgba(255, 255, 255, 0.5);
+
+    text-wrap: none;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.homelabel {
+    font-size: 22px;
+    line-height: 10px;
+
+    font-weight: 700;
+}
+
+.recentElement {
+    vertical-align: top;
+    width: 277px;
+    height: 98px;
+    margin: 0px;
+    cursor: pointer;
+
+    border: solid 1px rgba(255, 255, 255, 0.27);
+    background: rgba(255, 255, 255, 0.1);
+
+    border-radius: 10px;
+
+    margin-bottom: 30px;
+
+    transition: all 200ms;
+}
+
+.recentElement:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.recentIMG {
+
+    border: solid 1px rgba(255, 255, 255, 0.27);
+
+    position: relative;
+
+    left: -25px;
+    top: 2px;
+
+    width: 218px;
+    height: 88px;
+
+    border-radius: 6px;
+
+    object-fit: cover;
+    pointer-events: none;
+
+    pointer-events: none;
+
+    mask-image: url(cardgradient.png);
+}
+
+.recentTitle {
+
+    font-size: 18px;
+    font-weight: 700;
+
+    color: white;
+
+    position: relative;
+
+    top: -105px;
+    right: 5px;
+
+
+    overflow: hidden;
+    /* Nasconde il testo in eccesso */
+    text-overflow: ellipsis;
+    /* Mostra i puntini di sospensione se il testo è troppo lungo */
+    white-space: nowrap;
+    /* Impedisce il ritorno a capo */
+
+    pointer-events: none;
+
+    text-align: right;
+
+}
+
+.recentART {
+
+    position: relative;
+
+    top: -150px;
+    right: 5px;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+
+    pointer-events: none;
+
+    text-align: right;
+
+    color: rgba(255, 255, 255, 0.50);
 }
 
 .--TITLEDATA {
@@ -358,4 +688,249 @@ body {
     display: none;
 }
 
+.LikeButton {
 
+    position: relative;
+
+    width: 20px;
+    height: 18px;
+
+    float: right;
+
+    right: 15px;
+    top: -11px;
+
+    border: none;
+    background: transparent;
+
+    padding: 0px;
+
+    cursor: pointer;
+
+}
+
+.LikeButtonimg {
+
+
+    left: 0px;
+    top: 0px;
+
+    position: absolute;
+
+    width: 20px;
+    height: 19px;
+}
+
+.localind {
+
+    width: 17px;
+    height: 17px;
+
+    position: relative;
+
+    float: right;
+
+    right: 35px;
+    top: -11px;
+
+}
+
+.SongIndex {
+
+    width: 19px;
+    height: 19px;
+
+    position: relative;
+
+    float: right;
+
+    right: 135px;
+    top: -11px;
+}
+
+.queweButton {
+
+    border: solid 1px rgba(255, 255, 255, 0.27);
+    background: rgba(255, 255, 255, 0.1);
+
+    cursor: pointer;
+
+    height: 50px;
+    width: calc(100% - 12px);
+
+    border-radius: 7px;
+
+    margin-left: 6px;
+    margin-bottom: 5px;
+
+    transition: all 200ms;
+
+    padding: 0px;
+}
+
+.queweButton:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.queweButtonActive {
+
+    border: solid 1px rgba(255, 255, 255, 0.27);
+    background: rgba(255, 255, 255, 0.3);
+
+    cursor: pointer;
+
+    height: 50px;
+    width: calc(100% - 12px);
+
+    border-radius: 7px;
+
+    margin-left: 6px;
+    margin-bottom: 5px;
+
+    padding: 0px;
+
+    transition: all 200ms;
+}
+
+.queweButtonActive:hover {
+    border: solid 1px rgba(255, 255, 255, 0.60);
+}
+
+.queweImg {
+    float: left;
+    margin: 4px;
+    height: 39px;
+    width: 39px;
+
+    pointer-events: none;
+
+    border: solid 1px rgba(255, 255, 255, 0.27);
+    border-radius: 4px;
+
+}
+
+.queweTitle {
+
+    position: relative;
+
+    float: left;
+    margin: 0px;
+    font-size: 14px;
+
+    line-height: 15px;
+
+    margin-left: 10px;
+
+    pointer-events: none;
+
+    text-wrap: none;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    max-width: 200px;
+
+    font-weight: 700;
+
+    transform: translateY(5px);
+}
+
+.queweArtist {
+    margin: 0px;
+    margin-left: 10px;
+    float: left;
+    font-size: 12px;
+
+    margin-top: 10px;
+
+    pointer-events: none;
+}
+
+.ArtistHeader {
+
+    position: absolute;
+
+    margin-top: 10px;
+    border-radius: 10px;
+
+    height: 1000px;
+    width: 100%;
+
+    mask-image: url('./albumgradientbig.png');
+    padding: 0px;
+
+    overflow: hidden;
+}
+
+.ArtisPageImg {
+
+    position: absolute;
+    left: 0px;
+    top: 0px;
+
+    margin: 0px;
+
+    width: 100%;
+    height: 100%;
+
+    border-radius: 10px;
+
+    object-fit: cover;
+    border: solid 1px rgba(255, 255, 255, 0.27);
+
+    opacity: 0.7;
+    
+}
+
+.infoContainerArtist {
+    background-color: transparent;
+
+    position: relative;
+
+    margin: 0px;
+
+    top: 0px;
+    left: 0px;
+
+    z-index: 230;
+}
+
+.ArtPageTitle {
+
+    margin-left: 10px;
+    margin-top: 20.5vw;
+
+    font-weight: 900;
+    font-size: clamp(5.4vw, 3vw, 1.2rem);
+
+    line-height: 10px;
+}
+
+#likeArtist {
+    background: transparent;
+    border: none;
+
+    cursor: pointer;
+
+    transform: translate(10px, -2vw);
+
+    transition: all 200ms; 
+}
+
+#likeArtist:hover {
+    transform: translate(10px, -2vw) scale(1.1);
+}
+
+.likeimg {
+    width: 40px;
+    height: 40px;
+}
+
+.ArtistData {
+    position: absolute;
+
+    width: 100%;
+
+    top: 900px;
+}

@@ -5,6 +5,8 @@
 
   let {title, artist, album} = $props()
 
+  const LOCALimg = new URL('../../assets/local.png', import.meta.url).href
+
   onMount(async () => {
     
     if (await ipcRenderer.invoke('SearchLocalSong', title, artist, album)) {
@@ -17,5 +19,5 @@
 </script>
 
 {#if local}
-    <p style="float: right; margin-right:20px; color:red;" >local</p>
+  <img class="localind" src={LOCALimg} alt="">
 {/if}

@@ -449,6 +449,11 @@
 {/if}
 
 <style>
+
+  * {
+    color: black;
+  }
+
   .CmenuButton {
     width: 100%;
     margin: 0px;

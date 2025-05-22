@@ -2,7 +2,7 @@
 
   import { onMount } from 'svelte'
   import * as renderer from '../main.js'
-  import LikeButton from './pagesElements/LikeButton.svelte'
+  import { fade } from 'svelte/transition'
   const ipcRenderer = window.electron.ipcRenderer
 
   let shared
@@ -74,7 +74,7 @@
 </script>
 
 {#if !loading}
-  <div>
+  <div transition:fade>
     <p>Musica sul dispositivo</p>
 
     <button onclick={ () => togleMode()}>{filesmode ? 'file':'songs'}</button>
@@ -106,8 +106,8 @@
       {#if albums}
         {#each library.folders[dirIndex].albums as album, i}
           <button class="albumfolder contextMenuAlbum localAlbum" onclick={() => selectAlbum(i)}>
-            <img class="--IMGDATA albumimg" src={'local:///' + album.img} alt="xfgsd" />
             <p class="--ALBUMDATA albumtitle">{album.name}</p>
+            <img class="--IMGDATA albumimg" src={'local:///' + album.img} alt="xfgsd" />
             <p class="--ARTISTDATA albumartist">{album.artist}</p>
             <p class="hidden --FOLDERINDEX">{dirIndex}</p>
             <p class="hidden --SUBFOLDERINDEX">{i}</p>
@@ -131,14 +131,6 @@
             <p class="--TITLEDATA titolo">{song.title}</p>
             <p class="--ARTISTDATA artista">{song.artist}</p>
             <p class="--ALBUMDATA songalbum hidden">{song.album}</p>
-
-            <LikeButton
-              title={song.title}
-              artist={song.artist}
-              album={song.album}
-              img={song.img}
-              video={false}
-            />
           </button>
         {/each}
       {/if}
@@ -147,24 +139,16 @@
         {#each songs as song, i}
           <button class="bottone contextMenuSong removable" onclick={() => PlayTraks(i)}>
             <p class="--TITLEDATA titolo">{song.title}</p>
-            <p class="--ARTISTDATA artista">{song.artist}</p>
-            <p class="--ALBUMDATA songalbum">{song.album}</p>
-            <p class="--ITEMINDEXDATA">{i}</p>
-            <p class="YTvideo hidden"></p>
             <img
               class="--IMGDATA imgCanzone"
               src={song.img}
               alt="copertina"
               data-index={i}
             />
-
-            <LikeButton
-              title={song.title}
-              artist={song.artist}
-              album={song.album}
-              img={song.img}
-              video={song.video}
-            />
+            <p class="--ARTISTDATA artista">{song.artist}</p>
+            <p class="--ALBUMDATA songalbum">{song.album}</p>
+            <p class="--ITEMINDEXDATA">{i}</p>
+            <p class="YTvideo hidden"></p>
           </button>
         {/each}
       </div>

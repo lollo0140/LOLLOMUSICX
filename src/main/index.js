@@ -46,7 +46,46 @@ if (!fs.existsSync(localDataDir)) {
   fs.mkdirSync(localDataDir, { recursive: true })
 }
 
-// Funzione per inizializzare i file di configurazione
+const defSettingsValue = {
+  playerSettings:
+      {
+        general: {
+          appName: "LOLLOMUSICX",
+          version: "1.0.0",
+          startMinimized: false,
+          minimizeToTray: true,
+          autoPlayOnStart: false
+        },
+        audio: {
+          volume: 80,
+          rememberListen: true,
+          rememberShuffle: true
+        },
+        library: {
+            scanPaths: [],
+            scanOnStartup: true
+        },
+        interface: {
+            showLyrics: true,
+            showVideo: true,
+            showPlaylistInSideBar: true,
+            LiteMode: false,
+            Zoom: 1
+        },
+        hotkeys: {
+            playPause: "Space",
+            next: "Ctrl+Right",
+            previous: "Ctrl+Left",
+            volumeUp: "Ctrl+Up",
+            volumeDown: "Ctrl+Down",
+            mute: "Ctrl+M"
+        }
+  }
+}
+
+
+
+ // Funzione per inizializzare i file di configurazione
 function initializeConfigFiles() {
   // Definisci i file da controllare e i loro valori predefiniti
   const configFiles = [
@@ -56,42 +95,7 @@ function initializeConfigFiles() {
     { path: recentListens, defaultValue: {} },
     { path: userPlaylists, defaultValue: {}},
     { path: recentSearchs, defaultValue: {} },
-    {
-      path: SettingsPath, defaultValue: `{
-    "playerSettings": {
-        "general": {
-            "appName": "LOLLOMUSICX",
-            "version": "1.0.0",
-            "startMinimized": false,
-            "minimizeToTray": true,
-            "autoPlayOnStart": false
-        },
-        "audio": {
-            "volume": 80,
-            "rememberListen": true,
-            "rememberShuffle": true
-        },
-        "library": {
-            "scanPaths": [],
-            "scanOnStartup": true
-        },
-        "interface": {
-            "showLyrics": true,
-            "showVideo": true,
-            "showPlaylistInSideBar": true,
-            "LiteMode": false,
-            "Zoom": 1
-        },
-        "hotkeys": {
-            "playPause": "Space",
-            "next": "Ctrl+Right",
-            "previous": "Ctrl+Left",
-            "volumeUp": "Ctrl+Up",
-            "volumeDown": "Ctrl+Down",
-            "mute": "Ctrl+M"
-        }
-    }
-}`}
+    { path: SettingsPath, defaultValue: JSON.stringify(defSettingsValue) }
   ]
 
   // Crea i file se non esistono
@@ -1570,7 +1574,19 @@ ipcMain.handle('GetYTlink', async (event, SearchD) => {
   const artist = infos[1] || ''
   const album = infos[2] || ''
 
-  return await getStreamingUrl(await GetYoutubeLink(title, artist, album))
+  const ID = await GetYoutubeLink(title, artist, album)
+
+  console.log('id del video -------------------------------')
+  console.log(ID)
+
+  //return await getStreamingUrl(ID)
+
+  const Infos = await getVideoInfo(ID)
+
+  console.log(Infos)
+  console.log('id del video -------------------------------')
+
+  return await Infos.vidourl
 })
 
 ipcMain.handle('GetYTID', async (event, SearchD) => {

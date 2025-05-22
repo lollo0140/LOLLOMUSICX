@@ -4,6 +4,8 @@
   import { onMount } from 'svelte';
   import * as renderer from '../main.js';
 
+  import { fade } from 'svelte/transition';
+
   let shared
 
   let paths = $state()
@@ -61,7 +63,7 @@
 
 </script>
 
-<div class="dwpage">
+<div transition:fade class="dwpage">
   <div class="dwpageinner">
       
     <button onclick={ () => Closedwpannel()} >close</button>

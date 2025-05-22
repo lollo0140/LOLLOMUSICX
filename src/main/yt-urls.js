@@ -217,14 +217,17 @@ export class ytUrls {
 
             // Opzioni per yt-dlp
             const options = {
-                dumpJson: true,
+                dumpSingleJson: true,
                 noWarnings: true,
                 noCallHome: true,
                 preferFreeFormats: true,
                 youtubeSkipDashManifest: true,
                 extractAudio: true,
                 audioFormat: 'best',
+                format: 'bestaudio[ext=m4a]/bestaudio/best', // Preferisci formati diretti
+                noPlaylist: true
             }
+            
 
             // Aggiunta di headers per le richieste
             if (!options.requestOptions) {

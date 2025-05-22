@@ -5,6 +5,8 @@
 
     let { title, artist, album, img, video = false } = $props()
 
+    const LIKEimg = new URL('../../assets/like.png', import.meta.url).href
+
     let liked = $state(false)
     let shared
 
@@ -38,10 +40,14 @@
 
 {#if liked}
     
-    <button onclick={(event) => DISLIKE(event)}>dislike</button>
+    <button class="LikeButton" onclick={(event) => DISLIKE(event)}>
+        <img class="LikeButtonimg" src={LIKEimg} alt="">
+    </button>
 
     {:else}
 
-    <button onclick={(event) => LIKE(event)}>like</button>
+    <button class="LikeButton" onclick={(event) => LIKE(event)}>
+        <img style="opacity: 0.1;" class="LikeButtonimg" src={LIKEimg} alt="">
+    </button>
 
 {/if}

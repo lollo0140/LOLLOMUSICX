@@ -2,6 +2,7 @@
 
     import { onMount } from 'svelte';
     import * as renderer from '../main.js';
+  import { fade } from 'svelte/transition'
     const ipcRenderer = window.electron.ipcRenderer
 
     let shared
@@ -37,7 +38,7 @@
 
 </script>
 
-<div>
+<div transition:fade>
 
     <p>impostazioni</p>
 

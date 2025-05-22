@@ -4,6 +4,11 @@
   import * as renderer from '../main.js'
   let { playerLocal, loading, FullScreen } = $props()
 
+  import { slide } from 'svelte/transition';
+
+  const QUEWEimg = new URL('../assets/quewe.png', import.meta.url).href
+  const LIKEimg = new URL('../assets/like.png', import.meta.url).href
+
   let shared
   let quewe = $state()
   let quewewPannel = true
@@ -123,10 +128,17 @@
   </div>
 
   {#if saved}
-    <button class="likeButton" style="position:absolute;" onclick={() => delTrack()}>dislike</button
-    >
+    <button class="likeButton" style="position:absolute;" onclick={() => delTrack()}>
+    
+      <img class="likeNPbuttonImg" src={LIKEimg} alt="palle">
+
+    </button>
   {:else}
-    <button class="likeButton" style="position:absolute;" onclick={() => SaveTrack()}>like</button>
+    <button class="likeButton" style="position:absolute;" onclick={() => SaveTrack()}>
+      
+      <img style="opacity: 0.4;" class="likeNPbuttonImg" src={LIKEimg} alt="palle">
+
+    </button>
   {/if}
 
   <div id="quewePannel">
@@ -136,9 +148,8 @@
       {:then result}
         {#each result as item, i}
           {#if playngIndex === i}
-            <button
-              style="background-color: grey;"
-              class="queweButton contextMenuSong"
+            <button in:slide|global
+              class="queweButtonActive contextMenuSong"
               onclick={() => {
                 shared.ChangeQueweIndex(i)
               }}
@@ -151,8 +162,8 @@
               <p style="float: right;">{i + 1}</p>
             </button>
           {:else if i < playngIndex}
-            <button
-              style="opacity:0.7;"
+            <button in:slide|global
+              style="opacity:0.4;"
               class="queweButton contextMenuSong"
               onclick={() => {
                 shared.ChangeQueweIndex(i)
@@ -166,7 +177,7 @@
               <p style="float: right;">{i + 1}</p>
             </button>
           {:else}
-            <button
+            <button in:slide|global
               class="queweButton contextMenuSong"
               onclick={() => {
                 shared.ChangeQueweIndex(i)
@@ -185,65 +196,14 @@
     </div>
   </div>
 
-  <button class="TogleQueweButton" onclick={() => togleQuewePannel()}>quewe</button>
+  <button class="TogleQueweButton" onclick={() => togleQuewePannel()}>
+
+    <img class="TogleQueweButtonimg" src={QUEWEimg} alt="palle">
+
+  </button>
 </dir>
 
 <style>
-  .likeButton {
-    position: absolute;
-    top: 340px;
-    right: 15px;
-  }
-
-  .TogleQueweButton {
-    position: absolute;
-    left: 0px;
-    top: 0px;
-  }
-
-  .queweButton {
-    cursor: pointer;
-
-    height: 50px;
-    width: 100%;
-  }
-
-  .queweImg {
-    float: left;
-    height: 40px;
-    width: 40px;
-
-    pointer-events: none;
-  }
-
-  .queweTitle {
-    float: left;
-    margin: 0px;
-    font-size: 12px;
-
-    margin-left: 10px;
-
-    pointer-events: none;
-
-    text-wrap: none;
-    text-align: left;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-
-    max-width: 200px;
-  }
-
-  .queweArtist {
-    margin: 0px;
-    margin-left: 10px;
-    float: left;
-    font-size: 12px;
-
-    margin-top: 6px;
-
-    pointer-events: none;
-  }
 
   .NowPlayng {
     color: white;
@@ -353,9 +313,11 @@
 
     transition: all 300ms;
 
-    background-color: orange;
+    background-color: transparent;
 
     overflow-y: scroll;
+
+    backdrop-filter: blur(20px);
   }
 
   .queweButton {
