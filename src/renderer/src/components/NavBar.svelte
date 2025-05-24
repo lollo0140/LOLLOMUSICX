@@ -53,7 +53,7 @@
   <div class="PlaylistsContainer">
     {#each Playlists as P, i}
       {#if P.pinned === true}
-        <button class="Plbutton" onclick={() => CallPlaylist(i)}>
+        <button class="PlbuttonNav" onclick={() => CallPlaylist(i)}>
           <img class="Plimg" style="object-fit: cover;" src={P.img} alt="pimg" />
         </button>
       {/if}
@@ -139,7 +139,7 @@
   }
 
 
-  .Plbutton {
+  .PlbuttonNav {
 
     cursor: pointer;
 
@@ -152,7 +152,12 @@
 
     border: none;
     
+    transition: all 200ms;
 
+  }
+
+  .PlbuttonNav:hover {
+    transform: scale(1.1);
   }
 
   .Plimg {
@@ -164,7 +169,7 @@
     position: relative;
 
     left: -0.5px;
-    top: -1px;
+    top: 0px;
 
     width: 40px;
     height: 40px;

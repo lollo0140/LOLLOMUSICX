@@ -215,6 +215,8 @@ class shared {
   }
 
   async GetYTlink(query, ID = false) {
+    console.log('PALLACCE')
+
     try {
       const info = query.split(' | ')
 
@@ -355,6 +357,8 @@ class shared {
       console.error("Errore nel caricamento dell'URL YouTube:", error)
     }
 
+    this.Shuffled = false
+
     this.Player = this.SongsQuewe[0]
     if (this.onUpdate) this.onUpdate()
   }
@@ -371,6 +375,8 @@ class shared {
       FMurl: '',
       YTurl: ''
     }))
+
+    this.Shuffled = false
 
     this.PlayngIndex = index
     await this.preloadAndUpdatePlayer(index)
@@ -401,6 +407,8 @@ class shared {
         i++ // Incrementa i per le immagini
       }
 
+      this.Shuffled = false
+
       this.PlayngIndex = index
       await this.preloadAndUpdatePlayer(index)
     } catch (error) {
@@ -429,6 +437,8 @@ class shared {
           video: item.video
         })
       }
+
+      this.Shuffled = false
 
       this.PlayngIndex = index
       await this.preloadAndUpdatePlayer(index)
@@ -617,7 +627,7 @@ class shared {
     const currentSong = this.SongsQuewe[index]
 
     // Verifica se l'URL è già caricato
-    if (!currentSong.YTurl || currentSong.YTurl === '') {
+    if (!currentSong.YTurl || currentSong.YTurl === '' || currentSong.YTurl === false) {
       try {
         // Controlla se è un video di YouTube
         const isYoutubeVideo = currentSong.video === true

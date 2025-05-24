@@ -880,7 +880,7 @@ body {
     border: solid 1px rgba(255, 255, 255, 0.27);
 
     opacity: 0.7;
-    
+
 }
 
 .infoContainerArtist {
@@ -915,7 +915,7 @@ body {
 
     transform: translate(10px, -2vw);
 
-    transition: all 200ms; 
+    transition: all 200ms;
 }
 
 #likeArtist:hover {
@@ -934,3 +934,351 @@ body {
 
     top: 900px;
 }
+
+.DragRegion {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    right: 0px;
+    height: 50px;
+
+    margin: 0px;
+    padding: 0px;
+
+    background: transparent;
+
+    cursor: move;
+}
+
+.windowBarButton {
+    border: none;
+    width: 30px;
+    height: 30px;
+
+    padding: 7px;
+
+    margin-top: 10px;
+    margin-right: 10px;
+
+    float: right;
+
+    background: transparent;
+
+    opacity: 0.4;
+
+    transition: all 200ms;
+
+    cursor: pointer;
+
+}
+
+.windowBarButton:hover {
+    transform: scale(1.1);
+    opacity: 1;
+}
+
+.FScontainerout {
+
+    position: absolute;
+
+    left: 0px;
+    top: 0px;
+
+    width: 100%;
+    height: 100%;
+
+    overflow: hidden;
+}
+
+.FScontainer {
+    background: transparent;
+
+    position: absolute;
+
+
+    left: 50px;
+    top: 50%;
+    right: 50px;
+
+    transform: translateY(-50%);
+
+    height: auto;
+    overflow: hidden;
+}
+
+.FSimg {
+
+    width: 30vw;
+
+    margin: 20px;
+
+    border: solid 1px rgba(255, 255, 255, 0.27);
+
+    border-radius: 10px;
+
+    float: left;
+}
+
+.FStitle {
+    position: relative;
+    display: block;
+    /* Cambia da inline a block */
+    font-size: clamp(5vw, 3vw, 1.2rem);
+    margin-left: 30px;
+    margin-top: 11vw;
+
+    max-width: 700px;
+
+    line-height: 1px;
+    /* rimuovi float: left; */
+
+    font-weight: 800;
+
+    text-wrap: none;
+    text-align: left;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+
+}
+
+.FSartist {
+    position: relative;
+    display: block;
+    /* Cambia da inline a block */
+    font-size: 5vw;
+    margin-left: 30px;
+    line-height: 1px;
+    /* rimuovi float: left; */
+
+    font-weight: 800;
+    opacity: 0.7;
+}
+
+.FSalbum {
+    position: relative;
+    display: block;
+    /* Cambia da inline a block */
+    font-size: 3vw;
+    margin-left: 30px;
+    line-height: 1px;
+    /* rimuovi float: left; */
+
+    font-weight: 800;
+    opacity: 0.7;
+}
+
+.ControllsFS {
+
+    position: absolute;
+
+    left: 100px;
+    right: 100px;
+
+    height: 100px;
+
+    bottom: 65px;
+
+    border: none;
+    background: none;
+
+    opacity: 0.1;
+}
+
+.LocalPathButton {
+
+    background: none;
+    border: none;
+
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.LocalPathButton:hover {
+    text-decoration: underline;
+}
+
+.LocalFolder {
+
+    width: 400px;
+    height: 45px;
+
+    cursor: pointer;
+
+    border: solid 1px rgba(255, 255, 255, 0.27);
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+
+    align-items: start;
+
+    padding: 0px;
+    margin: 0px;
+
+    margin-right: 10px;
+
+    overflow: hidden;
+
+    text-wrap: none;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    transition: all 200ms;
+}
+
+.LocalFolder:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.albumfolder {
+    width: 140px;
+    height: 180px;
+}
+
+.FileModeButton {
+    border: solid 1px rgba(255, 255, 255, 0.27);
+    background: rgba(255, 255, 255, 0.1);
+    cursor: pointer;
+    border-radius: 10px;
+    margin-bottom: 10px;
+
+    padding: 10px;
+
+    transition: all 200ms;
+}
+
+.FileModeButton:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.Fname {
+    margin-left: 10px;
+    float: left;
+}
+
+.Fpath {
+    margin-right: 10px;
+    float: right;
+}
+
+.LikedTitle {
+    line-height: 10px;
+    font-size: 60px;
+    font-weight: 800;
+}
+
+.LikedIndicator {
+    line-height: 10px;
+    font-size: 30px;
+    font-weight: 800;
+    opacity: 0.5;
+}
+
+.PlaylistImg {
+
+    display: inline;
+
+    margin-top: 10px;
+
+    width: 300px;
+    height: 300px;
+
+    border: solid 1px rgba(255, 255, 255, 0.27);
+
+    border-radius: 10px;
+}
+
+.PlaylistName {
+
+    font-size: 80px;
+    font-weight: 800;
+
+    margin: 0px;
+}
+
+#contextmenu {
+    position: absolute;
+
+    z-index: 99999;
+
+    height: auto;
+    width: 200px;
+    
+    padding: 2px;
+
+    border: solid 1px rgba(255, 255, 255, 0.27);
+    background: rgba(255, 255, 255, 0.1);
+
+    border-radius: 10px;
+
+    backdrop-filter: blur(10px);
+
+}
+
+.CmenuButton {
+    border: solid 1px rgba(255, 255, 255, 0.27);
+    background: rgba(255, 255, 255, 0.1);
+
+    height: 30px;
+
+    color: white;
+
+    margin-bottom: 2px;
+
+    border-radius: 7px;
+
+    width: 100%;
+
+    text-align: left;
+
+    cursor: pointer;
+
+    transition: all 200ms;
+}
+
+.CmenuButton:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.PLbutt {
+
+    height: 50px;
+    width: 100%;
+
+    cursor: pointer;
+
+    border: solid 1px rgba(255, 255, 255, 0.27);
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+
+    transition: all 200ms;
+}
+
+.PLbutt:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.PLimgmenu {
+    position: relative;
+
+    left: -3px;
+
+    border: solid 1px rgba(255, 255, 255, 0.27);
+    border-radius: 7px;
+
+    height: 40px;
+    width: 40px;
+
+    float: left;
+}
+
+.PLtext {}
+
+#PlaylistsMenu {
+    position: absolute;
+    left: 210px;
+    top: 0px;
+
+    height: auto;
+    width: 200px;
+  }

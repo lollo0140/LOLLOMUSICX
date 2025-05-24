@@ -104,6 +104,7 @@
         if (clickedElement.classList.contains('localAlbum')) {
           local = true
         }
+        
 
         for (const element of elements) {
           
@@ -177,14 +178,3 @@
   </div>
 {/if}
 
-<style>
-  #contextmenu {
-    position: absolute;
-
-    z-index: 99999;
-
-    height: auto;
-    width: 200px;
-    background: rgb(255, 158, 207);
-  }
-</style>

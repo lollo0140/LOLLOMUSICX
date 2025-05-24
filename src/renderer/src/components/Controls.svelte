@@ -2,7 +2,7 @@
   import { onMount } from 'svelte'
   import * as renderer from '../main.js'
 
-  let { sec, max, paused } = $props()
+  let { sec, max, paused, FullScreen } = $props()
 
   const PLAYimg = new URL('../assets/play.png', import.meta.url).href
   const PAUSEimg = new URL('../assets/pause.png', import.meta.url).href
@@ -104,19 +104,15 @@
     } else {
       VolumeImg = VOLFULL
     }
-
   }
-
-
-
 </script>
 
-<div class="Controlls">
+<div class={!FullScreen ? "Controlls" : "ControllsFS"}  >
   <p id="SECONDS"></p>
 
   <p id="DURATION"></p>
 
-  <input 
+  <input
     {max}
     value={isDragging ? tempValue : sec}
     onmousedown={handleDragStart}
@@ -163,12 +159,10 @@
     class="volumeSlider"
   />
 
-  <img src={VolumeImg} alt="img" class="volimg">
-
+  <img src={VolumeImg} alt="img" class="volimg" />
 </div>
 
 <style>
-
   .volimg {
     position: absolute;
     width: 30px;
@@ -176,7 +170,6 @@
 
     top: 15px;
     right: 13px;
-
   }
 
   .volumeSlider {
@@ -185,22 +178,21 @@
     right: 55px;
 
     width: 150px;
-
   }
 
-  input[type="range"].volumeSlider {
-  -webkit-appearance: none;
-  appearance: none;
-  height: 11px;
-  background: transparent;
-  outline: none;
-  margin: 0;
+  input[type='range'].volumeSlider {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 11px;
+    background: transparent;
+    outline: none;
+    margin: 0;
 
-  transition: all 500ms;
+    transition: all 500ms;
   }
 
-/* Stile della traccia */
-  input[type="range"].volumeSlider::-webkit-slider-runnable-track {
+  /* Stile della traccia */
+  input[type='range'].volumeSlider::-webkit-slider-runnable-track {
     width: 100%;
     height: 11px;
     background: rgba(255, 255, 255, 0.27);
@@ -210,8 +202,8 @@
     transition: all 500ms;
   }
 
-/* Stile del thumb */
-  input[type="range"].volumeSlider::-webkit-slider-thumb {
+  /* Stile del thumb */
+  input[type='range'].volumeSlider::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
     width: 8px;
@@ -224,15 +216,6 @@
 
     transition: all 500ms;
   }
-
-
-
-
-
-
-
-
-
 
   .rpbutton {
     right: 270px;
@@ -366,19 +349,19 @@
     transition: all 500ms;
   }
 
-  input[type="range"].timeline {
-  -webkit-appearance: none;
-  appearance: none;
-  height: 11px;
-  background: transparent;
-  outline: none;
-  margin: 0;
+  input[type='range'].timeline {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 11px;
+    background: transparent;
+    outline: none;
+    margin: 0;
 
-  transition: all 500ms;
+    transition: all 500ms;
   }
 
-/* Stile della traccia */
-  input[type="range"].timeline::-webkit-slider-runnable-track {
+  /* Stile della traccia */
+  input[type='range'].timeline::-webkit-slider-runnable-track {
     width: 100%;
     height: 11px;
     background: rgba(255, 255, 255, 0.27);
@@ -388,8 +371,8 @@
     transition: all 500ms;
   }
 
-/* Stile del thumb */
-  input[type="range"].timeline::-webkit-slider-thumb {
+  /* Stile del thumb */
+  input[type='range'].timeline::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
     width: 8px;
@@ -413,7 +396,6 @@
     font-weight: 500;
 
     transition: all 500ms;
-
   }
 
   #DURATION {
@@ -427,41 +409,36 @@
     transition: all 500ms;
   }
 
-
-
   @media only screen and (max-width: 1300px) {
-    
     .rpbutton {
-    right: 180px;
-    top: 9px;
+      right: 180px;
+      top: 9px;
     }
 
     .shbutton {
-    right: 235px;
-    top: 10px;
+      right: 235px;
+      top: 10px;
 
-    margin: 0px;
+      margin: 0px;
     }
 
     #SECONDS {
-    position: absolute;
+      position: absolute;
 
-    top: -10px;
-    left: 10px;
+      top: -10px;
+      left: 10px;
 
-    color: white;
-    font-weight: 500;
-
+      color: white;
+      font-weight: 500;
     }
 
     #DURATION {
-    position: absolute;
-    top: -10px;
-    right: 470px;
+      position: absolute;
+      top: -10px;
+      right: 470px;
 
-    color: white;
-    font-weight: 500;
-
+      color: white;
+      font-weight: 500;
     }
 
     .volumeSlider {
@@ -500,5 +477,65 @@
       width: 40px;
       height: 40px;
     }
-}
+  }
+
+  @media only screen and (max-width: 600px) {
+    .Controlls {
+      background: none;
+      border: none;
+    }
+
+    .rpbutton {
+      pointer-events: none;
+      opacity: 0;
+    }
+    .shbutton {
+      pointer-events: none;
+      opacity: 0;
+    }
+
+    .volumeSlider {
+      pointer-events: none;
+      opacity: 0;
+    }
+
+    .volimg {
+      pointer-events: none;
+      opacity: 0;
+    }
+
+    .timeline {
+      pointer-events: none;
+      opacity: 0;
+    }
+
+    #SECONDS {
+      pointer-events: none;
+      opacity: 0;
+    }
+
+    #DURATION {
+      pointer-events: none;
+      opacity: 0;
+    }
+
+    .PlayButton {
+      left: calc(50% - 25px);
+      opacity: 0.6;
+    }
+
+    .PreviousButton {
+      left: calc(50% - 20px - 70px);
+      opacity: 0.6;
+    }
+
+    .nextButton {
+      left: calc(50% - 20px + 70px);
+      opacity: 0.6;
+    }
+
+    .Cbutton:hover {
+      opacity: 1;
+    }
+  }
 </style>

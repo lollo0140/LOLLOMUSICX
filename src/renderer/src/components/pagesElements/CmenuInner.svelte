@@ -36,6 +36,7 @@
   let Playlists = $state()
 
   import { onMount } from 'svelte'
+  import { fade } from 'svelte/transition'
 
   const ipcRenderer = window.electron.ipcRenderer
 
@@ -109,17 +110,34 @@
           altAlbum = temp.track.album.title || titolo
         }
 
+        var songMeta
+
         console.log(altAlbum)
 
-        const songMeta = {
-          title: titolo || '',
-          album: altAlbum || '',
-          artist: artista || '',
-          img: immagine || '',
-          duration: 0,
-          FMurl: '',
-          YTurl: '',
-          video: true
+        console.log(YTvideo)
+        
+
+        if (YTvideo) {
+          songMeta = {
+            title: titolo || '',
+            album: altAlbum || '',
+            artist: artista || '',
+            img: immagine || '',
+            duration: 0,
+            FMurl: '',
+            YTurl: '',
+            video: true
+          }
+        } else {
+          songMeta = {
+            title: titolo || '',
+            album: altAlbum || '',
+            artist: artista || '',
+            img: immagine || '',
+            duration: 0,
+            FMurl: '',
+            YTurl: '',
+          }
         }
 
         track.push(songMeta)
@@ -138,7 +156,6 @@
           const temp = await ipcRenderer.invoke('getAlbumInfo', album, artista)
           console.log(temp.album)
 
-
           const songs = temp.album.tracks.track
 
           albumTracks = []
@@ -146,18 +163,17 @@
 
           for (let index = 0; index < songs.length; index++) {
             const songMeta = {
-                title: songs[index].name || '',
-                album: album || '',
-                artist: artista || '',
-                img: immagine || '',
-                duration: 0,
-                FMurl: '',
-                YTurl: ''
-              }
+              title: songs[index].name || '',
+              album: album || '',
+              artist: artista || '',
+              img: immagine || '',
+              duration: 0,
+              FMurl: '',
+              YTurl: ''
+            }
 
-              
-              albumTracks.push(songMeta)
-              track = albumTracks
+            albumTracks.push(songMeta)
+            track = albumTracks
           }
         } else {
           const library = await ipcRenderer.invoke('readLocalLibrary')
@@ -194,16 +210,14 @@
       if (ifplaylist) {
         const Playlists = await ipcRenderer.invoke('ReadPlaylist')
 
-
         if (await shared.checkpin(playlistindex - 1)) {
           Pinned = true
         } else {
           Pinned = false
         }
-         
+
         for (const item of Playlists[playlistindex - 1].tracks) {
           let songMeta
-
 
           if (item.video) {
             songMeta = {
@@ -340,108 +354,105 @@
   async function PinPlaylist() {
     const index = playlistindex
 
-    
     await shared.Pin(index)
   }
 
   async function UnPinPlaylist() {
     const index = playlistindex
 
-    
     await shared.UnPin(index)
   }
 
   //console.log(titolo + '  ' + artista + '  ' + album)
 </script>
 
-<div>
+<div transition:fade>
   {#if !loading}
     {#if ifsong}
       {#if !liked}
-        <button class="CmenuButton" onclick={() => LikeItem()}>like</button>
+        <button transition:fade class="CmenuButton" onclick={() => LikeItem()}>like</button>
       {:else}
-        <button class="CmenuButton" onclick={() => LikeItem()}>dislike</button>
+        <button transition:fade class="CmenuButton" onclick={() => LikeItem()}>dislike</button>
       {/if}
 
       {#if removable}
-        <button class="CmenuButton" onclick={() => RemoveFromPlaylist()}
+        <button transition:fade class="CmenuButton" onclick={() => RemoveFromPlaylist()}
           >rimuovi dalla playlist</button
         >
       {/if}
 
-      <button onmouseenter={() => ShowPlistMenu()} class="CmenuButton"
+      <button transition:fade onmouseenter={() => ShowPlistMenu()} class="CmenuButton"
         >aggiungi alla playlist</button
       >
 
-      <button class="CmenuButton" onclick={() => AddToQuewe()}>aggiungi in coda</button>
+      <button transition:fade class="CmenuButton" onclick={() => AddToQuewe()}>aggiungi in coda</button>
 
-      <button class="CmenuButton" onclick={() => OnCall({ query: artista, type: 'artist' })}
+      <button transition:fade class="CmenuButton" onclick={() => OnCall({ query: artista, type: 'artist' })}
         >vai all artista</button
       >
 
       <span></span>
 
-      <button class="CmenuButton" onclick={() => DOWNLOAD()}>download</button>
+      <button transition:fade class="CmenuButton" onclick={() => DOWNLOAD()}>download</button>
     {:else if ifliked}
-      <button class="CmenuButton" onclick={() => PlayShuffled()}>riproduci casuale</button>
-      <button class="CmenuButton" onclick={() => AddToQuewe()}>aggiungi alla coda</button>
-      <button class="CmenuButton" onmouseenter={() => ShowPlistMenu()}
+      <button transition:fade class="CmenuButton" onclick={() => PlayShuffled()}>riproduci casuale</button>
+      <button transition:fade class="CmenuButton" onclick={() => AddToQuewe()}>aggiungi alla coda</button>
+      <button transition:fade class="CmenuButton" onmouseenter={() => ShowPlistMenu()}
         >aggiungi alla Playlist</button
       >
     {:else if ifartist}
       {#if !liked}
-        <button onclick={() => LikeItem()} class="CmenuButton">like</button>
+        <button transition:fade onclick={() => LikeItem()} class="CmenuButton">like</button>
       {:else}
-        <button onclick={() => LikeItem()} class="CmenuButton">dislike</button>
+        <button transition:fade onclick={() => LikeItem()} class="CmenuButton">dislike</button>
       {/if}
     {:else if ifalbum}
       {#if !liked}
-        <button onclick={() => LikeItem()} class="CmenuButton">like</button>
+        <button transition:fade onclick={() => LikeItem()} class="CmenuButton">like</button>
       {:else}
-        <button onclick={() => LikeItem()} class="CmenuButton">dislike</button>
+        <button transition:fade onclick={() => LikeItem()} class="CmenuButton">dislike</button>
       {/if}
 
-      <button class="CmenuButton" onclick={() => AddToQuewe()}>aggiungi alla coda</button>
+      <button transition:fade class="CmenuButton" onclick={() => AddToQuewe()}>aggiungi alla coda</button>
 
-      <button class="CmenuButton" onmouseenter={() => ShowPlistMenu()}
+      <button transition:fade class="CmenuButton" onmouseenter={() => ShowPlistMenu()}
         >aggiungi alla playlist</button
       >
 
-      <button class="CmenuButton" onclick={() => OnCall({ query: artista, type: 'artist' })}
+      <button transition:fade class="CmenuButton" onclick={() => OnCall({ query: artista, type: 'artist' })}
         >vai all artista</button
       >
 
       {#if !local}
-        <button class="CmenuButton" onclick={() => DOWNLOAD()}>download</button>
+        <button transition:fade class="CmenuButton" onclick={() => DOWNLOAD()}>download</button>
       {/if}
     {:else if ifplaylist}
-      <button class="CmenuButton" onclick={() => PlayShuffled()}>riproduci casuale</button>
-      <button class="CmenuButton" onclick={() => AddToQuewe()}>aggiungi alla coda</button>
-      <button class="CmenuButton" onmouseenter={() => ShowPlistMenu()}
+      <button transition:fade class="CmenuButton" onclick={() => PlayShuffled()}>riproduci casuale</button>
+      <button transition:fade class="CmenuButton" onclick={() => AddToQuewe()}>aggiungi alla coda</button>
+      <button transition:fade class="CmenuButton" onmouseenter={() => ShowPlistMenu()}
         >aggiungi alla Playlist</button
       >
 
-      <button class="CmenuButton" onclick={() => DOWNLOAD()}>download</button>
+      <button transition:fade class="CmenuButton" onclick={() => DOWNLOAD()}>download</button>
 
       {#if playlistindex !== '0'}
-
         {#if !Pinned}
-          <button class="CmenuButton" onclick={ () => PinPlaylist()}>pin</button>
+          <button transition:fade class="CmenuButton" onclick={() => PinPlaylist()}>pin</button>
         {:else}
-          <button class="CmenuButton" onclick={ () => UnPinPlaylist()}>unpin</button>
+          <button transition:fade class="CmenuButton" onclick={() => UnPinPlaylist()}>unpin</button>
         {/if}
 
-        <button class="CmenuButton" onclick={() => dellPlaylist(playlistindex - 1)}>elimina</button>
+        <button transition:fade class="CmenuButton" onclick={() => dellPlaylist(playlistindex - 1)}>elimina</button>
       {/if}
     {/if}
   {/if}
 </div>
 
 {#if Pmenu}
-  <div id="PlaylistsMenu" onmouseleave={() => HidePlistMenu()} role="button" tabindex="0">
+  <div transition:fade id="PlaylistsMenu" onmouseleave={() => HidePlistMenu()} role="button" tabindex="0">
     {#each Playlists as Pl, i}
-      <button class="PLbutt" onclick={() => AddToPlaylist(i)}>
-        <img class="PLimg" src={Pl.img} alt="palle" />
+      <button transition:fade class="PLbutt" onclick={() => AddToPlaylist(i)}>
+        <img class="PLimgmenu" src={Pl.img} alt="palle" />
         <p class="PLtext">{Pl.name}</p>
       </button>
     {/each}
@@ -449,43 +460,13 @@
 {/if}
 
 <style>
-
-  * {
-    color: black;
-  }
-
-  .CmenuButton {
-    width: 100%;
-    margin: 0px;
-
-    text-align: left;
-
-    cursor: pointer;
-  }
-
-  #PlaylistsMenu {
-    position: absolute;
-    left: 200px;
-    top: 0px;
-
-    background-color: rgb(49, 75, 9);
-
-    height: auto;
-    width: 200px;
-  }
+  
 
   .PLbutt {
     height: 50px;
     width: 100%;
 
     cursor: pointer;
-  }
-
-  .PLimg {
-    height: 40px;
-    width: 40px;
-
-    float: left;
   }
 
   .PLtext {

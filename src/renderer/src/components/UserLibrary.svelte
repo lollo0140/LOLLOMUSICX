@@ -1,6 +1,6 @@
 <script>/* eslint-disable prettier/prettier */
 
-  const LIKE = new URL('../assets/like.png', import.meta.url).href
+  const LIKE = new URL('../assets/LikePlaylistCover.png', import.meta.url).href
 
   import { onMount } from 'svelte'
   import * as renderer from '../main.js'
@@ -136,7 +136,7 @@
       </div>
 
       {#if creatingPlist}
-        <div id="PlaylistCreator">
+        <div transition:fade id="PlaylistCreator">
           <div id="newPpannel">
             <img
               id="NewPlaylistimg"

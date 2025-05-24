@@ -255,7 +255,7 @@
       position: absolute;
       bottom: 0px;
       left: 50%;
-      top: 0px;
+      top: 39px;
       
       transform: translateX(-50%);
 

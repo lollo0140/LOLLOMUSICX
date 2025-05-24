@@ -18,9 +18,15 @@
   import LocalAlbum from './components/LocalAlbum.svelte'
   import DownloadPage from './components/DownloadPage.svelte'
   import Background from './components/Background.svelte'
+  import { fade, fly } from 'svelte/transition'
 
   const ipcRenderer = window.electron.ipcRenderer
   //imports
+
+  const MINIMIZE = new URL('./assets/other/minimize.png', import.meta.url).href
+  const MAXIMIZE = new URL('./assets/other/maximize.png', import.meta.url).href
+  const CLOSE = new URL('./assets/other/exit.png', import.meta.url).href
+  const EXPAND = new URL('./assets/expand.png', import.meta.url).href
 
   var paused = $state()
   var shuffle = $state()
@@ -355,56 +361,69 @@
   </div>
 
   {#if !FullScreen}
-    <div id="mainContent">
-      <NavBar
-        pag={pagindex}
-        on:changePage={(e) => (pagindex = e.detail)}
-        on:cambia-variabile={(e) => CallItem(e.detail)}
-      />
-
-      <div id="content">
-        <Search
+    <div transition:fade={{ duration: 200 }}>
+      <div id="mainContent">
+        <NavBar
+          pag={pagindex}
           on:changePage={(e) => (pagindex = e.detail)}
           on:cambia-variabile={(e) => CallItem(e.detail)}
-          {pagindex}
         />
-
-        {#if pagindex === 0}
-          <Homepage on:cambia-variabile={(e) => CallItem(e.detail)} />
-        {:else if pagindex === 1}
-          <Album {AlbumQuery} on:cambia-variabile={(e) => CallItem(e.detail)} />
-        {:else if pagindex === 2}
-          <p class="hidden">search</p>
-        {:else if pagindex === 3}
-          <UserLibrary on:cambia-variabile={(e) => CallItem(e.detail)} />
-        {:else if pagindex === 4}
-          <Artists {ArtistQuery} on:cambia-variabile={(e) => CallItem(e.detail)} />
-        {:else if pagindex === 5}
-          <Local />
-        {:else if pagindex === 6}
-          <Playlist {Pindex} />
-        {:else if pagindex === 7}
-          <Liked on:cambia-variabile={(e) => CallItem(e.detail)} />
-        {:else if pagindex === 9}
-          <LocalAlbum {Pindex} />
-        {:else}
-          <Settings />
+  
+        <div id="content">
+          <Search
+            on:changePage={(e) => (pagindex = e.detail)}
+            on:cambia-variabile={(e) => CallItem(e.detail)}
+            {pagindex}
+          />
+  
+          {#if pagindex === 0}
+            <Homepage on:cambia-variabile={(e) => CallItem(e.detail)} />
+          {:else if pagindex === 1}
+            <Album {AlbumQuery} on:cambia-variabile={(e) => CallItem(e.detail)} />
+          {:else if pagindex === 2}
+            <p class="hidden">search</p>
+          {:else if pagindex === 3}
+            <UserLibrary on:cambia-variabile={(e) => CallItem(e.detail)} />
+          {:else if pagindex === 4}
+            <Artists {ArtistQuery} on:cambia-variabile={(e) => CallItem(e.detail)} />
+          {:else if pagindex === 5}
+            <Local />
+          {:else if pagindex === 6}
+            <Playlist {Pindex} />
+          {:else if pagindex === 7}
+            <Liked on:cambia-variabile={(e) => CallItem(e.detail)} />
+          {:else if pagindex === 9}
+            <LocalAlbum {Pindex} />
+          {:else}
+            <Settings />
+          {/if}
+        </div>
+  
+        {#if downloadPannel}
+          <DownloadPage {trackToDownload} on:cambia-variabile={(e) => CallItem(e.detail)} />
         {/if}
       </div>
-
-      {#if downloadPannel}
-        <DownloadPage {trackToDownload} on:cambia-variabile={(e) => CallItem(e.detail)} />
-      {/if}
+      <NowPlayng
+        {FullScreen}
+        {loading}
+        {playerLocal}
+        on:cambia-variabile={(e) => CallItem(e.detail)}
+      />
+      <Controls max={dur} {sec} {FullScreen} {paused} shuffled={shuffle} {repeat} />
     </div>
+  {:else}
+    <div class="FScontainerout" transition:fly={{ y: 200 }}>
+      <div class="FScontainer">
+        <img class="FSimg" src={playerLocal.img} alt="salsa" />
+        <p class="FStitle">{playerLocal.title}</p>
+        <p class="FSartist">{playerLocal.artist}</p>
 
-    <NowPlayng
-      {FullScreen}
-      {loading}
-      {playerLocal}
-      on:cambia-variabile={(e) => CallItem(e.detail)}
-    />
-
-    <Controls max={dur} {sec} {FullScreen} {paused} shuffled={shuffle} {repeat} />
+        {#if !playerLocal.title === playerLocal.album}
+          <p class="FSalbum">{playerLocal.album}</p>
+        {/if}
+      </div>
+      <Controls max={dur} {sec} {FullScreen} {paused} shuffled={shuffle} {repeat} />
+    </div>
   {/if}
 
   {#if contextmenu}
@@ -413,6 +432,42 @@
 {:else}
   <p>loading...</p>
 {/if}
+
+<dir style="-webkit-app-region: drag;" class="DragRegion">
+  <p class="windowTitle">LOLLOMUSICX BETA 0.6</p>
+
+  <button
+    onclick={() => ipcRenderer.invoke('closeWin')}
+    style="-webkit-app-region: no-drag;"
+    class="windowBarButton"
+  >
+    <img class="img" src={CLOSE} alt="palle" />
+  </button>
+
+  <button
+    onclick={() => ipcRenderer.invoke('maximize')}
+    style="-webkit-app-region: no-drag;"
+    class="windowBarButton"
+  >
+    <img class="img" src={MAXIMIZE} alt="palle" />
+  </button>
+
+  <button
+    onclick={() => ipcRenderer.invoke('minimize')}
+    style="-webkit-app-region: no-drag;"
+    class="windowBarButton"
+  >
+    <img class="MinImg img" src={MINIMIZE} alt="palle" />
+  </button>
+
+  <button
+    onclick={() => (FullScreen = !FullScreen)}
+    style="-webkit-app-region: no-drag;"
+    class="windowBarButton"
+  >
+    <img class="img" src={EXPAND} alt="palle" />
+  </button>
+</dir>
 
 <style>
   @media only screen and (max-width: 600px) {
@@ -445,5 +500,22 @@
     bottom: 5px;
     overflow-y: scroll;
     overflow-x: hidden;
+  }
+
+  .img {
+    margin: 0px;
+    width: 100%;
+    height: 100%;
+  }
+
+  .MinImg {
+    height: 3px;
+    transform: translateY(-2px);
+  }
+
+  .windowTitle {
+    float: left;
+    margin-left: 17px;
+    font-weight: 800;
   }
 </style>

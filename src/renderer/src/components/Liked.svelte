@@ -1,4 +1,5 @@
-<script>/* eslint-disable prettier/prettier */
+<script>
+  /* eslint-disable prettier/prettier */
   import { onMount } from 'svelte'
   import * as renderer from '../main.js'
   import LikeButton from './pagesElements/LikeButton.svelte'
@@ -48,28 +49,45 @@
 <div>
   {#if !loading}
     <div transition:fade>
-      <p>Brani preferiti</p>
-      <p>{numOfSongs / 2} canzoni</p>
+      <p class="LikedTitle">Favourites traks</p>
+      <p class="LikedIndicator">{numOfSongs / 2} songs</p>
 
       <div id="likedListDiv">
         {#each songs as song, i}
-          <button class="bottone contextMenuSong" onclick={() => PlayTraks(i)}>
-            <p class="--TITLEDATA titolo">{song.title}</p>
-            <img class="--IMGDATA imgCanzone" src={song.img} alt="copertina" data-index={i} />
-            <p class="--ARTISTDATA artista">{song.artist}</p>
-            <p class="--ALBUMDATA songalbum">{song.album}</p>
+          {#if song.video === true}
+            <button class="YTvideo bottone contextMenuSong" onclick={() => PlayTraks(i)}>
+              <p class="--TITLEDATA titolo">{song.title}</p>
+              <img class="--IMGDATA imgCanzone" src={song.img} alt="copertina" data-index={i} />
+              <p class="--ARTISTDATA artista">{song.artist}</p>
+              <p class="--ALBUMDATA songalbum">{song.album}</p>
+              <p class="YTvideo hidden"></p>
 
-            <p class="YTvideo hidden"></p>
+              <LikeButton
+                title={song.title}
+                artist={song.artist}
+                album={song.album}
+                img={song.img}
+                video={song.video}
+              />
+              <IsLocal title={song.title} artist={song.artist} album={song.album} />
+            </button>
+          {:else}
+            <button class=" bottone contextMenuSong" onclick={() => PlayTraks(i)}>
+              <p class="--TITLEDATA titolo">{song.title}</p>
+              <img class="--IMGDATA imgCanzone" src={song.img} alt="copertina" data-index={i} />
+              <p class="--ARTISTDATA artista">{song.artist}</p>
+              <p class="--ALBUMDATA songalbum">{song.album}</p>
 
-            <LikeButton
-              title={song.title}
-              artist={song.artist}
-              album={song.album}
-              img={song.img}
-              video={song.video}
-            />
-            <IsLocal title={song.title} artist={song.artist} album={song.album} />
-          </button>
+              <LikeButton
+                title={song.title}
+                artist={song.artist}
+                album={song.album}
+                img={song.img}
+                video={song.video}
+              />
+              <IsLocal title={song.title} artist={song.artist} album={song.album} />
+            </button>
+          {/if}
         {/each}
       </div>
     </div>

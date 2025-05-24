@@ -1,4 +1,4 @@
-import { net, protocol, dialog, app, shell, BrowserWindow, ipcMain } from 'electron'
+import { Tray, Menu, net, protocol, dialog, app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import * as fs from 'fs'
@@ -11,6 +11,7 @@ import { ytUrls } from './yt-urls.js'
 const ytmusicApi = require('ytmusic-api')
 const ytm = new ytmusicApi()
 
+var running = true
 //import { title } from 'process'
 //import * as axios from 'axios'
 //import * as ElStore from 'electron-store'
@@ -47,45 +48,42 @@ if (!fs.existsSync(localDataDir)) {
 }
 
 const defSettingsValue = {
-  playerSettings:
-      {
-        general: {
-          appName: "LOLLOMUSICX",
-          version: "1.0.0",
-          startMinimized: false,
-          minimizeToTray: true,
-          autoPlayOnStart: false
-        },
-        audio: {
-          volume: 80,
-          rememberListen: true,
-          rememberShuffle: true
-        },
-        library: {
-            scanPaths: [],
-            scanOnStartup: true
-        },
-        interface: {
-            showLyrics: true,
-            showVideo: true,
-            showPlaylistInSideBar: true,
-            LiteMode: false,
-            Zoom: 1
-        },
-        hotkeys: {
-            playPause: "Space",
-            next: "Ctrl+Right",
-            previous: "Ctrl+Left",
-            volumeUp: "Ctrl+Up",
-            volumeDown: "Ctrl+Down",
-            mute: "Ctrl+M"
-        }
+  playerSettings: {
+    general: {
+      appName: 'LOLLOMUSICX',
+      version: '1.0.0',
+      startMinimized: false,
+      minimizeToTray: true,
+      autoPlayOnStart: false
+    },
+    audio: {
+      volume: 80,
+      rememberListen: true,
+      rememberShuffle: true
+    },
+    library: {
+      scanPaths: [],
+      scanOnStartup: true
+    },
+    interface: {
+      showLyrics: true,
+      showVideo: true,
+      showPlaylistInSideBar: true,
+      LiteMode: false,
+      Zoom: 1
+    },
+    hotkeys: {
+      playPause: 'Space',
+      next: 'Ctrl+Right',
+      previous: 'Ctrl+Left',
+      volumeUp: 'Ctrl+Up',
+      volumeDown: 'Ctrl+Down',
+      mute: 'Ctrl+M'
+    }
   }
 }
 
-
-
- // Funzione per inizializzare i file di configurazione
+// Funzione per inizializzare i file di configurazione
 function initializeConfigFiles() {
   // Definisci i file da controllare e i loro valori predefiniti
   const configFiles = [
@@ -114,18 +112,30 @@ function initializeConfigFiles() {
 // Inizializza i file di configurazione
 initializeConfigFiles()
 
+var mainWindow
+
 function createWindow() {
   // Create the browser window.
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 900,
     height: 670,
     minWidth: 378,
+    minHeight: 585,
     show: false,
+    frame: false,
     autoHideMenuBar: true,
     //...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
+    }
+  })
+
+  mainWindow.on('close', (event) => {
+    if (running) {
+      event.preventDefault()
+      // Nasconde la finestra invece di chiuderla
+      mainWindow.hide()
     }
   })
 
@@ -243,6 +253,47 @@ async function initializeyt() {
 app.whenReady().then(async () => {
   // Set app user model id for windows
 
+  try {
+    let imagePath
+    if (app.isPackaged) {
+      // In modalità packaged, usa il percorso delle risorse
+      imagePath = path.join(process.resourcesPath, 'main', 'appLabel.png')
+    } else {
+      // In modalità sviluppo, usa il percorso diretto
+      imagePath = path.join(__dirname, '..\\..\\src\\renderer\\src\\assets\\appLabel.png')
+    }
+
+    const LABEL = new URL(imagePath).href
+
+    let tray = new Tray(LABEL)
+
+    // Crea il menu contestuale della tray
+    const contextMenu = Menu.buildFromTemplate([
+      {
+        label: 'Show window',
+        click: () => mainWindow.show()
+      },
+      {
+        label: 'close',
+        click: async () => {
+          running = false
+          await mainWindow.close()
+          app.isQuitting = true
+          app.quit()
+        }
+      }
+    ])
+
+    // Imposta il menu contestuale
+    tray.setContextMenu(contextMenu)
+
+    // Opzionale: mostra l'app al click sull'icona della tray
+    tray.on('click', () => {
+      mainWindow.show()
+    })
+  } catch (error) {
+    console.log(error)
+  }
   app.whenReady().then(async () => {
     protocol.handle('local', async (request) => {
       try {
@@ -2675,4 +2726,33 @@ async function CheckPin(index) {
     //console.log(false)
     return false
   }
+}
+
+ipcMain.handle('closeWin', () => {
+  CloseWindow()
+})
+
+ipcMain.handle('minimize', () => {
+  minimize()
+})
+
+ipcMain.handle('maximize', () => {
+  maximize()
+})
+
+//mainWindow
+function CloseWindow() {
+  mainWindow.close()
+}
+
+function maximize() {
+  if (mainWindow.isMaximized()) {
+    mainWindow.unmaximize()
+  } else {
+    mainWindow.maximize()
+  }
+}
+
+function minimize() {
+  mainWindow.minimize()
 }
