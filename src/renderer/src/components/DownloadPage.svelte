@@ -4,6 +4,8 @@
   import { onMount } from 'svelte';
   import * as renderer from '../main.js';
 
+  const closeX = new URL('../assets/other/exit.png', import.meta.url).href
+
   import { fade } from 'svelte/transition';
 
   let shared
@@ -66,78 +68,33 @@
 <div transition:fade class="dwpage">
   <div class="dwpageinner">
       
-    <button onclick={ () => Closedwpannel()} >close</button>
+    <button class="dwpClose" onclick={ () => Closedwpannel()} >
+      <img class="dwpCloseImg" src={closeX} alt="asdqas">
+    </button>
 
 
     <p>path: {destinationPath}</p>
 
     {#each paths as dir, i}
       
-      <button onclick={ () => SetPath(i)} >{dir}</button>
+      <button  class="dwppathselector" onclick={ () => SetPath(i)} >{dir}</button>
 
     {/each}
 
 
+    <div class="dwelementcontainer">
+      {#each trackToDownload as song}
+        <div class="dwelementbase">
+          <img class="dwelementimg" src={song.img} alt="asd" />
+          <p class="dwelementtitle">{song.title || song.name}</p>
+          <p class="dwelementartist">{song.artist}</p>
+          <p class="dwelementalbum" >{song.album}</p>
+        </div>
+      {/each}
+    </div>
 
-    {#each trackToDownload as song}
-      <div class="dwelementbase">
-        <img class="dwelementimg" src={song.img} alt="asd" />
-        <p class="dwelementtitle">{song.title || song.name}</p>
-        <p class="dwelementartist">{song.artist}</p>
-        <p class="dwelementalbum" >{song.album}</p>
-      </div>
-    {/each}
 
-    <button onclick={ () => SendTracks()}>download</button>
+    <button class="DownloadButton" onclick={ () => SendTracks()}>download</button>
 
   </div>
 </div>
-
-<style>
-  .dwpage {
-    position: absolute;
-    left: 100%;
-    height: 100%;
-
-    left: 0px;
-    top: 0px;
-    right: 0px;
-    bottom: 0px;
-
-    background-color: rgba(0, 0, 0, 0.753);
-  }
-
-  .dwpageinner {
-    position: absolute;
-    left: 30px;
-    top: 30px;
-    right: 30px;
-    bottom: 30px;
-
-    background: white;
-
-    overflow-y: scroll;
-  }
-
-  .dwelementbase {
-    height: 50px;
-    overflow: hidden;
-
-    background-color: grey;
-  }
-  .dwelementimg {
-    height: 45px;
-    width: 45px;
-    float: left;
-  }
-  .dwelementtitle {
-    float: left;
-    color: white;
-  }
-  .dwelementartist {
-    float: left;
-  }
-  .dwelementalbum {
-    float: right;
-  }
-</style>

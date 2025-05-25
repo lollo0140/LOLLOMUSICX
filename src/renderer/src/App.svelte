@@ -75,7 +75,6 @@
       if (pagindex === 7 || pagindex === 6 || pagindex === 3) {
         const temp = pagindex
         pagindex = 50
-
         setTimeout(() => {
           pagindex = temp
         }, 10)

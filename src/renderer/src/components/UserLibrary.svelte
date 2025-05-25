@@ -1,11 +1,14 @@
 <script>/* eslint-disable prettier/prettier */
 
   const LIKE = new URL('../assets/LikePlaylistCover.png', import.meta.url).href
+  const DEFIMG = new URL('../assets/defaultSongCover.png', import.meta.url).href
+  const closeX = new URL('../assets/other/exit.png', import.meta.url).href
 
   import { onMount } from 'svelte'
   import * as renderer from '../main.js'
   import { createEventDispatcher } from 'svelte'
   import { fade } from 'svelte/transition'
+
 
   let shared
 
@@ -20,7 +23,10 @@
 
   //let playlists = []
 
+  let imageSrc = $state(DEFIMG)
+
   onMount(async () => {
+    
     loading = true
     shared = renderer.default.shared
 
@@ -66,8 +72,7 @@
 
     creatingPlist = false
   }
-
-  let imageSrc = $state('')
+  
 
   async function ChoseImg() {
     const imgpath = await shared.SelectFile()
@@ -87,7 +92,7 @@
           onclick={() => CallItem({ query: '', type: 'liked' })}
         >
           <img style="object-fit: cover;" class="--IMGDATA albumimg" src={LIKE} alt="img" />
-          <p class="--PLAYLISTNAMEDATA albumtitle">preferiti</p>
+          <p class="--PLAYLISTNAMEDATA albumtitle">Liked</p>
           <p class="--PLAYLISTINDEXDATA">0</p>
         </button>
 
@@ -103,7 +108,27 @@
           </button>
         {/each}
 
-        <button onclick={() => (creatingPlist = true)} class="albumbutton">+</button>
+        <div class="NewPlaylistButton">
+          {#if creatingPlist}
+            <div in:fade class="PlaylistCreator">
+              <img
+                id="NewPlaylistimg"
+                src={imageSrc}
+                alt=""
+              />
+              <button class="NewPlaylistChangeimage" type="button" onclick={() => ChoseImg()}> change image </button>
+              <input id="NewPlaylistTitle" type="text" />
+  
+              <button class="NewPlaylistclose" onclick={() => (creatingPlist = false)}>
+                <img class="dwpCloseImg" src={closeX} alt="asdqas">
+              </button>
+              <button class="NewPlaylistDone" onclick={() => CreatePlaylist()}>Done</button>
+            </div>
+          {:else}
+            <button in:fade onclick={() => (creatingPlist = true)} class="albumbutton">+</button>
+          {/if}
+        </div>
+
       </div>
 
       <p>Albums</p>
@@ -134,24 +159,6 @@
           </button>
         {/each}
       </div>
-
-      {#if creatingPlist}
-        <div transition:fade id="PlaylistCreator">
-          <div id="newPpannel">
-            <img
-              id="NewPlaylistimg"
-              style="width: 200px; height: 200px; object-fit: cover;"
-              src={imageSrc}
-              alt=""
-            />
-            <button type="button" onclick={() => ChoseImg()}> change img </button>
-            <input id="NewPlaylistTitle" type="text" />
-
-            <button onclick={() => (creatingPlist = false)}>cancel</button>
-            <button onclick={() => CreatePlaylist()}>done</button>
-          </div>
-        </div>
-      {/if}
     </div>
   {:else}
     <p>Loading</p>
@@ -159,28 +166,4 @@
 </div>
 
 <style>
-  #PlaylistCreator {
-    width: calc(100% - 349px - 25px);
-    height: calc(100% - 110px - 20px);
-
-    left: 25px;
-    top: 25px;
-
-    position: fixed;
-
-    background-color: rgba(0, 0, 0, 0.616);
-  }
-
-  #newPpannel {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-
-    width: 60%;
-    height: 400px;
-
-    transform: translate(-50%, -50%);
-
-    background: white;
-  }
 </style>

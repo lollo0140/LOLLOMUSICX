@@ -1630,14 +1630,14 @@ ipcMain.handle('GetYTlink', async (event, SearchD) => {
   console.log('id del video -------------------------------')
   console.log(ID)
 
-  //return await getStreamingUrl(ID)
+  return await getStreamingUrl(ID)
 
-  const Infos = await getVideoInfo(ID)
+  //const Infos = await getVideoInfo(ID)
 
-  console.log(Infos)
-  console.log('id del video -------------------------------')
+  //console.log(Infos)
+  //console.log('id del video -------------------------------')
 
-  return await Infos.vidourl
+  //return await Infos.vidourl
 })
 
 ipcMain.handle('GetYTID', async (event, SearchD) => {

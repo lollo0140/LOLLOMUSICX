@@ -336,7 +336,7 @@
   }
 
   async function dellPlaylist(index) {
-    shared.DeletePlaylist(index)
+    shared.DeletePlaylist(index + 1)
   }
 
   async function PlayShuffled() {
