@@ -49,7 +49,7 @@
 <div>
   {#if !loading}
     <div transition:fade>
-      <p class="LikedTitle">Favourites traks</p>
+      <p class="LikedTitle">Favorite tracks</p>
       <p class="LikedIndicator">{numOfSongs / 2} songs</p>
 
       <div id="likedListDiv">

@@ -63,6 +63,8 @@
 
   let FullScreen = $state(false)
 
+  let STARTUP = 0
+
   document.addEventListener('contextmenu', (event) => {
     event.preventDefault()
 
@@ -282,13 +284,17 @@
       })
 
       // Avviamo la riproduzione
-      await mediaElement.play()
+
+      if (STARTUP === 0) {
+        await mediaElement.play()
+      }
+
       shared.WriteLastListened()
       shared.SaveListen()
       shared.LoadPreviousUrl()
+      LoadNext()
+
       loading = false
-      await shared.LoadNextUrl()
-      nextLoaded = true
     } catch (error) {
       console.error("Errore nell'inizializzazione del player:", error)
       loading = false
@@ -323,13 +329,21 @@
     }
   }
 
+  async function LoadNext() {
+    await shared.LoadNextUrl()
+    nextLoaded = true
+  }
+
   async function PlayPlayer() {
     const videoElement = document.getElementById('MediaPlayer')
     if (!videoElement) return
 
     try {
       if (videoElement.paused) {
-        await videoElement.play()
+        if (STARTUP === 0) {
+          await videoElement.play()
+        }
+
         shared.LoadPreviousUrl()
         shared.LoadNextUrl()
       }
@@ -348,7 +362,11 @@
       videoElement.pause()
       try {
         await new Promise((r) => setTimeout(r, 500))
-        await PlayPlayer()
+
+        if (STARTUP === 0) {
+          await PlayPlayer()
+          STARTUP--
+        }
       } catch (error) {
         console.error('Fallback fallito:', error)
       }
@@ -440,7 +458,7 @@
 {/if}
 
 <dir style="-webkit-app-region: drag;" class="DragRegion">
-  <p class="windowTitle">LOLLOMUSICX BETA 0.6</p>
+  <p class="windowTitle">LOLLOMUSICX BETA 0.7.5</p>
 
   <button
     onclick={() => ipcRenderer.invoke('closeWin')}

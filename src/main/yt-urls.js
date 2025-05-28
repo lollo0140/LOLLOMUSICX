@@ -5,6 +5,7 @@ import fs from 'fs'
 import * as MM from 'node-id3'
 import { spawn } from 'child_process'
 import { app } from 'electron'
+import { Innertube } from 'youtubei.js'
 
 // Funzione per ottenere un percorso sicuro per i file temporanei e binari
 function getSafePath() {
@@ -275,28 +276,21 @@ export class ytUrls {
             const binaryPath = await ensureBinaries(this.binPath);
             
             return await this.getUrlWithExternalProcess(videoId, binaryPath);
-        } catch (externalError) {
-            console.error('Errore con processo esterno:', externalError);
-
-            // Ultimo tentativo: usa il formato che abbiamo, anche se è un manifest
+        } catch {
+           
             try {
-                const binaryPath = await ensureBinaries(this.binPath);
-                const fallbackOptions = {
-                    getUrl: true,
-                    format: 'bestaudio',
-                    noWarnings: true,
-                };
+                const youtube = await Innertube.create()
+            
+                const streamingData = await youtube.getStreamingData(videoId)
+               
+                return streamingData.url
 
-                const fallbackUrl = await ytDlp(`https://www.youtube.com/watch?v=${videoId}`,
-                    fallbackOptions, { bin: binaryPath });
+              } catch (error) {
+                console.error('Errore durante il recupero delle informazioni del video:', error)
+                return null
+              }
 
-                if (fallbackUrl && typeof fallbackUrl === 'string') {
-                    return fallbackUrl.trim();
-                }
-            } catch (fallbackError) {
-                console.error('Anche il fallback è fallito:', fallbackError);
-                throw fallbackError;
-            }
+            
         }
     }
 
