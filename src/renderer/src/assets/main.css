@@ -68,9 +68,9 @@ body {
 }
 
 .TogleQueweButton {
-    position: absolute;
-    left: 12px;
-    bottom: 12px;
+    position: fixed;
+    right: 283px;
+    bottom: 121px;
 
     width: 30px;
     height: 30px;
@@ -1162,7 +1162,6 @@ body {
 }
 
 .LikedTitle {
-    line-height: 10px;
     font-size: 60px;
     font-weight: 800;
 }
@@ -1429,10 +1428,10 @@ body {
 
     height: 209px;
     width: 160px;
-    
+
     border: solid 1px rgba(255, 255, 255, 0.27);
     background: rgba(255, 255, 255, 0.1);
-    
+
     border-radius: 10px;
 }
 
@@ -1468,7 +1467,7 @@ body {
 
 .NewPlaylistChangeimage {
     position: absolute;
-    left:5px;
+    left: 5px;
     top: 5px;
 
     width: 150px;
@@ -1505,7 +1504,7 @@ body {
 
     border: solid 1px rgba(255, 255, 255, 0.27);
     background: rgba(255, 255, 255, 0.1);
-    
+
     border-radius: 7px;
 
     outline: none;
@@ -1513,7 +1512,7 @@ body {
 
 .NewPlaylistclose {
     position: absolute;
-    
+
     top: 0px;
     right: 0px;
 
@@ -1566,3 +1565,204 @@ body {
 
     vertical-align: top;
 }
+
+.lyricsContainer {
+    
+
+    margin-left: 12px;
+    margin-right: 12px;
+
+    margin-top: 12px;
+
+    padding: 10px;
+
+    height: 350px;
+
+    border: solid 1px rgba(255, 255, 255, 0.27);
+    background: rgba(255, 255, 255, 0.1);
+
+    border-radius: 7px;
+
+    overflow-Y: hidden;
+}
+
+#lyricOuter {
+    position: relative;
+    overflow: hidden;
+    height: 100%;
+    /* Imposta un'altezza fissa per il contenitore */
+    width: 100%;
+}
+
+.lyricelement {
+    height: 70px;
+    text-align: left;
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.3);
+    cursor: pointer;
+    transition: all 200ms;
+    font-size: 15px;
+}
+
+.lyricelement:hover {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.activelyricelement {
+    height: 70px;
+    text-align: left;
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: white;
+    transition: all 200ms;
+    font-size: 17px;
+}
+
+#lyricsContainer {
+    position: relative;
+    width: 100%;
+    transition: transform 200ms ease;
+}
+
+.upNextDiv {
+
+    overflow: hidden;
+
+    margin-left: 12px;
+    margin-right: 12px;
+    margin-bottom: 0px;
+    margin-top: 12px;
+
+    height: 70px;
+
+    border: solid 1px rgba(255, 255, 255, 0.27);
+    background: rgba(255, 255, 255, 0.1);
+
+    border-radius: 7px;
+
+}
+
+.moreInfoDiv {
+    margin-top: 470px;
+    padding-bottom: 12px;
+}
+
+.upNextImg {
+
+    position: relative;
+
+    height: 58px;
+    width: 58px;
+    
+    left: 5px;
+    top: 5px;
+
+    border: solid 1px rgba(255, 255, 255, 0.27);
+    background: rgba(255, 255, 255, 0.1);
+
+    border-radius: 3px;
+
+    opacity: 0.7;
+
+    object-fit: cover;
+}
+
+.upNextTitle {
+
+    position: relative;
+
+    left: 75px;
+    top: -78px;
+
+    font-weight: 800;
+    font-size: 22px;
+
+    width: 190px;
+
+    text-wrap: none;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.upNextArtist {
+    position: relative;
+
+    left: 75px;
+    top: -98px;
+
+    opacity: 0.6;
+
+    font-weight: 700;
+    font-size: 15px;
+
+    text-wrap: none;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    width: 190px;
+}
+
+@media only screen and (max-width: 600px) {
+    .moreInfoDiv {
+        display: none;
+    }
+
+    .TogleQueweButton {
+        display: none;
+    }
+}
+
+.dividerP {
+    line-height: 5px;
+
+    margin-left: 12px;
+
+    opacity: 0.3;
+}
+
+.NextLoadedIndicator {
+    background: rgb(104, 255, 104);
+    
+    position: absolute;
+
+    width: 8px;
+    height: 8px;
+
+    right: 2px;
+    top: 2px;
+
+    border-radius: 10px;
+
+    opacity: 0.3;
+}
+
+.ImmageOfLoadingSong {
+    position: absolute;
+
+    width: 70px;
+    width: 70px;
+
+    object-fit: cover;
+
+    top: 216px;
+    left: 12px;
+
+    border: solid 1px rgba(255, 255, 255, 0.27);
+    border-radius: 5px;
+
+    animation: LOD 2000ms infinite linear;
+
+}
+
+@keyframes LOD {
+    0% {opacity:0.5 ;}
+    50% {opacity:0 ;}
+    100% {opacity:0.5 ;}
+  }

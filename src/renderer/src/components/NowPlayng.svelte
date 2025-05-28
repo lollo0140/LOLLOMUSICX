@@ -1,13 +1,23 @@
-<script>/* eslint-disable prettier/prettier */
+<script>
+  /* eslint-disable prettier/prettier */
   import { createEventDispatcher } from 'svelte'
   import { onMount } from 'svelte'
   import * as renderer from '../main.js'
-  let { playerLocal, loading, FullScreen } = $props()
+  let { playerLocal, FullScreen } = $props()
 
-  import { slide } from 'svelte/transition';
+  let loading = $state()
+  let LoadingImg = $state()
+
+  import { fade, slide } from 'svelte/transition'
+  import LyricPannel from './pagesElements/LyricPannel.svelte'
 
   const QUEWEimg = new URL('../assets/quewe.png', import.meta.url).href
   const LIKEimg = new URL('../assets/like.png', import.meta.url).href
+
+  let Lyric = $state()
+  let LyricPannelVisible = $state(false)
+
+  let oldtitle, oldartist, oldalbum
 
   let shared
   let quewe = $state()
@@ -19,14 +29,17 @@
 
   let Visible = $state(false)
 
-  $effect(() => {
+  let nextSong = $state({
+    title: '',
+    artist: '',
+    img: ''
+  })
+
+  let nextSongLoad = $state(false)
+
+  $effect(async () => {
     checkSaved()
 
-    if (loading) {
-      document.getElementById('Img').style.opacity = 0.7
-    } else {
-      document.getElementById('Img').style.opacity = 1
-    }
 
     //console.log(playerLocal.img)
 
@@ -38,13 +51,49 @@
 
     //console.log(playerLocal)
 
-    //console.log(playerLocal.title)
-    //console.log(playerLocal.album)
-
     Visible = playerLocal.title !== playerLocal.album
 
     //console.log(immagine)
+
+    if (isSongChanged(playerLocal.title, playerLocal.artist, playerLocal.album)) {
+      LyricPannelVisible = false
+      Lyric = await GetLyric()
+
+      try {
+        nextSongLoad = false
+
+        const quewe = await shared.GetQuewe()
+        const Pindex = await shared.GetPIndex()
+        nextSong = await quewe[Pindex + 1]
+
+        nextSongLoad = true
+      } catch {
+        nextSongLoad = false
+      }
+
+      if (Lyric.lyric !== undefined) {
+        LyricPannelVisible = true
+      }
+    }
   })
+
+  async function GetLyric() {
+    return await shared.GetLyrics(playerLocal.title, playerLocal.artist, playerLocal.album)
+  }
+
+  function isSongChanged(title, artist, album) {
+    const changed = title !== oldtitle || artist !== oldartist || album !== oldalbum
+
+    if (changed) {
+      oldtitle = title
+      oldartist = artist
+      oldalbum = album
+
+      return true
+    } else {
+      return false
+    }
+  }
 
   async function checkSaved() {
     try {
@@ -64,7 +113,29 @@
     setInterval(async () => {
       quewe = await shared.GetQuewe()
       playngIndex = await shared.GetPIndex()
+      loading = shared.LOADING
+      LoadingImg = shared.LoadingImg
+      console.log(LoadingImg)
     }, 100)
+
+    LyricPannelVisible = false
+      Lyric = await GetLyric()
+
+      try {
+        nextSongLoad = false
+
+        const quewe = await shared.GetQuewe()
+        const Pindex = await shared.GetPIndex()
+        nextSong = await quewe[Pindex + 1]
+
+        nextSongLoad = true
+      } catch {
+        nextSongLoad = false
+      }
+
+      if (Lyric.lyric !== undefined) {
+        LyricPannelVisible = true
+      }
   })
 
   const dispatch = createEventDispatcher()
@@ -96,7 +167,7 @@
   }
 </script>
 
-<dir class="{FullScreen ? 'FSNowPlayng' : 'NowPlayng'}" style="transition: all 600ms;">
+<dir class={FullScreen ? 'FSNowPlayng' : 'NowPlayng'} style="transition: all 600ms;">
   <div
     class="contextMenuSong"
     style="positio: absolute; top: 0px; left: 0px; height: 430px; width: 100%;"
@@ -125,19 +196,42 @@
         >{playerLocal.album}
       </button>
     {/if}
+
+    {#if loading}
+      <img transition:fade class="ImmageOfLoadingSong" src={LoadingImg} alt="img">
+    {/if}
+
+    <div class="moreInfoDiv">
+
+      
+      {#if nextSongLoad}
+        <p class="dividerP">Next up</p>
+      
+        <div in:slide class="upNextDiv">
+          <img class="upNextImg" src={nextSong.img} alt="img" />
+          <p class="upNextTitle">{nextSong.title}</p>
+          <p class="upNextArtist">{nextSong.artist}</p>
+        </div>
+      {/if}
+
+      
+      {#if LyricPannelVisible}
+        <p class="dividerP">Lyrics</p>
+        
+        <div class="lyricsContainer" in:slide>
+          <LyricPannel testoCanzone={Lyric.lyric} sync={Lyric.sync} />
+        </div>
+      {/if}
+    </div>
   </div>
 
   {#if saved}
     <button class="likeButton" style="position:absolute;" onclick={() => delTrack()}>
-    
-      <img class="likeNPbuttonImg" src={LIKEimg} alt="palle">
-
+      <img class="likeNPbuttonImg" src={LIKEimg} alt="palle" />
     </button>
   {:else}
     <button class="likeButton" style="position:absolute;" onclick={() => SaveTrack()}>
-      
-      <img style="opacity: 0.4;" class="likeNPbuttonImg" src={LIKEimg} alt="palle">
-
+      <img style="opacity: 0.4;" class="likeNPbuttonImg" src={LIKEimg} alt="palle" />
     </button>
   {/if}
 
@@ -148,7 +242,8 @@
       {:then result}
         {#each result as item, i}
           {#if playngIndex === i}
-            <button in:slide|global
+            <button
+              in:slide|global
               class="queweButtonActive contextMenuSong"
               onclick={() => {
                 shared.ChangeQueweIndex(i)
@@ -162,7 +257,8 @@
               <p style="float: right;">{i + 1}</p>
             </button>
           {:else if i < playngIndex}
-            <button in:slide|global
+            <button
+              in:slide|global
               style="opacity:0.4;"
               class="queweButton contextMenuSong"
               onclick={() => {
@@ -177,7 +273,8 @@
               <p style="float: right;">{i + 1}</p>
             </button>
           {:else}
-            <button in:slide|global
+            <button
+              in:slide|global
               class="queweButton contextMenuSong"
               onclick={() => {
                 shared.ChangeQueweIndex(i)
@@ -197,14 +294,11 @@
   </div>
 
   <button class="TogleQueweButton" onclick={() => togleQuewePannel()}>
-
-    <img class="TogleQueweButtonimg" src={QUEWEimg} alt="palle">
-
+    <img class="TogleQueweButtonimg" src={QUEWEimg} alt="palle" />
   </button>
 </dir>
 
 <style>
-
   .NowPlayng {
     color: white;
     position: absolute;
@@ -213,6 +307,8 @@
     border-radius: 15px;
 
     overflow: hidden;
+    overflow-y: scroll;
+    scrollbar-width: none;
 
     width: 300px;
 
@@ -249,14 +345,13 @@
     transition: all 600ms;
   }
 
-
   @media only screen and (max-width: 600px) {
     .NowPlayng {
       position: absolute;
       bottom: 0px;
       left: 50%;
       top: 39px;
-      
+
       transform: translateX(-50%);
 
       background: transparent;
@@ -298,10 +393,7 @@
       height: 100%;
       width: 100%;
     }
-
   }
-
-  
 
   #quewePannel {
     position: absolute;

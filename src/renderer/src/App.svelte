@@ -41,6 +41,9 @@
 
   var Pageloading = $state(true)
   var loading = $state(true)
+  var LoadingImg = $state('')
+
+  var nextLoaded = $state(false)
 
   var shared
   let playerLocal = $state(null)
@@ -180,6 +183,8 @@
 
   async function initializePlayer() {
     try {
+      nextLoaded = false
+
       console.log('URL ricevuto:', url) // Log per debug
       // Determina se l'URL è remoto o locale
       const isRemoteUrl = url.startsWith('http://') || url.startsWith('https://')
@@ -281,8 +286,9 @@
       shared.WriteLastListened()
       shared.SaveListen()
       shared.LoadPreviousUrl()
-      shared.LoadNextUrl()
       loading = false
+      await shared.LoadNextUrl()
+      nextLoaded = true
     } catch (error) {
       console.error("Errore nell'inizializzazione del player:", error)
       loading = false
@@ -363,18 +369,19 @@
     <div transition:fade={{ duration: 200 }}>
       <div id="mainContent">
         <NavBar
+          {LoadingImg}
           pag={pagindex}
           on:changePage={(e) => (pagindex = e.detail)}
           on:cambia-variabile={(e) => CallItem(e.detail)}
         />
-  
+
         <div id="content">
           <Search
             on:changePage={(e) => (pagindex = e.detail)}
             on:cambia-variabile={(e) => CallItem(e.detail)}
             {pagindex}
           />
-  
+
           {#if pagindex === 0}
             <Homepage on:cambia-variabile={(e) => CallItem(e.detail)} />
           {:else if pagindex === 1}
@@ -397,7 +404,7 @@
             <Settings />
           {/if}
         </div>
-  
+
         {#if downloadPannel}
           <DownloadPage {trackToDownload} on:cambia-variabile={(e) => CallItem(e.detail)} />
         {/if}
@@ -408,7 +415,7 @@
         {playerLocal}
         on:cambia-variabile={(e) => CallItem(e.detail)}
       />
-      <Controls max={dur} {sec} {FullScreen} {paused} shuffled={shuffle} {repeat} />
+      <Controls max={dur} {sec} {FullScreen} {paused} shuffled={shuffle} {repeat} {nextLoaded} />
     </div>
   {:else}
     <div class="FScontainerout" transition:fly={{ y: 200 }}>

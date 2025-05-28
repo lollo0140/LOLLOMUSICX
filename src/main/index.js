@@ -2756,3 +2756,32 @@ function maximize() {
 function minimize() {
   mainWindow.minimize()
 }
+
+//testi
+
+async function GetLyrics(title, artist, album) {
+  const ApiCall = `https://lrclib.net/api/get?artist_name=${artist}&track_name=${title}&album_name=${album}`
+
+  const response = await fetch(ApiCall)
+
+  const Temp = await response.json()
+
+  var lyric
+  if (Temp.syncedLyrics && Temp.syncedLyrics !== '') {
+    lyric = {
+      lyric: Temp.syncedLyrics,
+      sync: true
+    }
+  } else {
+    lyric = {
+      lyric: Temp.plainLyrics,
+      sync: false
+    }
+  }
+
+  return lyric
+}
+
+ipcMain.handle('getSonglyrics', async (event, title, artist, album) => {
+  return await GetLyrics(title, artist, album)
+})

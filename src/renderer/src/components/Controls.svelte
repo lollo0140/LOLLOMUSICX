@@ -1,8 +1,9 @@
 <script>/* eslint-disable prettier/prettier */
   import { onMount } from 'svelte'
   import * as renderer from '../main.js'
+  import { fade } from 'svelte/transition'
 
-  let { sec, max, paused, FullScreen } = $props()
+  let { sec, max, paused, FullScreen, nextLoaded } = $props()
 
   const PLAYimg = new URL('../assets/play.png', import.meta.url).href
   const PAUSEimg = new URL('../assets/pause.png', import.meta.url).href
@@ -130,6 +131,11 @@
   </button>
   <button class="Cbutton nextButton" onclick={() => shared.next()}>
     <img class="next" src={NEXTimg} alt="next" />
+
+    {#if nextLoaded}
+      <div transition:fade class="NextLoadedIndicator"></div>
+    {/if}
+    
   </button>
 
   <button class="Cbutton rpbutton" onclick={() => shared.setrepeat()}>

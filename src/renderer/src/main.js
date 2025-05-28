@@ -62,6 +62,13 @@ class shared {
     this.settings = undefined
     this.downloadQuewe = []
     this.downloading = false
+    this.LOADING = false
+  }
+
+  //testi palle
+
+  async GetLyrics(title, artist, album) {
+    return await ipcRenderer.invoke('getSonglyrics', title, artist, album)
   }
 
   //pin playlists
@@ -216,7 +223,6 @@ class shared {
 
   async GetYTlink(query, ID = false) {
     console.log('PALLACCE')
-
     try {
       const info = query.split(' | ')
 
@@ -346,7 +352,10 @@ class shared {
       let Query = `${songMeta.title} | ${songMeta.artist} | ${songMeta.album}`.trim()
       console.log('Query per YouTube:', Query)
 
+      this.LoadingImg = songMeta.img
+      this.LOADING = true
       const ytUrl = await this.GetYTlink(Query)
+      this.LOADING = false
       if (ytUrl) {
         this.SongsQuewe[0].YTurl = ytUrl
         console.log('URL YouTube ottenuto:', ytUrl)
@@ -522,8 +531,10 @@ class shared {
           console.error('Query non valida per la ricerca YouTube')
           throw new Error('Dati insufficienti per cercare su YouTube')
         }
-
+        this.LoadingImg = currentSong.img
+        this.LOADING = true
         currentSong.YTurl = await this.GetYTlink(Query)
+        this.LOADING = false
       }
 
       console.log('URL ottenuto:', currentSong.YTurl)
@@ -663,7 +674,10 @@ class shared {
           }
 
           // Carica l'URL e attendi che sia disponibile
+          this.LoadingImg = currentSong.img
+          this.LOADING = true
           currentSong.YTurl = await this.GetYTlink(Query)
+          this.LOADING = false
         }
 
         console.log('URL ottenuto in preload:', currentSong.YTurl)
@@ -1084,6 +1098,11 @@ class shared {
 
   async addRecentSearchs(keyword) {
     await ipcRenderer.invoke('addtorecentSearchs', keyword)
+  }
+
+  async getExactVideoMilliseconds() {
+    const videoElement = document.getElementById('MediaPlayer')
+    return Math.floor(videoElement.currentTime * 1000)
   }
 }
 
