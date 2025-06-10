@@ -30,7 +30,7 @@
       recentSearchs.push(data)
     }
 
-    console.log(recentSearchs)
+    //console.log(recentSearchs)
 
     //console.log(shared);
   })

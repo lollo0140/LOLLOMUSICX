@@ -154,7 +154,11 @@ class shared {
   }
 
   async APPLYSETTINGS() {
-    await ipcRenderer.invoke('APPLYSettings', this.settings)
+    try {
+      await ipcRenderer.invoke('APPLYSettings', this.settings)
+    } catch (error) {
+      console.log(error)
+    }
   }
 
   //artist page
@@ -222,16 +226,16 @@ class shared {
   }
 
   async GetYTlink(query, ID = false) {
-    console.log('PALLACCE')
+    //console.log('PALLACCE')
     try {
       const info = query.split(' | ')
 
-      console.log(query)
-      console.log(info)
+      //console.log(query)
+      //console.log(info)
 
       const response = await ipcRenderer.invoke('SearchLocalSong', info[0], info[1], info[2], ID)
 
-      console.log(response)
+      //console.log(response)
 
       if (response !== false) {
         return response
@@ -240,7 +244,7 @@ class shared {
         return data
       }
     } catch (err) {
-      console.log('postio: ' + err)
+      console.log(err)
     }
   }
 
@@ -341,7 +345,7 @@ class shared {
       YTurl: ''
     }
 
-    console.log('PlaySong:', songMeta)
+    //console.log('PlaySong:', songMeta)
 
     this.SongsQuewe = []
     this.SongsQuewe.push(songMeta)
@@ -350,7 +354,7 @@ class shared {
     // Carica direttamente l'URL YouTube per la canzone
     try {
       let Query = `${songMeta.title} | ${songMeta.artist} | ${songMeta.album}`.trim()
-      console.log('Query per YouTube:', Query)
+      //console.log('Query per YouTube:', Query)
 
       this.LoadingImg = songMeta.img
       this.LOADING = true
@@ -358,7 +362,7 @@ class shared {
       this.LOADING = false
       if (ytUrl) {
         this.SongsQuewe[0].YTurl = ytUrl
-        console.log('URL YouTube ottenuto:', ytUrl)
+        //console.log('URL YouTube ottenuto:', ytUrl)
       } else {
         console.error('URL YouTube non disponibile per:', Query)
       }
@@ -395,7 +399,7 @@ class shared {
     try {
       // Attendi che la Promise di Tracks si risolva
       const resolvedTracks = await Tracks
-      console.log(resolvedTracks)
+      //console.log(resolvedTracks)
 
       this.SongsQuewe = []
       let i = 0
@@ -429,7 +433,7 @@ class shared {
     try {
       // Attendi che la Promise di Tracks si risolva
       const resolvedTracks = await Tracks
-      console.log(resolvedTracks)
+      //console.log(resolvedTracks)
 
       this.SongsQuewe = []
 
@@ -491,7 +495,7 @@ class shared {
       }
 
       const currentSong = this.SongsQuewe[this.PlayngIndex]
-      console.log('video?   ' + currentSong.video)
+      //console.log('video?   ' + currentSong.video)
 
       // Se YTurl è già presente, non fare nulla
       if (currentSong.YTurl && currentSong.YTurl !== '') {
@@ -537,7 +541,7 @@ class shared {
         this.LOADING = false
       }
 
-      console.log('URL ottenuto:', currentSong.YTurl)
+      //console.log('URL ottenuto:', currentSong.YTurl)
 
       if (!currentSong.YTurl) {
         console.error('Impossibile ottenere URL per:', Query)
@@ -796,10 +800,15 @@ class shared {
 
   async SetVolume(value) {
     const videoPlayer = document.getElementById('MediaPlayer')
+
     if (videoPlayer) {
       videoPlayer.volume = value
       this.volume = value
     }
+
+    this.settings.playerSettings.audio.volume = value
+
+    this.APPLYSETTINGS()
   }
 
   async GetVolume() {

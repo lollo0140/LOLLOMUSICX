@@ -1,11 +1,24 @@
 <script>/* eslint-disable prettier/prettier */
 
+    import { onMount } from 'svelte'
+    import * as renderer from '../main.js'
     let { img } = $props()
+
+    let shared
+    let bgType = $state()
+
+    onMount( () => {
+      shared = renderer.default.shared
+
+      bgType = shared.settings.playerSettings.interface.Background
+    })
 
 </script>
 
-<div class="background">
-    
+{#if bgType === 'dynamic'}
+
+  <div class="background">
+
     <img class="backgroundimg" src="{img}" alt="-" style="left:0px; top:0px;">
 
     <img class="backgroundimg" src="{img}" alt="-" style="left:1000px; top:0px;">
@@ -14,8 +27,17 @@
 
     <img class="backgroundimg" src="{img}" alt="-" style="left:1000px; top:1000px;">
 
+  </div>
 
-</div>
+{:else if bgType === 'static'}
+
+  <img class="staticBG" src="{img}">
+
+{:else if bgType === 'custom'}
+
+{/if}
+
+
 
 <style>
 
@@ -58,6 +80,21 @@
         background-size: cover;
         background-repeat: no-repeat;
 
+    }
+
+    .staticBG {
+
+      position: absolute;
+
+      left: -40px;
+      top: -40px;
+
+
+      width: calc(100% + 80px);
+      height: calc(100% + 80px);
+
+      filter: blur(15px) brightness(60%);
+      object-fit: cover;
     }
 
 </style>

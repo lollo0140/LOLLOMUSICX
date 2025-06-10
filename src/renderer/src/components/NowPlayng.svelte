@@ -1,12 +1,20 @@
-<script>
-  /* eslint-disable prettier/prettier */
+<script>/* eslint-disable prettier/prettier */
   import { createEventDispatcher } from 'svelte'
   import { onMount } from 'svelte'
   import * as renderer from '../main.js'
-  let { playerLocal, FullScreen } = $props()
+  let { playerLocal, FullScreen, LASTFMsessionOn, SessionKEY } = $props()
+
+  const ipcRenderer = window.electron.ipcRenderer
 
   let loading = $state()
   let LoadingImg = $state()
+
+  let canvaLoading = $state(true)
+  let canva = $state()
+  let canShowcanva = $state(false)
+
+  var youtubePlayer
+
 
   import { fade, slide } from 'svelte/transition'
   import LyricPannel from './pagesElements/LyricPannel.svelte'
@@ -19,7 +27,7 @@
 
   let oldtitle, oldartist, oldalbum
 
-  let shared
+  let shared = $state()
   let quewe = $state()
   let quewewPannel = true
   let playngIndex = $state()
@@ -37,9 +45,15 @@
 
   let nextSongLoad = $state(false)
 
+  function onPlayerStateChange(event) {
+    // Quando il video finisce (stato = 0), riavvialo per creare un loop manuale
+    if (event.data === YT.PlayerState.ENDED) {
+      youtubePlayer.playVideo();
+    }
+  }
+
   $effect(async () => {
     checkSaved()
-
 
     //console.log(playerLocal.img)
 
@@ -56,10 +70,26 @@
     //console.log(immagine)
 
     if (isSongChanged(playerLocal.title, playerLocal.artist, playerLocal.album)) {
+      canvaLoading = true
       LyricPannelVisible = false
       Lyric = await GetLyric()
 
       try {
+        if (LASTFMsessionOn) {
+          const timestamp = Math.floor(Date.now() / 1000)
+          ipcRenderer.invoke(
+            'lastfm-api-call',
+            'track.scrobble',
+            {
+              artist: playerLocal.artist,
+              track: playerLocal.title,
+              timestamp: timestamp.toString(),
+              album: playerLocal.album
+            },
+            SessionKEY
+          )
+        }
+
         nextSongLoad = false
 
         const quewe = await shared.GetQuewe()
@@ -74,6 +104,33 @@
       if (Lyric.lyric !== undefined) {
         LyricPannelVisible = true
       }
+
+      canva = await ipcRenderer.invoke('GetCanvas', playerLocal.title, playerLocal.artist)
+      console.log(canva)
+      console.log(`https://www.youtube.com/embed/${canva}?autoplay=1&controls=0&rel=0&mute=1&loop=1&playlist=${canva}`)
+      canvaLoading = false
+
+      if (!window.YT) {
+        const tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        const firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+      }
+
+      window.onYouTubeIframeAPIReady = function() {
+        // Usa l'iframe esistente
+        youtubePlayer = new YT.Player('Iframe', {
+          events: {
+            'onStateChange': onPlayerStateChange
+          }
+        });
+      };
+
+      setTimeout(() => {
+        document.getElementById('Iframe').style.opacity = '1'
+        document.getElementById('Img2').style.opacity = '0'
+      }, 4000);
+
     }
   })
 
@@ -115,27 +172,27 @@
       playngIndex = await shared.GetPIndex()
       loading = shared.LOADING
       LoadingImg = shared.LoadingImg
-      console.log(LoadingImg)
+      //console.log(LoadingImg)
     }, 100)
 
     LyricPannelVisible = false
-      Lyric = await GetLyric()
+    Lyric = await GetLyric()
 
-      try {
-        nextSongLoad = false
+    try {
+      nextSongLoad = false
 
-        const quewe = await shared.GetQuewe()
-        const Pindex = await shared.GetPIndex()
-        nextSong = await quewe[Pindex + 1]
+      const quewe = await shared.GetQuewe()
+      const Pindex = await shared.GetPIndex()
+      nextSong = await quewe[Pindex + 1]
 
-        nextSongLoad = true
-      } catch {
-        nextSongLoad = false
-      }
+      nextSongLoad = true
+    } catch {
+      nextSongLoad = false
+    }
 
-      if (Lyric.lyric !== undefined) {
-        LyricPannelVisible = true
-      }
+    if (Lyric.lyric !== undefined) {
+      LyricPannelVisible = true
+    }
   })
 
   const dispatch = createEventDispatcher()
@@ -168,17 +225,29 @@
 </script>
 
 <dir class={FullScreen ? 'FSNowPlayng' : 'NowPlayng'} style="transition: all 600ms;">
-  <div
-    class="contextMenuSong"
-    style="positio: absolute; top: 0px; left: 0px; height: 430px; width: 100%;"
-  >
+  <div class="contextMenuSong NowPlayngCUrrentContainer">
+    {#if canvaLoading || !shared.settings.playerSettings.interface.showVideo}
+      <img in:fade
+        id="Img"
+        class="PLAYERimg contextMenuSong --IMGDATA"
+        style="object-fit: cover; pointer-events: none;"
+        src={immagine}
+        alt="img"
+      />
+    {:else}
+
     <img
-      id="Img"
-      class="PLAYERimg contextMenuSong --IMGDATA"
-      style="object-fit: cover; pointer-events: none;"
-      src={immagine}
-      alt="img"
-    />
+        id="Img2"
+        class="PLAYERimg contextMenuSong --IMGDATA"
+        style="object-fit: cover; pointer-events: none; opacity:1; transition:all 500ms;"
+        src={immagine}
+        alt="img"
+      />
+
+      <iframe id="Iframe" in:slide style="opacity:0;" class="PLAYERvideo" title="song" src={`https://www.youtube.com/embed/${canva}?autoplay=1&controls=0&rel=0&mute=1&loop=1&enablejsapi=1`} frameborder="0"></iframe>
+
+    {/if}
+
     <p class="--TITLEDATA PLAYERtitle" style="pointer-events: none;">{playerLocal.title}</p>
     <button
       style="pointer-events: all;"
@@ -198,15 +267,13 @@
     {/if}
 
     {#if loading}
-      <img transition:fade class="ImmageOfLoadingSong" src={LoadingImg} alt="img">
+      <img transition:fade class="ImmageOfLoadingSong" src={LoadingImg} alt="img" />
     {/if}
 
     <div class="moreInfoDiv">
-
-      
       {#if nextSongLoad}
         <p class="dividerP">Next up</p>
-      
+
         <div in:slide class="upNextDiv">
           <img class="upNextImg" src={nextSong.img} alt="img" />
           <p class="upNextTitle">{nextSong.title}</p>
@@ -214,10 +281,9 @@
         </div>
       {/if}
 
-      
       {#if LyricPannelVisible}
         <p class="dividerP">Lyrics</p>
-        
+
         <div class="lyricsContainer" in:slide>
           <LyricPannel testoCanzone={Lyric.lyric} sync={Lyric.sync} />
         </div>
@@ -348,34 +414,40 @@
   @media only screen and (max-width: 600px) {
     .NowPlayng {
       position: absolute;
-      bottom: 0px;
-      left: 50%;
-      top: 39px;
-
-      transform: translateX(-50%);
-
-      background: transparent;
-      border: none;
-
-      height: 100%;
-      width: 352px;
+        bottom: 0px;
+        left: 0px;
+        right: 0px;
+        top: 0px;
+        background: transparent;
+        border: none;
+        height: 100%;
+        width: 100%;
+        border-radius: 0px;
     }
 
     .PLAYERtitle {
-      transform: translateY(20px);
+      transform: translateY(65px) translateX(14px);
+      pointer-events: none;
     }
 
     .PLAYERart {
-      transform: translateY(20px);
+      transform: translateY(65px) translateX(14px);
+      pointer-events: none;
     }
 
     .PLAYERalbum {
-      transform: translateY(20px);
+      transform: translateY(65px) translateX(14px);
+      pointer-events: none;
     }
 
     .PLAYERimg {
+
+      top: 50px;
+      left: 25px;
       width: 326px;
       height: 326px;
+
+      pointer-events: none;
     }
 
     .likeButton {

@@ -32,6 +32,10 @@
   onMount(async () => {
     shared = renderer.default.shared
 
+    document.getElementById('volSlider').value = shared.settings.playerSettings.audio.volume * 100
+
+    console.log(shared.settings.playerSettings.audio.volume * 100)
+
     setInterval(() => {
       shuffled = shared.Shuffled
       repeat = shared.repeat
@@ -98,7 +102,7 @@
 
     shared.SetVolume(volSlider / 100)
 
-    if (volSlider <= 1) {
+    if (volSlider < 1) {
       VolumeImg = VOLNONE
     } else if (volSlider <= 50) {
       VolumeImg = VOLHALF

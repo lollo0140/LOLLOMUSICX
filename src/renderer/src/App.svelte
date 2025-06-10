@@ -19,9 +19,12 @@
   import DownloadPage from './components/DownloadPage.svelte'
   import Background from './components/Background.svelte'
   import { fade, fly } from 'svelte/transition'
+  import HomePageLastfm from './components/HomePageLASTFM.svelte'
 
   const ipcRenderer = window.electron.ipcRenderer
   //imports
+
+  var LASTFMsessionOn = $state(false)
 
   const MINIMIZE = new URL('./assets/other/minimize.png', import.meta.url).href
   const MAXIMIZE = new URL('./assets/other/maximize.png', import.meta.url).href
@@ -88,12 +91,32 @@
     }
   })
 
+  let SessionKEY = $state(),
+    SessionName = $state()
+
   onMount(async () => {
     shared = renderer.default.shared
     playerLocal = renderer.default.shared.Player
 
     try {
-      shared.LoadSettings()
+      if (localStorage.getItem('lastfm_session_key') !== '') {
+        SessionName = localStorage.getItem('lastfm_username')
+        SessionKEY = localStorage.getItem('lastfm_session_key')
+
+        LASTFMsessionOn = true
+      } else {
+        LASTFMsessionOn = false
+      }
+    } catch {
+      localStorage.setItem('lastfm_session_key', '')
+      localStorage.setItem('lastfm_username', '')
+      LASTFMsessionOn = false
+    }
+
+    try {
+      await shared.LoadSettings()
+
+      document.body.style.zoom = `${shared.settings.playerSettings.interface.Zoom}`
     } catch (error) {
       console.log(error)
     }
@@ -128,11 +151,11 @@
       if (obj.type === 'album') {
         pagindex = 1
         AlbumQuery = obj.query
-        console.log('album chiamato: ' + obj.query)
+        //console.log('album chiamato: ' + obj.query)
       } else if (obj.type === 'artist') {
         pagindex = 4
         ArtistQuery = obj.query
-        console.log('artista chiamato: ' + obj.query)
+        //console.log('artista chiamato: ' + obj.query)
       } else if (obj.type === 'liked') {
         pagindex = 7
       } else if (obj.type === 'playlist') {
@@ -187,7 +210,7 @@
     try {
       nextLoaded = false
 
-      console.log('URL ricevuto:', url) // Log per debug
+      //console.log('URL ricevuto:', url) // Log per debug
       // Determina se l'URL è remoto o locale
       const isRemoteUrl = url.startsWith('http://') || url.startsWith('https://')
 
@@ -212,7 +235,7 @@
       mediaElement.className = 'media-player'
       mediaElement.controls = false
 
-      mediaElement.volume = shared.volume
+      mediaElement.volume = shared.settings.playerSettings.audio.volume
 
       // Aggiungi l'elemento al contenitore
       playerContainer.appendChild(mediaElement)
@@ -237,7 +260,7 @@
       if (isRemoteUrl) {
         // Per URL remoti, usa direttamente l'URL
         mediaElement.src = url
-        console.log('URL remoto del media:', url)
+        //console.log('URL remoto del media:', url)
       } else {
         // Per file locali, usa la funzione per creare un Blob URL
         const blobUrl = window.mediaAPI.createMediaUrl(url)
@@ -246,7 +269,7 @@
         }
 
         mediaElement.src = blobUrl
-        console.log('Blob URL del media locale:', blobUrl)
+        //console.log('Blob URL del media locale:', blobUrl)
       }
 
       await new Promise((resolve, reject) => {
@@ -300,7 +323,7 @@
       loading = false
 
       // Sistema di fallback
-      console.log('Tentativo di ripristino dopo errore...')
+      //console.log('Tentativo di ripristino dopo errore...')
 
       // Attendi un po' prima di ritentare
       setTimeout(() => {
@@ -314,11 +337,11 @@
 
         if (shouldSkip) {
           // Se il file non esiste o è inaccessibile, passa alla traccia successiva
-          console.log('File non accessibile, passaggio alla traccia successiva')
+          //console.log('File non accessibile, passaggio alla traccia successiva')
           shared.next()
         } else {
           // Per altri errori (come problemi di rete), riprova la stessa traccia
-          console.log('Ritentativo di riproduzione della stessa traccia')
+          //console.log('Ritentativo di riproduzione della stessa traccia')
           initializePlayer()
         }
       }, 1000)
@@ -355,7 +378,7 @@
   }
 
   async function audioFallBack() {
-    console.log('Tentativo di fallback...')
+    //console.log('Tentativo di fallback...')
     loading = true
     const videoElement = document.getElementById('MediaPlayer')
     if (videoElement) {
@@ -371,6 +394,42 @@
         console.error('Fallback fallito:', error)
       }
     }
+  }
+
+  let LASTFMToken
+  let clickAllow = $state(false)
+  async function login() {
+    const Token = await ipcRenderer.invoke('lastfm-get-auth-token')
+
+    await ipcRenderer.invoke('lastfm-open-auth-url', Token)
+    LASTFMToken = Token
+    clickAllow = true
+  }
+
+  async function ContinueLongin() {
+    try {
+      const data = await ipcRenderer.invoke('lastfm-get-session', LASTFMToken)
+
+      localStorage.setItem('lastfm_session_key', data.key)
+      localStorage.setItem('lastfm_username', data.name)
+
+      SessionName = data.name
+      SessionKEY = data.key
+
+      LASTFMsessionOn = true
+    } catch {
+      LASTFMsessionOn = false
+      clickAllow = false
+      localStorage.setItem('lastfm_session_key', '')
+      localStorage.setItem('lastfm_username', '')
+    }
+  }
+
+  async function logout() {
+    localStorage.setItem('lastfm_session_key', '')
+    localStorage.setItem('lastfm_username', '')
+
+    LASTFMsessionOn = false
   }
 </script>
 
@@ -400,8 +459,43 @@
             {pagindex}
           />
 
+          <div class="LogContainer">
+            {#if !LASTFMsessionOn}
+              {#if !clickAllow}
+                <button
+                  onclick={() => {
+                    login()
+                  }}
+                  class="LoginButton">Log In</button
+                >
+              {:else}
+                <p class="ClickAllowText">
+                  Click the "allow" button on the browser and press continue
+                </p>
+                <button class="ClickAllow" onclick={() => ContinueLongin()}>Continue</button>
+              {/if}
+            {:else}
+              <p class="Sessionplaceholder">Logged as</p>
+              <p class="SessionName">{SessionName}</p>
+              <button
+                class="LoginButton"
+                onclick={() => {
+                  logout()
+                }}>Log Out</button
+              >
+            {/if}
+          </div>
+
           {#if pagindex === 0}
-            <Homepage on:cambia-variabile={(e) => CallItem(e.detail)} />
+            {#if LASTFMsessionOn}
+              <HomePageLastfm
+                {SessionKEY}
+                {SessionName}
+                on:cambia-variabile={(e) => CallItem(e.detail)}
+              />
+            {:else}
+              <Homepage on:cambia-variabile={(e) => CallItem(e.detail)} />
+            {/if}
           {:else if pagindex === 1}
             <Album {AlbumQuery} on:cambia-variabile={(e) => CallItem(e.detail)} />
           {:else if pagindex === 2}
@@ -431,6 +525,9 @@
         {FullScreen}
         {loading}
         {playerLocal}
+        {SessionName}
+        {SessionKEY}
+        {LASTFMsessionOn}
         on:cambia-variabile={(e) => CallItem(e.detail)}
       />
       <Controls max={dur} {sec} {FullScreen} {paused} shuffled={shuffle} {repeat} {nextLoaded} />

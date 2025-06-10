@@ -1,5 +1,5 @@
-<script>
-  /* eslint-disable prettier/prettier */
+<script>/* eslint-disable prettier/prettier */
+  /* eslint-disable no-unused-vars */
   import { onMount } from 'svelte'
   import * as renderer from '../main.js'
   import LikeButton from './pagesElements/LikeButton.svelte'
@@ -19,7 +19,7 @@
     songs = await shared.GetLiked()
 
     for (const item of songs) {
-      console.log(item)
+      //console.log(item)
       numOfSongs++
     }
 
@@ -33,7 +33,7 @@
     songs = await shared.GetLiked()
 
     for (const item of songs) {
-      console.log(item)
+      //console.log(item)
       numOfSongs++
     }
 
@@ -41,7 +41,7 @@
   })
 
   async function PlayTraks(index) {
-    console.log(songs)
+    //console.log(songs)
     shared.PlayPlaylistS(songs, index)
   }
 </script>

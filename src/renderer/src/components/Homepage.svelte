@@ -100,20 +100,4 @@
   {/if}
 </div>
 
-<style>
-  #welcome {
-    font-size: 46px;
 
-    line-height: 10px;
-
-    font-weight: 800;
-  }
-
-  #recentlyPlayed {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 0px;
-    width: 80%;
-    min-width: 600px;
-  }
-</style>

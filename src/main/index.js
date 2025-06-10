@@ -10,6 +10,7 @@ import fetch from 'node-fetch'
 import { ytUrls } from './yt-urls.js'
 const ytmusicApi = require('ytmusic-api')
 const ytm = new ytmusicApi()
+import crypto from 'crypto'
 
 var running = true
 //import { title } from 'process'
@@ -19,6 +20,7 @@ var running = true
 var ytengine
 
 const LASTFM_API_KEY = '81d1abb0e9e24219499ba934854bd3d7'
+const LASTFM_API_KEY_SECRETE = '67bdd640bf6ed99c4cb59d190e8f8215'
 const LASTFM_API_URL = ' http://ws.audioscrobbler.com/2.0/'
 const userDataPath = app.getPath('userData')
 const dataFolder = path.join(userDataPath, 'data')
@@ -54,7 +56,9 @@ const defSettingsValue = {
       version: '1.0.0',
       startMinimized: false,
       minimizeToTray: true,
-      autoPlayOnStart: false
+      autoPlayOnStart: false,
+      miniPlayerWhenClosed: false,
+      killLollomusicOnClose: false
     },
     audio: {
       volume: 80,
@@ -66,11 +70,10 @@ const defSettingsValue = {
       scanOnStartup: true
     },
     interface: {
-      showLyrics: true,
       showVideo: true,
-      showPlaylistInSideBar: true,
-      LiteMode: false,
-      Zoom: 1
+      Zoom: 1,
+      Background: 'dynamic',
+      UIopacity: 1
     },
     hotkeys: {
       playPause: 'Space',
@@ -91,7 +94,7 @@ function initializeConfigFiles() {
     { path: LikedalbumsPath, defaultValue: {} },
     { path: LikedartistsPath, defaultValue: {} },
     { path: recentListens, defaultValue: {} },
-    { path: userPlaylists, defaultValue: {}},
+    { path: userPlaylists, defaultValue: {} },
     { path: recentSearchs, defaultValue: {} },
     { path: SettingsPath, defaultValue: JSON.stringify(defSettingsValue) }
   ]
@@ -1617,6 +1620,22 @@ async function GetYoutubeLink(title, artist, album) {
   }
 }
 
+async function GetCanvas(title, artist) {
+  const result = await PerformBasicSearch(`${artist} - ${title}`)
+
+  console.log('Risultati  ricerca--------------------------------------------\n' + result + '-----')
+  // Check if we have results before proceeding
+  if (result) {
+    return result
+  } else {
+    return null // Or throw an error or handle as needed
+  }
+}
+
+ipcMain.handle('GetCanvas', async (event, title, artist) => {
+  return await GetCanvas(title, artist)
+})
+
 // Handler principale
 ipcMain.handle('GetYTlink', async (event, SearchD) => {
   let infos = SearchD.split(' | ')
@@ -2784,4 +2803,101 @@ async function GetLyrics(title, artist, album) {
 
 ipcMain.handle('getSonglyrics', async (event, title, artist, album) => {
   return await GetLyrics(title, artist, album)
+})
+
+//0Auth
+
+// Funzione per generare MD5 hash
+function md5(string) {
+  return crypto.createHash('md5').update(string).digest('hex')
+}
+
+// Genera firma API per Last.fm
+function generateSignature(params) {
+  const keys = Object.keys(params).sort()
+  let signature = ''
+
+  keys.forEach((key) => {
+    signature += key + params[key]
+  })
+
+  signature += LASTFM_API_KEY_SECRETE
+  return md5(signature)
+}
+
+// Gestisci richiesta di autenticazione dal renderer
+ipcMain.handle('lastfm-get-auth-token', async () => {
+  const url = `https://ws.audioscrobbler.com/2.0/?method=auth.gettoken&api_key=${LASTFM_API_KEY}&format=json`
+
+  try {
+    const response = await fetch(url)
+    const data = await response.json()
+    return data.token
+  } catch (error) {
+    console.error('Errore nel recupero del token:', error)
+    throw error
+  }
+})
+
+// Apri URL di autorizzazione nel browser predefinito
+ipcMain.handle('lastfm-open-auth-url', (event, token) => {
+  const authURL = `https://www.last.fm/api/auth/?api_key=${LASTFM_API_KEY}&token=${token}`
+  shell.openExternal(authURL)
+  return true
+})
+
+// Ottieni sessione dopo autorizzazione
+ipcMain.handle('lastfm-get-session', async (event, token) => {
+  const params = {
+    method: 'auth.getSession',
+    api_key: LASTFM_API_KEY,
+    token: token
+  }
+
+  const api_sig = generateSignature(params)
+
+  const url = `https://ws.audioscrobbler.com/2.0/?method=auth.getSession&api_key=${LASTFM_API_KEY}&token=${token}&api_sig=${api_sig}&format=json`
+
+  try {
+    const response = await fetch(url)
+    const data = await response.json()
+    return data.session
+  } catch (error) {
+    console.error('Errore nel recupero della sessione:', error)
+    throw error
+  }
+})
+
+// Gestisci richieste API autenticate (es. scrobble)
+ipcMain.handle('lastfm-api-call', async (event, method, params, sessionKey) => {
+  const apiParams = {
+    method: method,
+    api_key: LASTFM_API_KEY,
+    sk: sessionKey,
+    ...params
+  }
+
+  const api_sig = generateSignature(apiParams)
+
+  const formData = new URLSearchParams()
+  Object.keys(apiParams).forEach((key) => {
+    formData.append(key, apiParams[key])
+  })
+  formData.append('api_sig', api_sig)
+  formData.append('format', 'json')
+
+  try {
+    const response = await fetch('https://ws.audioscrobbler.com/2.0/', {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      }
+    })
+
+    return await response.json()
+  } catch (error) {
+    console.error(`Errore durante ${method}:`, error)
+    throw error
+  }
 })

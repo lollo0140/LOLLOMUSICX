@@ -9,7 +9,6 @@
   import { createEventDispatcher } from 'svelte'
   import { fade } from 'svelte/transition'
 
-
   let shared
 
   let albums = $state()
