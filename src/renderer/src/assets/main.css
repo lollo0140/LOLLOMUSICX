@@ -2137,3 +2137,37 @@ body {
     left: 0px;
     right: 0px;
 }
+
+.PlayPouse {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+
+    margin: 0px;
+    width: 50px;
+    height: 50px;
+
+    transition: all 500ms;
+  }
+
+  .previous {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    margin: 0px;
+    width: 40px;
+    height: 40px;
+
+    transition: all 500ms;
+  }
+
+  .next {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    margin: 0px;
+    width: 40px;
+    height: 40px;
+
+    transition: all 500ms;
+  }

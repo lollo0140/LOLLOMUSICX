@@ -26,10 +26,17 @@
 
   var LASTFMsessionOn = $state(false)
 
+  const PLAYimg = new URL('./assets/play.png', import.meta.url).href
+  const PAUSEimg = new URL('./assets/pause.png', import.meta.url).href
+  const NEXTimg = new URL('./assets/next.png', import.meta.url).href
+  const PREVIOUSimg = new URL('./assets/previous.png', import.meta.url).href
+
   const MINIMIZE = new URL('./assets/other/minimize.png', import.meta.url).href
   const MAXIMIZE = new URL('./assets/other/maximize.png', import.meta.url).href
   const CLOSE = new URL('./assets/other/exit.png', import.meta.url).href
   const EXPAND = new URL('./assets/expand.png', import.meta.url).href
+
+  var MINIPLAYER = $state(false)
 
   var paused = $state()
   var shuffle = $state()
@@ -431,166 +438,408 @@
 
     LASTFMsessionOn = false
   }
+
+  async function setMiniplayer() {
+    MINIPLAYER = true
+    ipcRenderer.invoke('togleMiniPLayer', true)
+  }
+
+  async function setNormalplayer() {
+    MINIPLAYER = false
+    ipcRenderer.invoke('togleMiniPLayer', false)
+  }
 </script>
 
-{#if !Pageloading}
-  <Background img={playerLocal.img || ''} />
+<div id="videoContainer">
+  <video id="MediaPlayer" bind:volume bind:currentTime={sec} bind:duration={dur}>
+    <track kind="captions" />
+  </video>
+</div>
 
-  <div id="videoContainer">
-    <video id="MediaPlayer" bind:volume bind:currentTime={sec} bind:duration={dur}>
-      <track kind="captions" />
-    </video>
-  </div>
+{#if !MINIPLAYER}
+  {#if !Pageloading}
+    <Background img={playerLocal.img || ''} />
 
-  {#if !FullScreen}
-    <div transition:fade={{ duration: 200 }}>
-      <div id="mainContent">
-        <NavBar
-          {LoadingImg}
-          pag={pagindex}
-          on:changePage={(e) => (pagindex = e.detail)}
-          on:cambia-variabile={(e) => CallItem(e.detail)}
-        />
-
-        <div id="content">
-          <Search
+    {#if !FullScreen}
+      <div transition:fade={{ duration: 200 }}>
+        <div id="mainContent">
+          <NavBar
+            {LoadingImg}
+            pag={pagindex}
             on:changePage={(e) => (pagindex = e.detail)}
             on:cambia-variabile={(e) => CallItem(e.detail)}
-            {pagindex}
           />
 
-          <div class="LogContainer">
-            {#if !LASTFMsessionOn}
-              {#if !clickAllow}
-                <button
-                  onclick={() => {
-                    login()
-                  }}
-                  class="LoginButton">Log In</button
-                >
+          <div id="content">
+            <Search
+              on:changePage={(e) => (pagindex = e.detail)}
+              on:cambia-variabile={(e) => CallItem(e.detail)}
+              {pagindex}
+            />
+
+            <div class="LogContainer">
+              {#if !LASTFMsessionOn}
+                {#if !clickAllow}
+                  <button
+                    onclick={() => {
+                      login()
+                    }}
+                    class="LoginButton">Log In</button
+                  >
+                {:else}
+                  <p class="ClickAllowText">
+                    Click the "allow" button on the browser and press continue
+                  </p>
+                  <button class="ClickAllow" onclick={() => ContinueLongin()}>Continue</button>
+                {/if}
               {:else}
-                <p class="ClickAllowText">
-                  Click the "allow" button on the browser and press continue
-                </p>
-                <button class="ClickAllow" onclick={() => ContinueLongin()}>Continue</button>
+                <p class="Sessionplaceholder">Logged as</p>
+                <p class="SessionName">{SessionName}</p>
+                <button
+                  class="LoginButton"
+                  onclick={() => {
+                    logout()
+                  }}>Log Out</button
+                >
               {/if}
+            </div>
+
+            {#if pagindex === 0}
+              {#if LASTFMsessionOn}
+                <HomePageLastfm
+                  {SessionKEY}
+                  {SessionName}
+                  on:cambia-variabile={(e) => CallItem(e.detail)}
+                />
+              {:else}
+                <Homepage on:cambia-variabile={(e) => CallItem(e.detail)} />
+              {/if}
+            {:else if pagindex === 1}
+              <Album {AlbumQuery} on:cambia-variabile={(e) => CallItem(e.detail)} />
+            {:else if pagindex === 2}
+              <p class="hidden">search</p>
+            {:else if pagindex === 3}
+              <UserLibrary on:cambia-variabile={(e) => CallItem(e.detail)} />
+            {:else if pagindex === 4}
+              <Artists {ArtistQuery} on:cambia-variabile={(e) => CallItem(e.detail)} />
+            {:else if pagindex === 5}
+              <Local />
+            {:else if pagindex === 6}
+              <Playlist {Pindex} />
+            {:else if pagindex === 7}
+              <Liked on:cambia-variabile={(e) => CallItem(e.detail)} />
+            {:else if pagindex === 9}
+              <LocalAlbum {Pindex} />
             {:else}
-              <p class="Sessionplaceholder">Logged as</p>
-              <p class="SessionName">{SessionName}</p>
-              <button
-                class="LoginButton"
-                onclick={() => {
-                  logout()
-                }}>Log Out</button
-              >
+              <Settings />
             {/if}
           </div>
 
-          {#if pagindex === 0}
-            {#if LASTFMsessionOn}
-              <HomePageLastfm
-                {SessionKEY}
-                {SessionName}
-                on:cambia-variabile={(e) => CallItem(e.detail)}
-              />
-            {:else}
-              <Homepage on:cambia-variabile={(e) => CallItem(e.detail)} />
-            {/if}
-          {:else if pagindex === 1}
-            <Album {AlbumQuery} on:cambia-variabile={(e) => CallItem(e.detail)} />
-          {:else if pagindex === 2}
-            <p class="hidden">search</p>
-          {:else if pagindex === 3}
-            <UserLibrary on:cambia-variabile={(e) => CallItem(e.detail)} />
-          {:else if pagindex === 4}
-            <Artists {ArtistQuery} on:cambia-variabile={(e) => CallItem(e.detail)} />
-          {:else if pagindex === 5}
-            <Local />
-          {:else if pagindex === 6}
-            <Playlist {Pindex} />
-          {:else if pagindex === 7}
-            <Liked on:cambia-variabile={(e) => CallItem(e.detail)} />
-          {:else if pagindex === 9}
-            <LocalAlbum {Pindex} />
-          {:else}
-            <Settings />
+          {#if downloadPannel}
+            <DownloadPage {trackToDownload} on:cambia-variabile={(e) => CallItem(e.detail)} />
           {/if}
         </div>
-
-        {#if downloadPannel}
-          <DownloadPage {trackToDownload} on:cambia-variabile={(e) => CallItem(e.detail)} />
-        {/if}
+        <NowPlayng
+          {FullScreen}
+          {loading}
+          {playerLocal}
+          {SessionName}
+          {SessionKEY}
+          {LASTFMsessionOn}
+          on:cambia-variabile={(e) => CallItem(e.detail)}
+        />
+        <Controls max={dur} {sec} {FullScreen} {paused} shuffled={shuffle} {repeat} {nextLoaded} />
       </div>
-      <NowPlayng
-        {FullScreen}
-        {loading}
-        {playerLocal}
-        {SessionName}
-        {SessionKEY}
-        {LASTFMsessionOn}
+    {:else}
+      <div class="FScontainerout" transition:fly={{ y: 200 }}>
+        <div class="FScontainer">
+          <img class="FSimg" src={playerLocal.img} alt="salsa" />
+          <p class="FStitle">{playerLocal.title}</p>
+          <p class="FSartist">{playerLocal.artist}</p>
+
+          {#if !playerLocal.title === playerLocal.album}
+            <p class="FSalbum">{playerLocal.album}</p>
+          {/if}
+        </div>
+        <Controls max={dur} {sec} {FullScreen} {paused} shuffled={shuffle} {repeat} />
+      </div>
+    {/if}
+
+    {#if contextmenu}
+      <ContextMenu
+        {menuX}
+        {menuY}
+        {clickedElement}
         on:cambia-variabile={(e) => CallItem(e.detail)}
       />
-      <Controls max={dur} {sec} {FullScreen} {paused} shuffled={shuffle} {repeat} {nextLoaded} />
-    </div>
+    {/if}
   {:else}
-    <div class="FScontainerout" transition:fly={{ y: 200 }}>
-      <div class="FScontainer">
-        <img class="FSimg" src={playerLocal.img} alt="salsa" />
-        <p class="FStitle">{playerLocal.title}</p>
-        <p class="FSartist">{playerLocal.artist}</p>
-
-        {#if !playerLocal.title === playerLocal.album}
-          <p class="FSalbum">{playerLocal.album}</p>
-        {/if}
-      </div>
-      <Controls max={dur} {sec} {FullScreen} {paused} shuffled={shuffle} {repeat} />
-    </div>
+    <p>loading...</p>
   {/if}
 
-  {#if contextmenu}
-    <ContextMenu {menuX} {menuY} {clickedElement} on:cambia-variabile={(e) => CallItem(e.detail)} />
-  {/if}
+  <dir style="-webkit-app-region: drag;" class="DragRegion">
+    <p class="windowTitle">LOLLOMUSICX BETA 0.7.5</p>
+
+    <button
+      onclick={() =>
+        !shared.settings.playerSettings.general.miniPlayerWhenClosed
+          ? ipcRenderer.invoke('closeWin')
+          : setMiniplayer()}
+      style="-webkit-app-region: no-drag;"
+      class="windowBarButton"
+    >
+      <img class="img" src={CLOSE} alt="palle" />
+    </button>
+
+    <button
+      onclick={() => ipcRenderer.invoke('maximize')}
+      style="-webkit-app-region: no-drag;"
+      class="windowBarButton"
+    >
+      <img class="img" src={MAXIMIZE} alt="palle" />
+    </button>
+
+    <button
+      onclick={() => ipcRenderer.invoke('minimize')}
+      style="-webkit-app-region: no-drag;"
+      class="windowBarButton"
+    >
+      <img class="MinImg img" src={MINIMIZE} alt="palle" />
+    </button>
+
+    <button
+      onclick={() => (FullScreen = !FullScreen)}
+      style="-webkit-app-region: no-drag;"
+      class="windowBarButton"
+    >
+      <img class="img" src={EXPAND} alt="palle" />
+    </button>
+  </dir>
 {:else}
-  <p>loading...</p>
+  <div class="MiniPlayerContainer">
+    <p class="MiniPlayerTitle">{playerLocal.title}</p>
+
+    <p class="MiniPlayerArtist">{playerLocal.artist}</p>
+
+    <button class="Cbutton MPPreviousButton" onclick={() => shared.previous()}
+      ><img class="previous" src={PREVIOUSimg} alt="next" /></button
+    >
+    <button class="Cbutton MPPlayButton" onclick={() => shared.PlayPause()}>
+      <img class="PlayPouse" src={!paused ? PAUSEimg : PLAYimg} alt="play" />
+    </button>
+    <button class="Cbutton MPnextButton" onclick={() => shared.next()}>
+      <img class="next" src={NEXTimg} alt="next" />
+      {#if nextLoaded}
+        <div transition:fade class="MPNextLoadedIndicator"></div>
+      {/if}
+    </button>
+  </div>
+  <button class="MiniPlayerCloseButton" onclick={() => setNormalplayer()}>
+    <img class="MiniPlayerCloseButtonImg" src={CLOSE} alt="close" />
+  </button>
+  <img src={playerLocal.img} alt="BG" class="MiniPlayerimg" />
 {/if}
 
-<dir style="-webkit-app-region: drag;" class="DragRegion">
-  <p class="windowTitle">LOLLOMUSICX BETA 0.7.5</p>
-
-  <button
-    onclick={() => ipcRenderer.invoke('closeWin')}
-    style="-webkit-app-region: no-drag;"
-    class="windowBarButton"
-  >
-    <img class="img" src={CLOSE} alt="palle" />
-  </button>
-
-  <button
-    onclick={() => ipcRenderer.invoke('maximize')}
-    style="-webkit-app-region: no-drag;"
-    class="windowBarButton"
-  >
-    <img class="img" src={MAXIMIZE} alt="palle" />
-  </button>
-
-  <button
-    onclick={() => ipcRenderer.invoke('minimize')}
-    style="-webkit-app-region: no-drag;"
-    class="windowBarButton"
-  >
-    <img class="MinImg img" src={MINIMIZE} alt="palle" />
-  </button>
-
-  <button
-    onclick={() => (FullScreen = !FullScreen)}
-    style="-webkit-app-region: no-drag;"
-    class="windowBarButton"
-  >
-    <img class="img" src={EXPAND} alt="palle" />
-  </button>
-</dir>
-
 <style>
+  .MPNextLoadedIndicator {
+    background: rgb(104, 255, 104);
+
+    position: absolute;
+
+    width: 8px;
+    height: 8px;
+
+    left: 32px;
+    top: 2px;
+
+    border-radius: 10px;
+
+    opacity: 0.3;
+  }
+
+  .MPPreviousButton {
+    position: absolute;
+
+    background: transparent;
+    border: none;
+
+    top: 110px;
+    left: 5px;
+
+    padding: 0px;
+
+    opacity: 0.4;
+    cursor: pointer;
+
+    transition: all 200ms;
+  }
+
+  .MPPreviousButton:hover {
+    transform: scale(1.1) translate(-2px, -2px);
+  }
+
+  .MPPlayButton {
+    position: absolute;
+
+    background: transparent;
+    border: none;
+
+    top: 105px;
+    left: 45px;
+
+    padding: 0px;
+
+    opacity: 0.4;
+    cursor: pointer;
+
+    transition: all 200ms;
+  }
+
+  .MPPlayButton:hover {
+    transform: scale(1.1) translate(-2px, -2px);
+  }
+
+  .MPnextButton {
+    position: absolute;
+
+    background: transparent;
+    border: none;
+
+    top: 110px;
+    left: 95px;
+
+    padding: 0px;
+
+    opacity: 0.4;
+    cursor: pointer;
+
+    transition: all 200ms;
+  }
+
+  .MPnextButton:hover {
+    transform: scale(1.1) translate(-2px, -2px);
+  }
+
+  .MiniPlayerContainer {
+    pointer-events: visible;
+    position: absolute;
+    top: 0px;
+    left: 0px;
+
+    z-index: 50;
+
+    height: 300px;
+    width: 100%;
+
+    background-color: transparent;
+
+    transition: all 200ms;
+  }
+
+  .MiniPlayerContainer:hover {
+    top: -57px;
+  }
+
+  @keyframes ROTATING {
+    0% {
+      transform: translate(-50%, -50%) scale(1.1) rotateZ(0deg);
+    }
+
+    50% {
+      transform: translate(-50%, -50%) scale(1.1) rotateZ(180deg);
+    }
+
+    100% {
+      transform: translate(-50%, -50%) scale(1.1) rotateZ(360deg);
+    }
+  }
+
+  .MiniPlayerCloseButton {
+    z-index: 50;
+    position: absolute;
+
+    top: 65px;
+    right: 20px;
+
+    width: 16px;
+    height: 16px;
+
+    padding: 0px;
+    border: none;
+
+    background: transparent;
+
+    cursor: pointer;
+
+    opacity: 0.5;
+
+    transition: all 200ms;
+  }
+
+  .MiniPlayerCloseButton:hover {
+    transform: scale(1.1);
+  }
+
+  .MiniPlayerCloseButtonImg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .MiniPlayerTitle {
+    z-index: 50;
+    position: absolute;
+    top: 37px;
+    left: 10px;
+
+    width: 150px;
+
+    font-weight: 800;
+
+    pointer-events: none;
+
+    text-wrap: none;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .MiniPlayerArtist {
+    z-index: 50;
+    position: absolute;
+    top: 57px;
+    left: 10px;
+
+    width: 150px;
+
+    opacity: 0.6;
+
+    font-weight: 800;
+    pointer-events: none;
+
+    text-wrap: none;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .MiniPlayerimg {
+    position: absolute;
+    width: 100%;
+
+    left: 50%;
+    top: 50%;
+
+    transform: translate(-50%, -50%) scale(1.1);
+
+    filter: blur(3px) opacity(0.7);
+
+    z-index: 0;
+
+    animation: ROTATING 70000ms infinite linear;
+  }
+
   @media only screen and (max-width: 600px) {
     #mainContent {
       opacity: 0;

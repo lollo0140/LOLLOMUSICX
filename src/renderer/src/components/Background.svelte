@@ -6,11 +6,13 @@
 
     let shared
     let bgType = $state()
+    let bgImmage = $state()
 
     onMount( () => {
       shared = renderer.default.shared
 
       bgType = shared.settings.playerSettings.interface.Background
+      bgImmage = shared.settings.playerSettings.interface.BackgroundImage
     })
 
 </script>
@@ -34,6 +36,8 @@
   <img class="staticBG" src="{img}">
 
 {:else if bgType === 'custom'}
+
+  <img class="staticBG" src={bgImmage} alt="">
 
 {/if}
 

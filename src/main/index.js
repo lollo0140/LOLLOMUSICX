@@ -345,6 +345,10 @@ app.on('window-all-closed', () => {
     app.quit()
   }
 })
+
+ipcMain.handle('RELAPPLICATION', async () => {
+  mainWindow.reload()
+})
 //
 //
 //
@@ -2899,5 +2903,59 @@ ipcMain.handle('lastfm-api-call', async (event, method, params, sessionKey) => {
   } catch (error) {
     console.error(`Errore durante ${method}:`, error)
     throw error
+  }
+})
+
+//miniPlayer and global shortcuts
+
+var beforeheight, beforewidth
+var beforeResizable, beforeFullScreenable
+var beforePosition
+
+ipcMain.handle('togleMiniPLayer', async (event, condition) => {
+  if (condition) {
+    // Salva lo stato attuale
+    const bounds = mainWindow.getBounds()
+    beforewidth = bounds.width
+    beforeheight = bounds.height
+    beforePosition = { x: bounds.x, y: bounds.y }
+    beforeResizable = mainWindow.isResizable()
+    beforeFullScreenable = mainWindow.isFullScreenable()
+
+    // Imposta dimensioni mini player
+    mainWindow.setMinimumSize(200, 100)
+    mainWindow.setSize(200, 100)
+
+    mainWindow.setAlwaysOnTop(true, 'floating')
+    mainWindow.setSkipTaskbar(true)
+
+    // Disabilita resize e fullscreen
+    mainWindow.setResizable(false)
+    mainWindow.setFullScreenable(false)
+
+    // Posiziona in alto al centro, 50px fuori dallo schermo
+    const { width: screenWidth } = require('electron').screen.getPrimaryDisplay().workAreaSize
+    const x = Math.floor((screenWidth - 200) / 2)
+    mainWindow.setPosition(x, -50) // Usa -50 invece di 0 per posizionare 50px fuori dallo schermo
+  } else {
+    // Ripristina le dimensioni minime normali
+    mainWindow.setMinimumSize(378, 585)
+
+    // Ripristina la possibilità di resize e fullscreen
+    mainWindow.setResizable(beforeResizable !== undefined ? beforeResizable : true)
+    mainWindow.setFullScreenable(beforeFullScreenable !== undefined ? beforeFullScreenable : true)
+
+    // Ripristina dimensioni
+    mainWindow.setSize(beforewidth || 800, beforeheight || 600)
+
+    mainWindow.setAlwaysOnTop(false)
+    mainWindow.setSkipTaskbar(false)
+
+    // Ripristina posizione
+    if (beforePosition) {
+      mainWindow.setPosition(beforePosition.x, beforePosition.y)
+    } else {
+      mainWindow.center()
+    }
   }
 })

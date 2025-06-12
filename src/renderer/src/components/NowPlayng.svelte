@@ -1,4 +1,5 @@
 <script>/* eslint-disable prettier/prettier */
+  /* eslint-disable no-undef */
   import { createEventDispatcher } from 'svelte'
   import { onMount } from 'svelte'
   import * as renderer from '../main.js'
@@ -11,7 +12,7 @@
 
   let canvaLoading = $state(true)
   let canva = $state()
-  let canShowcanva = $state(false)
+  //let canShowcanva = $state(false)
 
   var youtubePlayer
 

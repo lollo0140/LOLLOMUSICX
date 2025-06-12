@@ -1,5 +1,4 @@
-<script>
-  /* eslint-disable prettier/prettier */
+<script>/* eslint-disable prettier/prettier */
 
   import { onMount } from 'svelte'
   import * as renderer from '../main.js'
@@ -9,7 +8,13 @@
   import DropDownMenu from './pagesElements/DropDownMenu.svelte'
   const ipcRenderer = window.electron.ipcRenderer
 
+  const defBG = new URL('./assets/defaultSongCover.png', import.meta.url).href
+
+
+
   const backgmenuitems = ['dynamic', 'static', 'custom']
+
+  let custombg = $state(defBG)
 
   let shared
 
@@ -25,6 +30,8 @@
     settings = shared.settings.playerSettings
 
     paths = settings.library.scanPaths
+
+    custombg = shared.settings.playerSettings.interface.BackgroundImage
 
     loading = false
   })
@@ -163,6 +170,17 @@
     console.log(shared.settings.playerSettings.interface.Background)
   }
 
+  async function SetCustomImg() {
+
+    const imgpath = await shared.SelectFile()
+    const imageSrc = `local:///` + imgpath
+
+    shared.settings.playerSettings.interface.BackgroundImage = imageSrc
+
+    ApplyMod()
+    console.log(shared.settings.playerSettings.interface.BackgroundImage)
+  }
+
 </script>
 
 {#if !loading}
@@ -230,9 +248,11 @@
 
         <DropDownMenu SettingName={'Background'} Values={backgmenuitems} Current={settings.interface.Background} Click={SetBackground}/>
 
-        {#if settings.interface.background === 'custom'}
+        {#if settings.interface.Background === 'custom'}
 
-          <img>
+          <img alt="bg" src="{custombg}">
+
+          <button onclick={() => SetCustomImg()} type="button">chose background</button>
 
         {/if}
 
@@ -257,6 +277,11 @@
 
       <button onclick={() => ADDPATH()}>aggiungi</button>
     </div>
+
+
+    <button onclick={ () => ipcRenderer.invoke('RELAPPLICATION')}>Reload app</button>
+
+
   </div>
 {/if}
 
