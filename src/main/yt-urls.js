@@ -488,87 +488,6 @@ export class ytUrls {
         }
     }
 
-    async GetCompatibleVideoUrl(videoId) {
-        try {
-          console.log(`Recupero URL video compatibile per ID: ${videoId}`);
-          
-          // Prima otteniamo le informazioni sul video
-          const videoURL = `https://www.youtube.com/watch?v=${videoId}`;
-          
-          // Tenta di ottenere un formato HLS (m3u8) che è generalmente più compatibile
-          try {
-            // Assicurati che i binari esistano
-            const binaryPath = await ensureBinaries();
-            
-            const args = [
-              videoURL,
-              '--no-warnings',
-              '--no-call-home',
-              '-f', 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
-              '--print', 'urls', // Stampa gli URL
-              '--no-playlist',
-            ];
-            
-            const processOptions = {
-              shell: process.platform === 'win32'
-            };
-            
-            return new Promise((resolve, reject) => {
-              const ytProcess = spawn(binaryPath, args, processOptions);
-              let stdout = '';
-              let stderr = '';
-              
-              ytProcess.stdout.on('data', (data) => {
-                stdout += data.toString();
-              });
-              
-              ytProcess.stderr.on('data', (data) => {
-                stderr += data.toString();
-              });
-              
-              ytProcess.on('error', (error) => {
-                console.error(`Errore nell'avvio del processo: ${error.message}`);
-                reject(error);
-              });
-              
-              ytProcess.on('close', (code) => {
-                if (code === 0 && stdout.trim()) {
-                  // Restituisci i dati necessari per il player
-                  resolve({
-                    type: 'native',
-                    url: stdout.trim().split('\n')[0], // Prendi il primo URL
-                    embedUrl: `https://www.youtube.com/embed/${videoId}?autoplay=1&enablejsapi=1`,
-                    videoId: videoId
-                  });
-                } else {
-                  console.error(`yt-dlp ha restituito codice ${code}: ${stderr}`);
-                  
-                  // Fallback a URL di embed
-                  resolve({
-                    type: 'embed',
-                    embedUrl: `https://www.youtube.com/embed/${videoId}?autoplay=1&enablejsapi=1`,
-                    videoId: videoId
-                  });
-                }
-              });
-            });
-          } catch (error) {
-            console.error('Errore con yt-dlp:', error);
-            
-            // Fallback a URL di embed YouTube
-            return {
-              type: 'embed',
-              embedUrl: `https://www.youtube.com/embed/${videoId}?autoplay=1&enablejsapi=1`,
-              videoId: videoId
-            };
-          }
-        } catch (error) {
-          console.error('Errore durante il recupero dell\'URL video:', error);
-          throw error;
-        }
-      }
-
-
     // Metodo che utilizza un processo esterno per più controllo
     async getUrlWithExternalProcess(videoId, binaryPath) {
         // eslint-disable-next-line no-async-promise-executor
@@ -629,95 +548,68 @@ export class ytUrls {
     }
 
     async DownloadFromUrl(ID, downloadPath, data = undefined) {
-        console.log('--------------------------------------------------');
-        console.log(`Inizio download da ID: ${ID}`);
-        console.log(`Percorso di destinazione: ${downloadPath}`);
-    
-        try {
-            // Assicurati che la directory di destinazione esista
-            const downloadDir = path.dirname(downloadPath);
-            
-            if (!fs.existsSync(downloadDir)) {
-                fs.mkdirSync(downloadDir, { recursive: true });
-            }
-    
-            const outputPath = `${downloadPath}.mp3`;
-            const videoURL = `https://www.youtube.com/watch?v=${ID}`;
-            
-            return new Promise((resolve, reject) => {
-                ytdl.getInfo(videoURL).then(info => {
-                    console.log(`Titolo video: ${info.videoDetails.title}`);
-                    
-                    // Scarica solo l'audio con la qualità più alta disponibile
-                    ytdl(videoURL, {
-                        quality: 'highestaudio',
-                        filter: 'audioonly'
-                    })
-                    .pipe(fs.createWriteStream(outputPath))
-                    .on('finish', async () => {
-                        console.log(`Download completato con successo: ${outputPath}`);
-                        
-                        try {
-                            if (data !== undefined) {
-                                try {
-                                    const tags = {
-                                        title: data.title || '',
-                                        artist: data.artist || '',
-                                        album: data.album || '',
-                                        comment: {
-                                            language: 'eng',
-                                            text: 'Downloaded with LOLLOMUSICX'
-                                        }
-                                    };
-                                    
-                                    // Se hai un'immagine di copertina
-                                    if (data.img) {
-                                        // Se data.img è un URL
-                                        const imgResponse = await fetch(data.img);
-                                        const arrayBuffer = await imgResponse.arrayBuffer();
-                                        const imageBuffer = Buffer.from(arrayBuffer);
-                                        
-                                        tags.image = {
-                                            mime: 'image/jpeg', // o 'image/png' a seconda del formato
-                                            type: {
-                                                id: 3,
-                                                name: 'front cover'
-                                            },
-                                            description: 'Cover',
-                                            imageBuffer: imageBuffer
-                                        };
-                                    }
-                                    
-                                    const success = MM.write(tags, outputPath);
-                                    console.log('Tag aggiunti con risultato:', success);
-                                } catch (error) {
-                                    console.error('Errore durante l\'aggiunta dei tag:', error);
-                                }
-                            }
-                            
-                            // Aggiungi il resolve qui, dopo tutte le operazioni
-                            resolve(outputPath);
-                        } catch (error) {
-                            console.error(`Errore durante l'aggiunta dei tag: ${error.message}`);
-                            // Se c'è un errore nei tag, risolvi comunque la promessa con il percorso
-                            resolve(outputPath);
-                        }
-                    })
-                    .on('error', (error) => {
-                        console.error(`Errore durante il download: ${error.message}`);
-                        // Aggiungi il reject qui per gestire gli errori
-                        reject(error);
-                    });
-                })
-                .catch(error => {
-                    console.error(`Errore nell'ottenere info sul video: ${error.message}`);
-                    reject(error);
-                });
-            });
- 
-        } catch (e) {
-            console.log(e);
-        }
-    }
+      console.log('--------------------------------------------------');
+      console.log(`Inizio download da ID: ${ID}`);
+      console.log(`Percorso di destinazione: ${downloadPath}`);
+  
+      try {
+          const outputPath = `${downloadPath}.mp3`;
+          const videoURL = `https://www.youtube.com/watch?v=${ID}`;
+  
+          // 2. Ottieni info video
+          const info = await ytdl.getInfo(videoURL);
+          console.log(`Titolo video: ${info.videoDetails.title}`);
+  
+          // 3. Scarica solo l'audio con la qualità più alta disponibile
+          await new Promise((resolve, reject) => {
+              ytdl(videoURL, { quality: 'highestaudio', filter: 'audioonly' })
+                  .pipe(fs.createWriteStream(outputPath))
+                  .on('finish', resolve)
+                  .on('error', reject);
+          });
+  
+          console.log(`Download completato con successo: ${outputPath}`);
+  
+          // 4. Se ci sono dati per i tag, aggiungili
+          if (data) {
+              let tags = {
+                  title: data.title || info.videoDetails.title,
+                  artist: data.artist || '',
+                  album: data.album || '',
+                  comment: {
+                      language: 'eng',
+                      text: 'Downloaded with LOLLOMUSICX'
+                  }
+              };
+  
+              // Se c'è una copertina, scaricala e aggiungila
+              if (data.img) {
+                  try {
+                      const imgResponse = await fetch(data.img);
+                      if (!imgResponse.ok) throw new Error('Immagine non trovata');
+                      const imgBuffer = Buffer.from(await imgResponse.arrayBuffer());
+                      tags.image = imgBuffer;
+                  } catch (imgError) {
+                      console.warn('Errore nel caricamento immagine di copertina:', imgError.message);
+                  }
+              }
+  
+              // Scrivi i tag ID3
+              const tagResult = MM.write(tags, outputPath);
+              if (tagResult) {
+                  console.log('Tag aggiunti con successo');
+              } else {
+                  console.warn('Impossibile aggiungere i tag');
+              }
+          }
+  
+          return outputPath;
+  
+      } catch (error) {
+          console.error('Errore nel download o nella scrittura:', error);
+          throw error;
+      }
+  }
+  
 
 }

@@ -1628,9 +1628,13 @@ async function GetCanvas(title, artist) {
   const result = await PerformBasicSearch(`${artist} - ${title}`)
 
   console.log('Risultati  ricerca--------------------------------------------\n' + result + '-----')
-  // Check if we have results before proceeding
+
   if (result) {
-    return result
+    const youtube = await Innertube.create()
+
+    const streamingData = await youtube.getStreamingData(result)
+
+    return streamingData.url
   } else {
     return null // Or throw an error or handle as needed
   }

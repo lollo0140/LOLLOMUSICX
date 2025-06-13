@@ -33,7 +33,7 @@
 
 {:else if bgType === 'static'}
 
-  <img class="staticBG" src="{img}">
+  <img class="staticBG" src="{img}" alt="BG">
 
 {:else if bgType === 'custom'}
 

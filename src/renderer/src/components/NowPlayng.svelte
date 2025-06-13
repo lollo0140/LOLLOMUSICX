@@ -1,5 +1,4 @@
 <script>/* eslint-disable prettier/prettier */
-  /* eslint-disable no-undef */
   import { createEventDispatcher } from 'svelte'
   import { onMount } from 'svelte'
   import * as renderer from '../main.js'
@@ -10,15 +9,14 @@
   let loading = $state()
   let LoadingImg = $state()
 
-  let canvaLoading = $state(true)
   let canva = $state()
-  //let canShowcanva = $state(false)
+  let canShowCanva = $state()
 
-  var youtubePlayer
-
+  let albumcover, CanvaContainer
 
   import { fade, slide } from 'svelte/transition'
   import LyricPannel from './pagesElements/LyricPannel.svelte'
+  import CanvaPLayer from './pagesElements/CanvaPLayer.svelte'
 
   const QUEWEimg = new URL('../assets/quewe.png', import.meta.url).href
   const LIKEimg = new URL('../assets/like.png', import.meta.url).href
@@ -46,13 +44,6 @@
 
   let nextSongLoad = $state(false)
 
-  function onPlayerStateChange(event) {
-    // Quando il video finisce (stato = 0), riavvialo per creare un loop manuale
-    if (event.data === YT.PlayerState.ENDED) {
-      youtubePlayer.playVideo();
-    }
-  }
-
   $effect(async () => {
     checkSaved()
 
@@ -71,8 +62,9 @@
     //console.log(immagine)
 
     if (isSongChanged(playerLocal.title, playerLocal.artist, playerLocal.album)) {
-      canvaLoading = true
       LyricPannelVisible = false
+      ShowVideo(false)
+
       Lyric = await GetLyric()
 
       try {
@@ -106,32 +98,9 @@
         LyricPannelVisible = true
       }
 
-      canva = await ipcRenderer.invoke('GetCanvas', playerLocal.title, playerLocal.artist)
-      console.log(canva)
-      console.log(`https://www.youtube.com/embed/${canva}?autoplay=1&controls=0&rel=0&mute=1&loop=1&playlist=${canva}`)
-      canvaLoading = false
-
-      if (!window.YT) {
-        const tag = document.createElement('script');
-        tag.src = "https://www.youtube.com/iframe_api";
-        const firstScriptTag = document.getElementsByTagName('script')[0];
-        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+      if (shared.settings.playerSettings.interface.showVideo) {
+        canva = await ipcRenderer.invoke('GetCanvas', playerLocal.title, playerLocal.artist)
       }
-
-      window.onYouTubeIframeAPIReady = function() {
-        // Usa l'iframe esistente
-        youtubePlayer = new YT.Player('Iframe', {
-          events: {
-            'onStateChange': onPlayerStateChange
-          }
-        });
-      };
-
-      setTimeout(() => {
-        document.getElementById('Iframe').style.opacity = '1'
-        document.getElementById('Img2').style.opacity = '0'
-      }, 4000);
-
     }
   })
 
@@ -166,7 +135,12 @@
   }
 
   onMount(async () => {
+    albumcover = document.getElementById('Img')
+    CanvaContainer = document.getElementById('CanvaContainer')
+
     shared = renderer.default.shared
+
+    canShowCanva = shared.settings.playerSettings.interface.showVideo
 
     setInterval(async () => {
       quewe = await shared.GetQuewe()
@@ -223,31 +197,34 @@
     await shared.dislikeTrack()
     checkSaved()
   }
+
+  async function ShowVideo(condition) {
+    if (condition) {
+      albumcover.style.opacity = '0'
+      CanvaContainer.style.opacity = '1'
+    } else {
+      albumcover.style.opacity = '1'
+      CanvaContainer.style.opacity = '0'
+    }
+  }
 </script>
 
 <dir class={FullScreen ? 'FSNowPlayng' : 'NowPlayng'} style="transition: all 600ms;">
   <div class="contextMenuSong NowPlayngCUrrentContainer">
-    {#if canvaLoading || !shared.settings.playerSettings.interface.showVideo}
-      <img in:fade
-        id="Img"
-        class="PLAYERimg contextMenuSong --IMGDATA"
-        style="object-fit: cover; pointer-events: none;"
-        src={immagine}
-        alt="img"
-      />
-    {:else}
-
     <img
-        id="Img2"
-        class="PLAYERimg contextMenuSong --IMGDATA"
-        style="object-fit: cover; pointer-events: none; opacity:1; transition:all 500ms;"
-        src={immagine}
-        alt="img"
-      />
+      in:fade
+      id="Img"
+      class="PLAYERimg contextMenuSong --IMGDATA"
+      style="object-fit: cover; pointer-events: none;"
+      src={immagine}
+      alt="img"
+    />
 
-      <iframe id="Iframe" in:slide style="opacity:0;" class="PLAYERvideo" title="song" src={`https://www.youtube.com/embed/${canva}?autoplay=1&controls=0&rel=0&mute=1&loop=1&enablejsapi=1`} frameborder="0"></iframe>
 
-    {/if}
+    <div id="CanvaContainer" style="transition: all 200ms; display: {canShowCanva ? 'block' : 'none'};">
+      <CanvaPLayer showVid={ShowVideo} {canva} />
+    </div>
+
 
     <p class="--TITLEDATA PLAYERtitle" style="pointer-events: none;">{playerLocal.title}</p>
     <button
@@ -415,15 +392,15 @@
   @media only screen and (max-width: 600px) {
     .NowPlayng {
       position: absolute;
-        bottom: 0px;
-        left: 0px;
-        right: 0px;
-        top: 0px;
-        background: transparent;
-        border: none;
-        height: 100%;
-        width: 100%;
-        border-radius: 0px;
+      bottom: 0px;
+      left: 0px;
+      right: 0px;
+      top: 0px;
+      background: transparent;
+      border: none;
+      height: 100%;
+      width: 100%;
+      border-radius: 0px;
     }
 
     .PLAYERtitle {
@@ -442,7 +419,6 @@
     }
 
     .PLAYERimg {
-
       top: 50px;
       left: 25px;
       width: 326px;
