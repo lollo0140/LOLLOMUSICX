@@ -578,7 +578,7 @@
   {/if}
 
   <dir style="-webkit-app-region: drag;" class="DragRegion">
-    <p class="windowTitle">LOLLOMUSICX BETA 0.8.1</p>
+    <p class="windowTitle">LOLLOMUSICX BETA 0.8.60 BERN EDITION</p>
 
     <button
       onclick={() =>

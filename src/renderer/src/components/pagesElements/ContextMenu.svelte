@@ -57,112 +57,124 @@
   }
 
   async function CheckClicked() {
+  loading = true
 
-    loading = true
+  if (clickedElement !== oldClickedElement) {
+    oldClickedElement = clickedElement
 
-    if (clickedElement !== oldClickedElement) {
-      oldClickedElement = clickedElement
+    try {
+      // Controllo della classe per visibilità
+      visible = [
+        'contextMenuSong', 
+        'contextMenuLiked', 
+        'contextMenuPlaylist', 
+        'contextMenuAlbum', 
+        'contextMenuArtist', 
+        'contextMenuHomeCards'
+      ].some(className => clickedElement.classList.contains(className));
 
-      try {
-        if (clickedElement.classList.contains('contextMenuSong')) {
-          visible = true
-        } else if (clickedElement.classList.contains('contextMenuLiked')) {
-          visible = true
-        } else if (clickedElement.classList.contains('contextMenuPlaylist')) {
-          visible = true
-        } else if (clickedElement.classList.contains('contextMenuAlbum')) {
-          visible = true
-        } else if (clickedElement.classList.contains('contextMenuArtist')) {
-          visible = true
-        } else if (clickedElement.classList.contains('contextMenuHomeCards')) {
-          visible = true
-        } else {
-          visible = false
-        }
+      // Reset delle variabili
+      titolo = undefined
+      artista = undefined
+      album = undefined
+      playlistname = undefined
+      playlistindex = undefined
+      itemindex = undefined
+      removable = false
+      YTvideo = false
+      Liked = false
+      local = false
 
-        const elements = clickedElement.children
+      // Controllo classi sull'elemento principale
+      if (clickedElement.classList.contains('removable')) {
+        removable = true
+      }
 
-        titolo = undefined
-        artista = undefined
-        album = undefined
-        playlistname = undefined
-        playlistindex = undefined
-        itemindex = undefined
+      if (clickedElement.classList.contains('YTvideo')) {
+        YTvideo = true
+      }
 
-        if (clickedElement.classList.contains('removable')) {
-          removable = true
-        }
+      if (clickedElement.classList.contains('contextMenuLiked')) {
+        Liked = true
+      }
 
-        if (clickedElement.classList.contains('YTvideo')) {
-          YTvideo = true
-        }
+      if (clickedElement.classList.contains('localAlbum')) {
+        local = true
+      }
 
-        if (clickedElement.classList.contains('contextMenuLiked')) {
-          Liked = true
-        }
-
-        if (clickedElement.classList.contains('localAlbum')) {
-          local = true
-        }
-        
-
-        for (const element of elements) {
-          
+      // Funzione ricorsiva per analizzare tutti gli elementi annidati
+      function scanElement(element) {
+        // Controllo delle classi dell'elemento corrente
+        if (element.classList) {
           if (element.classList.contains('YTvideo')) {
             YTvideo = true
           }
 
           if (element.classList.contains('--PLAYLISTNAMEDATA')) {
             playlistname = element.textContent
+            console.log(playlistname)
           }
 
           if (element.classList.contains('--PLAYLISTINDEXDATA')) {
             playlistindex = element.textContent
+            console.log(playlistindex)
           }
           
           if (element.classList.contains('--TITLEDATA')) {
             titolo = element.textContent
+            console.log(titolo)
           }
 
           if (element.classList.contains('--ARTISTDATA')) {
             artista = element.textContent
+            console.log(artista)
           } 
 
           if (element.classList.contains('--ALBUMDATA')) {
             album = element.textContent
+            console.log(album)
           } 
 
-          if (element.classList.contains('--IMGDATA')) {
+          if (element.classList.contains('--IMGDATA') && element.src) {
             immagine = element.src
+            console.log(immagine)
           } 
 
           if (element.classList.contains('--ITEMINDEXDATA')) {
             itemindex = element.textContent
+            console.log(itemindex)
           }
 
           if (element.classList.contains('--FOLDERINDEX')) {
             folder = element.textContent
+            console.log(folder)
           }
 
           if (element.classList.contains('--SUBFOLDERINDEX')) {
             SUBfolder = element.textContent
+            console.log(SUBfolder)
           }
-
         }
 
-        
-        
-        
-      } catch (e) {
-        console.log(e)
+        // Scansione ricorsiva di tutti i figli
+        if (element.children && element.children.length > 0) {
+          for (const child of element.children) {
+            scanElement(child)
+          }
+        }
       }
+
+      // Avvia la scansione ricorsiva dall'elemento cliccato
+      scanElement(clickedElement)
+    } catch (e) {
+      console.log(e)
     }
-
-    setTimeout(() => {
-      loading = false
-    }, 100);
-
   }
+
+  setTimeout(() => {
+    loading = false
+  }, 100);
+}
 </script>
 
 {#if visible}

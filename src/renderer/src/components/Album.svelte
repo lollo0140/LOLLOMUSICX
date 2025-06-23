@@ -2,10 +2,9 @@
   import { onMount } from 'svelte'
   import * as renderer from '../main.js'
   import { createEventDispatcher } from 'svelte'
-  import LikeButton from './pagesElements/LikeButton.svelte'
-  import IsLocal from './pagesElements/IsLocal.svelte'
 
   import { fade } from 'svelte/transition'
+  import SongButton from './pagesElements/SongButton.svelte'
 
   let { AlbumQuery } = $props()
 
@@ -30,7 +29,7 @@
   let albumartist = $state('')
   let AlbumTracks = $state(null)
 
-  let shared
+  let shared = $state()
 
   onMount(async () => {
     shared = renderer.default.shared
@@ -62,12 +61,15 @@
 
     try {
       const result = await shared.getAlbumInfo(nome, artista)
-      if (result && result.album) {
-        albumtitle = result.album.name
-        albumimg = result.album.image && result.album.image[3] ? result.album.image[3]['#text'] : ''
-        albumartist = result.album.artist
-        AlbumTracks = result.album.tracks
-      }
+      
+      
+      
+      console.log(result);
+      AlbumTracks = result.songs.songs
+      albumimg = result.img[0].url || result.img[1].url || result.img[2].url || result.img[3].url
+      albumtitle = result.name
+      albumartist = result.artists[0].name
+      
     } catch (error) {
       console.error("Errore durante il recupero delle informazioni dell'album:", error)
     } finally {
@@ -98,6 +100,11 @@
     await shared.dislikeAlbum(albumtitle.toLowerCase(), albumartist, albumimg)
     checklike()
   }
+
+  async function Play(i) {
+    shared.PlayPlaylistS(AlbumTracks, i)
+  }
+
 </script>
 
 <div style="overflow-y: hidden;">
@@ -128,63 +135,11 @@
       <div id="AlbumSongs">
         <p>Tracks</p>
 
-        {#if AlbumTracks && AlbumTracks.data}
-          {#each AlbumTracks.data as song, i}
-            <button
-              onclick={() => shared.PlayAlbum(AlbumTracks.data, i, albumtitle, albumimg)}
-              style="width: 100%;"
-              class="bottone contextMenuSong"
-            >
-              <p class="SongIndex">{i + 1}</p>
-              <img
-                src={albumimg}
-                class="--IMGDATA imgCanzone"
-                alt={song.title || 'Copertina brano'}
-              />
-              <p class="--TITLEDATA titolo">{song.title}</p>
-              <p class="--ARTISTDATA artista">{albumartist}</p>
-              <p class="--ALBUMDATA songalbum hidden">{albumtitle}</p>
+        {#if AlbumTracks}
+          {#each AlbumTracks as song, i}
 
-              <div class="albButtonContainer">
-                <LikeButton
-                  title={song.title}
-                  artist={albumartist}
-                  album={albumtitle}
-                  img={albumimg}
-                  video={false}
-                />
-                <IsLocal title={song.title} artist={albumartist} album={albumtitle} />
-              </div>
-            </button>
-          {/each}
-        {:else if AlbumTracks && AlbumTracks.track}
-          {#each AlbumTracks.track as song, i}
-            <button
-              onclick={() => shared.PlayAlbum(AlbumTracks.track, i, albumtitle, albumimg)}
-              style="width: 100%;"
-              class="bottone contextMenuSong"
-            >
-              <p class="SongIndex">{i + 1}</p>
-              <img
-                src={albumimg}
-                class="--IMGDATA imgCanzone"
-                alt={song.name || 'Copertina brano'}
-              />
-              <p class="--TITLEDATA titolo">{song.name}</p>
-              <p class="--ARTISTDATA artista">{albumartist}</p>
-              <p class="--ALBUMDATA songalbum hidden">{albumtitle}</p>
+            <SongButton songIndex={i} title={song.title} album={albumtitle} artist={albumartist} img={albumimg} onclickEvent={Play}/> 
 
-              <div class="albButtonContainer">
-                <LikeButton
-                  title={song.name}
-                  artist={albumartist}
-                  album={albumtitle}
-                  img={albumimg}
-                  video={false}
-                />
-                <IsLocal title={song.name} artist={albumartist} album={albumtitle} />
-              </div>
-            </button>
           {/each}
         {:else}
           <p>Error</p>

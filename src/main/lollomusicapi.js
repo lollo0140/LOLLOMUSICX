@@ -38,94 +38,124 @@ export class lollomusicapi {
         if (!this.initialized) {
             await this.initialize();
         }
-
+    
         try {
             console.log(`[SONG] Looking for: "${query}"`);
             const musicResults = await this.youtube.music.search(query, {
                 type: 'song'
             });
-
+    
             let result = [];
-
+    
             // Cerca MusicShelf che contiene canzoni
             const musicShelf = musicResults.contents.find(c => c.type === 'MusicShelf');
-
-
-            for (const item of musicShelf.contents) {
-                // Accedi direttamente a item invece di item.MusicResponsiveListItem
-                const element = item.musicResponsiveListItem || item;
-
-                let esplicit
-
+            
+            if (!musicShelf || !musicShelf.contents) {
+                console.log('[SONG] Nessun risultato trovato');
+                return [];
+            }
+    
+            // Usa Promise.all per fare le chiamate API in parallelo
+            result = await Promise.all(musicShelf.contents.map(async (item) => {
                 try {
-                    // Verifica se badges esiste e ha elementi
-                    if (element.badges && element.badges.length > 0) {
-                        // Cerca tra i badges se c'è quello "Explicit"
-                        for (const badge of element.badges) {
-                            if (badge && badge.label && badge.label === 'Explicit') {
-                                esplicit = true;
-                                break;
-                            }
-                        }
+                    // Accedi direttamente a item invece di item.MusicResponsiveListItem
+                    const element = item.musicResponsiveListItem || item;
+                    
+                    if (!element || !element.album || !element.album.id) {
+                        console.log('[SONG] Elemento non valido o senza album');
+                        return null;
                     }
-                } catch (error) {
-                    console.log(error);
+                    
+                    // Ottieni informazioni sull'album
+                    let albumThumbnail = null;
+                    try {
+                        const infos = await this.youtube.music.getAlbum(element.album.id);
+                        
+                        // Gestione sicura dell'accesso alle thumbnail
+                        albumThumbnail = infos.header.thumbnail.contents[0].url || infos.header.thumbnail.contents[1].url
 
-                    esplicit = false;
-                }
-
-
-
-                const songartists = [];
-
-                for (const artist of element.artists) {
-                    songartists.push({
+                    } catch (albumError) {
+                        console.log(`[ALBUM] Errore nel recuperare l'album ${element.album.id}:`, albumError);
+                    }
+                    
+                    // Verifica se è esplicito
+                    let esplicit = false;
+                    if (element.badges && element.badges.length > 0) {
+                        esplicit = element.badges.some(badge => badge && badge.label === 'Explicit');
+                    }
+                    
+                    // Crea array di artisti
+                    const songartists = (element.artists || []).map(artist => ({
                         name: artist.name,
                         id: artist.channel_id
-                    });
+                    }));
+                    
+                    // Estrai le thumbnail quadrate da element.thumbnail come fallback
+                    let squareThumbnail = albumThumbnail;
+                    if (!squareThumbnail) {
+                        if (element.thumbnail && element.thumbnail.musicThumbnailRenderer) {
+                            const musicThumbnails = element.thumbnail.musicThumbnailRenderer.thumbnail.thumbnails;
+                            if (musicThumbnails && musicThumbnails.length > 0) {
+                                squareThumbnail = musicThumbnails[musicThumbnails.length - 1].url;
+                            }
+                        } else if (element.thumbnails && element.thumbnails.length > 0) {
+                            squareThumbnail = element.thumbnails[element.thumbnails.length - 1].url;
+                        }
+                    }
+                    
+                    // Genera le thumbnail standard di YouTube
+                    const thumbnails = {
+                        default: `https://i.ytimg.com/vi/${element.id}/default.jpg`,
+                        medium: `https://i.ytimg.com/vi/${element.id}/mqdefault.jpg`,
+                        high: `https://i.ytimg.com/vi/${element.id}/hqdefault.jpg`,
+                        standard: `https://i.ytimg.com/vi/${element.id}/sddefault.jpg`,
+                        maxres: `https://i.ytimg.com/vi/${element.id}/maxresdefault.jpg`,
+                        square: albumThumbnail || squareThumbnail || `https://i.ytimg.com/vi/${element.id}/hqdefault.jpg`,
+                        album: albumThumbnail
+                    };
+                    
+                    // Costruisci l'oggetto canzone
+                    return {
+                        id: element.id,
+                        fullYTlink: await this.CreateYtLink(element.id),
+                        title: element.title,
+                        artists: songartists,
+                        esplicit: esplicit,
+                        album: {
+                            name: element.album?.name || 'Unknown Album',
+                            id: element.album?.id || '',
+                            thumbnail: albumThumbnail
+                        },
+                        duration: {
+                            display: element.duration?.text || '0:00',
+                            seconds: element.duration?.seconds || 0
+                        },
+                        thumbnails: thumbnails,
+                        thumbnail: albumThumbnail || thumbnails.high,
+                        squareThumbnail: albumThumbnail || thumbnails.square
+                    };
+                } catch (elementError) {
+                    console.error('[SONG] Errore nell\'elaborazione di un elemento:', elementError);
+                    return null;
                 }
-
-                // Genera le thumbnail standard di YouTube
-                const thumbnails = {
-                    default: `https://i.ytimg.com/vi/${element.id}/default.jpg`,     // 120x90
-                    medium: `https://i.ytimg.com/vi/${element.id}/mqdefault.jpg`,    // 320x180
-                    high: `https://i.ytimg.com/vi/${element.id}/hqdefault.jpg`,      // 480x360
-                    standard: `https://i.ytimg.com/vi/${element.id}/sddefault.jpg`,  // 640x480
-                    maxres: `https://i.ytimg.com/vi/${element.id}/maxresdefault.jpg` // 1920x1080
-                };
-
-
-                const song = {
-                    id: element.id,
-                    fullYTlink: await this.CreateYtLink(element.id),
-                    title: element.title,
-                    artists: songartists,
-                    esplicit: esplicit || false,
-                    album: {
-                        name: element.album.name,
-                        id: element.album.id
-                    },
-                    duration: {
-                        display: element.duration.text,
-                        seconds: element.duration.seconds
-                    },
-                    thumbnails: thumbnails,
-                    thumbnail: thumbnails.high // Per retrocompatibilità
-                };
-
-                // Aggiungi la canzone all'array result
-                result.push(song);
-            }
-
-            return result;
-
+            }));
+    
+            // Filtra eventuali elementi null
+            return result.filter(song => song !== null);
+    
         } catch (error) {
             console.error('Errore durante la ricerca:', error);
             return { error: error.message };
         }
     }
+    
 
     async getSongs(id) {
+
+        if (!this.initialized) {
+            await this.initialize();
+        }
+
         const infos = await this.youtube.music.getInfo(id);
 
         const searchResult = await this.searchSong(`${infos.basic_info.tags[0]} ${infos.basic_info.tags[2] || ''} ${infos.basic_info.tags[1]}`)
@@ -145,7 +175,12 @@ export class lollomusicapi {
     }
 
     //albums
-    async searchAlbum(query, fetchSongs = true) {
+    async searchAlbum(query, fetchSongs = true, limit = 20) {
+
+        if (!this.initialized) {
+            await this.initialize();
+        }
+
         console.log(`[ALBUM] Looking for: "${query}"`);
 
         const musicResults = await this.youtube.music.search(query, {
@@ -158,8 +193,10 @@ export class lollomusicapi {
             return [];
         }
 
+        const ToProcessAlbums = musicShelf.contents.slice(0,limit)
+
         // Processa tutti gli album in parallelo
-        const results = await Promise.all(musicShelf.contents.map(async (element) => {
+        const results = await Promise.all(ToProcessAlbums.map(async (element) => {
             try {
                 const albuminfos = await this.youtube.music.getAlbum(element.id);
 
@@ -224,7 +261,7 @@ export class lollomusicapi {
                 if (fetchSongs && albuminfos.contents && albuminfos.contents.length > 0) {
                     // Ottieni le canzoni dell'album direttamente dai contenuti dell'album
                     // Processa tutte le canzoni in parallelo con un limite di concorrenza
-                    const batchSize = 6; // Processa 6 canzoni alla volta per evitare sovraccarichi
+                    const batchSize = 30; // Processa 6 canzoni alla volta per evitare sovraccarichi
                     let detailedSongs = [];
 
                     for (let i = 0; i < albuminfos.contents.length; i += batchSize) {
@@ -330,6 +367,11 @@ export class lollomusicapi {
     }
 
     async getAlbum(id) {
+
+        if (!this.initialized) {
+            await this.initialize();
+        }
+
         const infos = await this.youtube.music.getAlbum(id);
 
         const albumSearch = await this.searchAlbum(`${infos.header.title.text} ${infos.header.strapline_text_one.text}`)
@@ -349,6 +391,11 @@ export class lollomusicapi {
 
     //artists
     async searchArtist(query) {
+
+        if (!this.initialized) {
+            await this.initialize();
+        }
+
         const musicResults = await this.youtube.music.search(query, {
             type: 'artist'
         });
@@ -370,7 +417,7 @@ export class lollomusicapi {
                 id: element.id,
                 channelLink: await this.CreateArtistYtLink(element.id),
                 name: element.name,
-                image: img.metadata.avatar[0].url
+                image: img.metadata.avatar[0].url || img.metadata.avatar[1].url || img.metadata.avatar[2].url
             }
 
             result.push(artist)
@@ -381,6 +428,10 @@ export class lollomusicapi {
     }
 
     async getArtist(id) {
+
+        if (!this.initialized) {
+            await this.initialize();
+        }
 
         const artistResult = await this.youtube.music.getArtist(id)
 
@@ -397,6 +448,12 @@ export class lollomusicapi {
     }
 
     async getArtistPage(id) {
+
+
+        if (!this.initialized) {
+            await this.initialize();
+        }
+
         // Otteniamo i dati di base dell'artista
         const artistData = await this.youtube.music.getArtist(id)
 
@@ -426,6 +483,11 @@ export class lollomusicapi {
     }
 
     async getArtistTopSongs(id) {
+
+        if (!this.initialized) {
+            await this.initialize();
+        }
+
         const artistData = await this.youtube.music.getArtist(id)
 
         const musicShelf = artistData.sections.find(c => c.type === 'MusicShelf');
@@ -466,6 +528,8 @@ export class lollomusicapi {
     }
 
     async getArtistReleases(id) {
+
+        
         const artistData = await this.youtube.music.getArtist(id)
 
         // Funzione helper per estrarre release (album, EP, singoli)
@@ -612,8 +676,127 @@ export class lollomusicapi {
         return relatedArtists;
     }
 
+    //video
+    async searchYouTubeVideos(query) {
+        if (!this.initialized) {
+            await this.initialize();
+        }
+    
+        try {
+            console.log(`[VIDEO] Looking for: "${query}"`);
+            // Usa l'API di YouTube per la ricerca di video normali invece di music
+            const videoResults = await this.youtube.search(query, {
+                type: 'video'  // Specifica che vogliamo solo video
+            });
+    
+            let result = [];
+    
+            // Verifica se abbiamo risultati validi
+            if (!videoResults.contents) {
+                console.log('[VIDEO] Nessun risultato trovato');
+                return [];
+            }
+    
+            // Usa Promise.all per fare le chiamate API in parallelo
+            result = await Promise.all(videoResults.contents.map(async (item) => {
+                try {
+                    // Per i video normali, il percorso dell'oggetto potrebbe essere diverso
+                    const element = item.video || item;
+                    
+                    if (!element || !element.id) {
+                        console.log('[VIDEO] Elemento non valido');
+                        return null;
+                    }
+                    
+                    // Ottieni ulteriori informazioni sul video se necessario
+                    let videoDetails = null;
+                    try {
+                        videoDetails = await this.youtube.getInfo(element.id);
+                    } catch (videoError) {
+                        console.log(`[VIDEO] Errore nel recuperare i dettagli del video ${element.id}:`, videoError);
+                    }
+                    
+                    // Estrai il canale/autore
+                    const channelInfo = element.author || element.channel || {};
+                    
+                    // Gestisci le thumbnail
+                    let thumbnails = {};
+                    
+                    if (element.thumbnails && element.thumbnails.length > 0) {
+                        // Ordina le thumbnail dalla qualità più bassa alla più alta
+                        const sortedThumbnails = [...element.thumbnails].sort((a, b) => 
+                            (a.width || 0) - (b.width || 0)
+                        );
+                        
+                        // Assegna le thumbnail in base alla qualità
+                        thumbnails = {
+                            default: sortedThumbnails[0]?.url,
+                            medium: sortedThumbnails[Math.min(1, sortedThumbnails.length - 1)]?.url,
+                            high: sortedThumbnails[Math.min(2, sortedThumbnails.length - 1)]?.url,
+                            standard: sortedThumbnails[Math.min(3, sortedThumbnails.length - 1)]?.url,
+                            maxres: sortedThumbnails[sortedThumbnails.length - 1]?.url,
+                        };
+                    } else {
+                        // Genera le thumbnail standard di YouTube se non sono disponibili
+                        thumbnails = {
+                            default: `https://i.ytimg.com/vi/${element.id}/default.jpg`,
+                            medium: `https://i.ytimg.com/vi/${element.id}/mqdefault.jpg`,
+                            high: `https://i.ytimg.com/vi/${element.id}/hqdefault.jpg`,
+                            standard: `https://i.ytimg.com/vi/${element.id}/sddefault.jpg`,
+                            maxres: `https://i.ytimg.com/vi/${element.id}/maxresdefault.jpg`,
+                        };
+                    }
+                    
+                    // Aggiungi la thumbnail principale
+                    thumbnails.main = thumbnails.high || thumbnails.medium || thumbnails.default;
+                    
+                    // Costruisci l'oggetto video
+                    return {
+                        id: element.id,
+                        fullYTlink: await this.CreateYtLink(element.id),
+                        title: element.title,
+                        description: element.description || '',
+                        channel: {
+                            name: channelInfo.name || channelInfo.title || 'Unknown Channel',
+                            id: channelInfo.id || channelInfo.channelId || '',
+                            url: channelInfo.url || `https://www.youtube.com/channel/${channelInfo.id || channelInfo.channelId || ''}`,
+                            thumbnail: channelInfo.thumbnail?.url || null
+                        },
+                        duration: {
+                            display: element.duration?.text || videoDetails?.duration?.text || '0:00',
+                            seconds: element.duration?.seconds || videoDetails?.duration?.seconds || 0
+                        },
+                        viewCount: element.viewCount?.text || element.views || videoDetails?.viewCount || '0',
+                        publishedTime: element.publishedTime || element.uploadedAt || videoDetails?.publishDate || '',
+                        thumbnails: thumbnails,
+                        thumbnail: thumbnails.main,
+                        // Aggiungi altre proprietà utili qui
+                        isLive: element.isLiveNow || element.isLive || false,
+                        badges: element.badges || []
+                    };
+                } catch (elementError) {
+                    console.error('[VIDEO] Errore nell\'elaborazione di un elemento:', elementError);
+                    return null;
+                }
+            }));
+    
+            // Filtra eventuali elementi null
+            return result.filter(video => video !== null);
+    
+        } catch (error) {
+            console.error('Errore durante la ricerca video:', error);
+            return { error: error.message };
+        }
+    }
+    
+
     //playlists
     async searchPlaylist(query) {
+
+        if (!this.initialized) {
+            await this.initialize();
+        }
+
         const musicResults = await this.youtube.music.search(query, {
             type: 'playlist'
         });

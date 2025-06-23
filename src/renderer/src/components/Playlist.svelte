@@ -4,9 +4,8 @@
   //import { createEventDispatcher } from 'svelte'
   import { onMount } from 'svelte'
   import * as renderer from '../main.js'
-  import LikeButton from './pagesElements/LikeButton.svelte'
-  import IsLocal from './pagesElements/IsLocal.svelte'
   import { fade } from 'svelte/transition'
+  import SongButton from './pagesElements/SongButton.svelte'
   let { Pindex } = $props()
 
   let shared
@@ -58,50 +57,9 @@
       <div class="Ptracksdiv">
         {#if Playlist.tracks.length > 0}
           {#each Playlist.tracks as song, i}
-            {#if song.video === true}
-              <button
-                class=" YTvideo bottone contextMenuSong removable"
-                onclick={() => PlayTraks(i)}
-              >
-                <p class="--TITLEDATA titolo">{song.title}</p>
-                <img class="--IMGDATA imgCanzone" src={song.img} alt="copertina" data-index={i} />
-                <p class="--ARTISTDATA artista">{song.artist}</p>
-                <p class="--ALBUMDATA songalbum">{song.album}</p>
-                <p class="--ITEMINDEXDATA">{i}</p>
-                <p class="--PLAYLISTINDEXDATA">{Pindex}</p>
-                <p class="YTvideo hidden"></p>
 
-                <LikeButton
-                  title={song.title}
-                  artist={song.artist}
-                  album={song.album}
-                  img={song.img}
-                  video={song.video}
-                />
-                <IsLocal title={song.title} artist={song.artist} album={song.album} />
-              </button>
-            {:else}
-              <button
-                class="bottone contextMenuSong removable"
-                onclick={() => PlayTraks(i)}
-              >
-                <p class="--TITLEDATA titolo">{song.title}</p>
-                <img class="--IMGDATA imgCanzone" src={song.img} alt="copertina" data-index={i} />
-                <p class="--ARTISTDATA artista">{song.artist}</p>
-                <p class="--ALBUMDATA songalbum">{song.album}</p>
-                <p class="--ITEMINDEXDATA">{i}</p>
-                <p class="--PLAYLISTINDEXDATA">{Pindex}</p>
+          <SongButton songIndex={i} title={song.title} album={song.album} artist={song.artist} img={song.img} onclickEvent={PlayTraks} removable={true} PlaylistIndex={Pindex}/> 
 
-                <LikeButton
-                  title={song.title}
-                  artist={song.artist}
-                  album={song.album}
-                  img={song.img}
-                  video={song.video}
-                />
-                <IsLocal title={song.title} artist={song.artist} album={song.album} />
-              </button>
-            {/if}
           {/each}
         {:else}
           <p>This playlist is empty</p>

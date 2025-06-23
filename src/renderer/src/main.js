@@ -376,13 +376,13 @@ class shared {
     if (this.onUpdate) this.onUpdate()
   }
 
-  async PlayAlbum(Tracks, index, album, img) {
+  async PlayAlbum(Tracks, index, album, img, artist) {
     // Inizializza la coda con i metadati ma senza URL YouTube
 
     this.SongsQuewe = Tracks.map((track) => ({
       title: track.title || track.name || '',
       album: album || '',
-      artist: track.artist?.name || Tracks[0].artist,
+      artist: artist,
       img: img || '',
       duration: track.duration || 0,
       FMurl: '',
@@ -430,6 +430,8 @@ class shared {
   }
 
   async PlayPlaylistS(Tracks, index) {
+    console.log(Tracks, index)
+
     try {
       // Attendi che la Promise di Tracks si risolva
       const resolvedTracks = await Tracks
@@ -439,22 +441,41 @@ class shared {
 
       // Usa i tracks risolti
       for (const item of resolvedTracks) {
-        this.SongsQuewe.push({
-          title: item.title || '',
-          album: item.album || '',
-          artist: item.artist || '',
-          img: item.img || '',
-          duration: item.duration || 0,
-          FMurl: '',
-          YTurl: item.YTurl || '',
-          video: item.video
-        })
+        try {
+          console.log(item)
+
+          if (item.artists[0].name !== undefined) {
+            this.SongsQuewe.push({
+              title: item.title,
+              album: item.album.name,
+              artist: item.artists[0].name,
+              img: item.album.thumbnail,
+              duration: item.duration,
+              FMurl: '',
+              YTurl: item.YTurl,
+              video: item.video
+            })
+          } else {
+            throw new Error('palle')
+          }
+        } catch {
+          this.SongsQuewe.push({
+            title: item.title || '',
+            album: item.album || '',
+            artist: item.artist || '',
+            img: item.img || '',
+            duration: item.duration || 0,
+            FMurl: '',
+            YTurl: item.YTurl || '',
+            video: item.video
+          })
+        }
       }
 
       this.Shuffled = false
 
       this.PlayngIndex = index
-      await this.preloadAndUpdatePlayer(index)
+      await this.preloadAndUpdatePlayer(this.PlayngIndex)
     } catch (error) {
       console.error('Errore nel caricamento della playlist:', error)
     }

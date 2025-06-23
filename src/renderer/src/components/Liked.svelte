@@ -5,6 +5,7 @@
   import LikeButton from './pagesElements/LikeButton.svelte'
   import IsLocal from './pagesElements/IsLocal.svelte'
   import { fade } from 'svelte/transition'
+  import SongButton from './pagesElements/SongButton.svelte'
 
   let loading = $state(true)
   let shared
@@ -54,40 +55,9 @@
 
       <div id="likedListDiv">
         {#each songs as song, i}
-          {#if song.video === true}
-            <button class="YTvideo bottone contextMenuSong" onclick={() => PlayTraks(i)}>
-              <p class="--TITLEDATA titolo">{song.title}</p>
-              <img class="--IMGDATA imgCanzone" src={song.img} alt="copertina" data-index={i} />
-              <p class="--ARTISTDATA artista">{song.artist}</p>
-              <p class="--ALBUMDATA songalbum">{song.album}</p>
-              <p class="YTvideo hidden"></p>
 
-              <LikeButton
-                title={song.title}
-                artist={song.artist}
-                album={song.album}
-                img={song.img}
-                video={song.video}
-              />
-              <IsLocal title={song.title} artist={song.artist} album={song.album} />
-            </button>
-          {:else}
-            <button class=" bottone contextMenuSong" onclick={() => PlayTraks(i)}>
-              <p class="--TITLEDATA titolo">{song.title}</p>
-              <img class="--IMGDATA imgCanzone" src={song.img} alt="copertina" data-index={i} />
-              <p class="--ARTISTDATA artista">{song.artist}</p>
-              <p class="--ALBUMDATA songalbum">{song.album}</p>
+          <SongButton songIndex={i} title={song.title} album={song.album} artist={song.artist} img={song.img} onclickEvent={PlayTraks}/> 
 
-              <LikeButton
-                title={song.title}
-                artist={song.artist}
-                album={song.album}
-                img={song.img}
-                video={song.video}
-              />
-              <IsLocal title={song.title} artist={song.artist} album={song.album} />
-            </button>
-          {/if}
         {/each}
       </div>
     </div>

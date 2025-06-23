@@ -8,8 +8,10 @@ import { Innertube } from 'youtubei.js'
 const sharp = require('sharp')
 import fetch from 'node-fetch'
 import { ytUrls } from './yt-urls.js'
+import { lollomusicapi } from './lollomusicapi.js'
 const ytmusicApi = require('ytmusic-api')
 const ytm = new ytmusicApi()
+const LolloMusicApi = new lollomusicapi()
 import crypto from 'crypto'
 
 var running = true
@@ -41,6 +43,7 @@ let userPlaylists = path.join(dataFolder, 'userPlaylist.json')
 let recentSearchs = path.join(dataFolder, 'recentSearchs.json')
 let SettingsPath = path.join(dataFolder, 'Settings.json')
 let localDataDir = path.join(dataFolder, 'LocalData')
+let LastListened = path.join(dataFolder, 'LastListened.json')
 
 console.log(SettingsPath)
 
@@ -53,15 +56,15 @@ const defSettingsValue = {
   playerSettings: {
     general: {
       appName: 'LOLLOMUSICX',
-      version: '1.0.0',
+      version: '0.8.60',
       startMinimized: false,
-      minimizeToTray: true,
+      minimizeToTray: false,
       autoPlayOnStart: false,
-      miniPlayerWhenClosed: false,
+      miniPlayerWhenClosed: true,
       killLollomusicOnClose: false
     },
     audio: {
-      volume: 80,
+      volume: 0.5,
       rememberListen: true,
       rememberShuffle: true
     },
@@ -70,10 +73,10 @@ const defSettingsValue = {
       scanOnStartup: true
     },
     interface: {
-      showVideo: true,
+      showVideo: false,
       Zoom: 1,
       Background: 'dynamic',
-      UIopacity: 1
+      BackgroundImage: ''
     },
     hotkeys: {
       playPause: 'Space',
@@ -96,7 +99,8 @@ function initializeConfigFiles() {
     { path: recentListens, defaultValue: {} },
     { path: userPlaylists, defaultValue: {} },
     { path: recentSearchs, defaultValue: {} },
-    { path: SettingsPath, defaultValue: JSON.stringify(defSettingsValue) }
+    { path: LastListened, defaultValue: {} },
+    { path: SettingsPath, defaultValue: defSettingsValue }
   ]
 
   // Crea i file se non esistono
@@ -1162,42 +1166,7 @@ async function SearchYtVideos(query) {
 }
 
 ipcMain.handle('searchsong', async (event, keyword) => {
-  const Songs = await SearchSong(keyword)
-
-  let NewSongs = []
-
-  for (const song of Songs) {
-    const infos = await getTrack(song.title, song.artist)
-
-    console.log('--------------------------------------------------------------')
-    console.log(infos.track)
-    console.log('--------------------------------------------------------------')
-
-    try {
-      NewSongs.push({
-        title: song.title,
-        artist: song.artist,
-        img:
-          infos.track.album.image ||
-          infos.track.album.image[3]['#text'] ||
-          infos.track.album.image[2]['#text'] ||
-          infos.track.album.image[1]['#text'] ||
-          infos.track.album.image[0]['#text'] ||
-          undefined
-      })
-    } catch {
-      NewSongs.push({
-        title: song.title,
-        artist: song.artist,
-        img: undefined
-      })
-    }
-  }
-
-  console.log('--------------------------------------------------------------')
-  console.log(NewSongs[0])
-  console.log('--------------------------------------------------------------')
-  return NewSongs
+  return await LolloMusicApi.searchSong(keyword)
 })
 
 ipcMain.handle('searchYT', async (event, keyword) => {
@@ -1206,19 +1175,31 @@ ipcMain.handle('searchYT', async (event, keyword) => {
 })
 
 ipcMain.handle('searchalbums', async (event, keyword) => {
-  return await SearchAlbums(keyword)
+  return await LolloMusicApi.searchAlbum(keyword, false)
 })
 
 ipcMain.handle('searchartists', async (event, keyword) => {
-  return await SearchArtists(keyword)
+  return await LolloMusicApi.searchArtist(keyword)
 })
 
 ipcMain.handle('getSongDetails', async (event, title, artist) => {
-  return await getTrack(title, artist)
+  const songs = LolloMusicApi.searchSong(`${title} ${artist}`)
+
+  for (const song of songs) {
+    if (song.title === title && song.artists[0].name === artist && song.explicit === true) {
+      return song
+    }
+  }
 })
 
 ipcMain.handle('getAlbumDetails', async (event, name, artist) => {
-  return await getAlbumInfo(name, artist)
+  const albums = await LolloMusicApi.searchAlbum(`${name} ${artist}`, true, 2)
+
+  for (const album of albums) {
+    if (album.esplicit === true) {
+      return album
+    }
+  }
 })
 
 ipcMain.handle('GetArtistTopAlbum', async (event, name) => {
@@ -1226,7 +1207,9 @@ ipcMain.handle('GetArtistTopAlbum', async (event, name) => {
 })
 
 ipcMain.handle('GetArtPage', async (event, name) => {
-  return await GetArtistHomePage(name)
+  const artist = await LolloMusicApi.searchArtist(name)
+
+  return LolloMusicApi.getArtistPage(artist[0].id)
 })
 
 const ytLinkCache = {}
@@ -1652,19 +1635,41 @@ ipcMain.handle('GetYTlink', async (event, SearchD) => {
   const artist = infos[1] || ''
   const album = infos[2] || ''
 
-  const ID = await GetYoutubeLink(title, artist, album)
+  const songs = await LolloMusicApi.searchSong(`${title} ${album} ${artist}`)
 
-  console.log('id del video -------------------------------')
-  console.log(ID)
+  console.log(songs)
 
-  return await getStreamingUrl(ID)
+  let ID = null
 
-  //const Infos = await getVideoInfo(ID)
+  for (const song of songs) {
+    if (song.title === title && artist === song.artists[0].name && song.esplicit === true) {
+      ID = song.id
+      break
+    }
+  }
 
-  //console.log(Infos)
-  //console.log('id del video -------------------------------')
+  console.log('ID del video:', ID)
 
-  //return await Infos.vidourl
+  if (ID) {
+    return await getStreamingUrl(ID)
+  } else {
+    for (const song of songs) {
+      if (song.title === title && artist === song.artists[0].name) {
+        ID = song.id
+        break
+      }
+    }
+
+    if (ID) {
+      return await getStreamingUrl(ID)
+    } else {
+      const video = await PerformBasicSearch(`${title}`)
+      console.log('------------------------------------------------------')
+      console.log(video)
+      console.log('------------------------------------------------------')
+      return await getStreamingUrl(await video)
+    }
+  }
 })
 
 ipcMain.handle('GetYTID', async (event, SearchD) => {
@@ -2943,7 +2948,6 @@ ipcMain.handle('togleMiniPLayer', async (event, condition) => {
     mainWindow.setPosition(x, -50) // Usa -50 invece di 0 per posizionare 50px fuori dallo schermo
   } else {
     // Ripristina le dimensioni minime normali
-    mainWindow.setMinimumSize(378, 585)
 
     // Ripristina la possibilità di resize e fullscreen
     mainWindow.setResizable(beforeResizable !== undefined ? beforeResizable : true)
@@ -2954,6 +2958,8 @@ ipcMain.handle('togleMiniPLayer', async (event, condition) => {
 
     mainWindow.setAlwaysOnTop(false)
     mainWindow.setSkipTaskbar(false)
+
+    mainWindow.setMinimumSize(378, 585)
 
     // Ripristina posizione
     if (beforePosition) {

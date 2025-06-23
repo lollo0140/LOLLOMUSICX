@@ -220,11 +220,12 @@
       alt="img"
     />
 
-
-    <div id="CanvaContainer" style="transition: all 200ms; display: {canShowCanva ? 'block' : 'none'};">
+    <div
+      id="CanvaContainer"
+      style="transition: all 200ms; display: {canShowCanva ? 'block' : 'none'};"
+    >
       <CanvaPLayer showVid={ShowVideo} {canva} />
     </div>
-
 
     <p class="--TITLEDATA PLAYERtitle" style="pointer-events: none;">{playerLocal.title}</p>
     <button
@@ -234,15 +235,13 @@
       >{playerLocal.artist}
     </button>
 
-    {#if Visible}
-      <button
-        style="pointer-events: all;"
-        onclick={() =>
-          CallItem({ query: playerLocal.artist + ' - ' + playerLocal.album, type: 'album' })}
-        class="--ALBUMDATA PLAYERalbum"
-        >{playerLocal.album}
-      </button>
-    {/if}
+    <button
+      style="pointer-events: all;"
+      onclick={() =>
+        CallItem({ query: playerLocal.artist + ' - ' + playerLocal.album, type: 'album' })}
+      class="--ALBUMDATA PLAYERalbum {!Visible ? 'hidden' : ''}"
+      >{playerLocal.album}
+    </button>
 
     {#if loading}
       <img transition:fade class="ImmageOfLoadingSong" src={LoadingImg} alt="img" />
