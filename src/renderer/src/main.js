@@ -163,6 +163,7 @@ class shared {
 
   //artist page
   async GetTopArtistAlbum(name) {
+    console.log(name)
     const data = await ipcRenderer.invoke('GetArtistTopAlbum', name)
     return data
   }
@@ -225,8 +226,8 @@ class shared {
     return data
   }
 
-  async GetYTlink(query, ID = false) {
-    //console.log('PALLACCE')
+  async GetYTlink(query, ID) {
+    console.log(ID)
     try {
       const info = query.split(' | ')
 
@@ -240,7 +241,7 @@ class shared {
       if (response !== false) {
         return response
       } else {
-        const data = await ipcRenderer.invoke('GetYTlink', query)
+        const data = await ipcRenderer.invoke('GetYTlink', query, ID)
         return data
       }
     } catch (err) {
@@ -248,8 +249,8 @@ class shared {
     }
   }
 
-  async getAlbumInfo(title, artist) {
-    const data = await ipcRenderer.invoke('getAlbumDetails', title, artist)
+  async getAlbumInfo(title, artist, id) {
+    const data = await ipcRenderer.invoke('getAlbumDetails', title, artist, id)
     return data
   }
 
@@ -334,101 +335,6 @@ class shared {
     await this.preloadAndUpdatePlayer(this.PlayngIndex)
   }
 
-  async PlaySong(title, artist, album, img, duration, FMurl) {
-    let songMeta = {
-      title: title || '',
-      album: album || '',
-      artist: artist || '',
-      img: img || '',
-      duration: duration || 0,
-      FMurl: FMurl || '',
-      YTurl: ''
-    }
-
-    //console.log('PlaySong:', songMeta)
-
-    this.SongsQuewe = []
-    this.SongsQuewe.push(songMeta)
-    this.PlayngIndex = 0
-
-    // Carica direttamente l'URL YouTube per la canzone
-    try {
-      let Query = `${songMeta.title} | ${songMeta.artist} | ${songMeta.album}`.trim()
-      //console.log('Query per YouTube:', Query)
-
-      this.LoadingImg = songMeta.img
-      this.LOADING = true
-      const ytUrl = await this.GetYTlink(Query)
-      this.LOADING = false
-      if (ytUrl) {
-        this.SongsQuewe[0].YTurl = ytUrl
-        //console.log('URL YouTube ottenuto:', ytUrl)
-      } else {
-        console.error('URL YouTube non disponibile per:', Query)
-      }
-    } catch (error) {
-      console.error("Errore nel caricamento dell'URL YouTube:", error)
-    }
-
-    this.Shuffled = false
-
-    this.Player = this.SongsQuewe[0]
-    if (this.onUpdate) this.onUpdate()
-  }
-
-  async PlayAlbum(Tracks, index, album, img, artist) {
-    // Inizializza la coda con i metadati ma senza URL YouTube
-
-    this.SongsQuewe = Tracks.map((track) => ({
-      title: track.title || track.name || '',
-      album: album || '',
-      artist: artist,
-      img: img || '',
-      duration: track.duration || 0,
-      FMurl: '',
-      YTurl: ''
-    }))
-
-    this.Shuffled = false
-
-    this.PlayngIndex = index
-    await this.preloadAndUpdatePlayer(index)
-  }
-
-  async PlayPlaylist(Tracks, index, images, albums) {
-    try {
-      // Attendi che la Promise di Tracks si risolva
-      const resolvedTracks = await Tracks
-      //console.log(resolvedTracks)
-
-      this.SongsQuewe = []
-      let i = 0
-
-      // Usa i tracks risolti
-      for (const item of resolvedTracks) {
-        this.SongsQuewe.push({
-          title: item.name || '',
-          album: albums[i] || '',
-          artist: item.artist?.name || '',
-          img: images[i] || '',
-          duration: item.duration || 0,
-          FMurl: '',
-          YTurl: '',
-          video: item.video || undefined
-        })
-
-        i++ // Incrementa i per le immagini
-      }
-
-      this.Shuffled = false
-
-      this.PlayngIndex = index
-      await this.preloadAndUpdatePlayer(index)
-    } catch (error) {
-      console.error('Errore nel caricamento della playlist:', error)
-    }
-  }
-
   async PlayPlaylistS(Tracks, index) {
     console.log(Tracks, index)
 
@@ -450,10 +356,10 @@ class shared {
               album: item.album.name,
               artist: item.artists[0].name,
               img: item.album.thumbnail,
-              duration: item.duration,
-              FMurl: '',
-              YTurl: item.YTurl,
-              video: item.video
+              YTurl: item.YTurl || '',
+              id: item.id,
+              albumID: item.albumid || '',
+              artistID: item.artistid || ''
             })
           } else {
             throw new Error('palle')
@@ -464,13 +370,14 @@ class shared {
             album: item.album || '',
             artist: item.artist || '',
             img: item.img || '',
-            duration: item.duration || 0,
-            FMurl: '',
-            YTurl: item.YTurl || '',
-            video: item.video
+            id: item.id,
+            albumID: item.albumid || '',
+            artistID: item.artistid || ''
           })
         }
       }
+
+      console.log(this.SongsQuewe)
 
       this.Shuffled = false
 
@@ -558,7 +465,7 @@ class shared {
         }
         this.LoadingImg = currentSong.img
         this.LOADING = true
-        currentSong.YTurl = await this.GetYTlink(Query)
+        currentSong.YTurl = await this.GetYTlink(Query, currentSong.id)
         this.LOADING = false
       }
 
@@ -608,7 +515,7 @@ class shared {
 
         if (!Query || Query.trim() === '|  |') return
 
-        nextSong.YTurl = await this.GetYTlink(Query)
+        nextSong.YTurl = await this.GetYTlink(Query, nextSong.id)
       }
     } catch (error) {
       console.error('Errore in LoadNextUrl:', error)
@@ -647,7 +554,7 @@ class shared {
 
         if (!Query || Query.trim() === '|  |') return
 
-        nextSong.YTurl = await this.GetYTlink(Query)
+        nextSong.YTurl = await this.GetYTlink(Query, nextSong.id)
       }
     } catch (error) {
       console.error('Errore in LoadNextUrl:', error)
@@ -665,45 +572,30 @@ class shared {
     // Verifica se l'URL è già caricato
     if (!currentSong.YTurl || currentSong.YTurl === '' || currentSong.YTurl === false) {
       try {
-        // Controlla se è un video di YouTube
-        const isYoutubeVideo = currentSong.video === true
         let Query
 
-        if (isYoutubeVideo) {
-          // Procedura per i video di YouTube
-          const title = currentSong.title || ''
-          Query = `${title}`
+        // Procedura standard per le canzoni normali
+        const title = currentSong.title || ''
+        const artist = currentSong.artist || ''
+        const album = currentSong.album || ''
 
-          if (!Query) {
-            throw new Error('Dati insufficienti per cercare il video')
-          }
+        Query = `${title} | ${artist} | ${album}`.trim()
+        console.log('preloadAndUpdatePlayer Query:', Query)
 
-          // Usa basicSearch per i video di YouTube
-          currentSong.YTurl = await ipcRenderer.invoke('basicSearch', Query)
-        } else {
-          // Procedura standard per le canzoni normali
-          const title = currentSong.title || ''
-          const artist = currentSong.artist || ''
-          const album = currentSong.album || ''
-
-          Query = `${title} | ${artist} | ${album}`.trim()
-          console.log('preloadAndUpdatePlayer Query:', Query)
-
-          if (Query.length < 5 && title) {
-            Query = title
-          }
-
-          if (!Query || Query.trim() === '|  |') {
-            console.error('Query non valida per la ricerca YouTube')
-            throw new Error('Dati insufficienti per cercare su YouTube')
-          }
-
-          // Carica l'URL e attendi che sia disponibile
-          this.LoadingImg = currentSong.img
-          this.LOADING = true
-          currentSong.YTurl = await this.GetYTlink(Query)
-          this.LOADING = false
+        if (Query.length < 5 && title) {
+          Query = title
         }
+
+        if (!Query || Query.trim() === '|  |') {
+          console.error('Query non valida per la ricerca YouTube')
+          throw new Error('Dati insufficienti per cercare su YouTube')
+        }
+
+        // Carica l'URL e attendi che sia disponibile
+        this.LoadingImg = currentSong.img
+        this.LOADING = true
+        currentSong.YTurl = await this.GetYTlink(Query, currentSong.id)
+        this.LOADING = false
 
         console.log('URL ottenuto in preload:', currentSong.YTurl)
 
@@ -863,7 +755,7 @@ class shared {
     ipcRenderer.invoke('DisLikeSong', this.Player)
   }
 
-  async SaveTrackExt(title, artist, album, img, video = false) {
+  async SaveTrackExt(title, artist, album, img, video = false, id, artID, albID) {
     let immage
 
     if (Array.isArray(img)) {
@@ -874,7 +766,9 @@ class shared {
 
     console.log('immagine canzone' + immage)
 
-    const SendData = { title, artist, album, img: immage, video }
+    const SendData = { title, artist, album, img: immage, video, id, artID, albID }
+
+    console.log(SendData)
 
     ipcRenderer.invoke('LikeSong', SendData)
   }
@@ -883,16 +777,16 @@ class shared {
     ipcRenderer.invoke('DisLikeSong', { title, artist, album, img })
   }
 
-  async SaveAlbum(name, artist, img) {
-    ipcRenderer.invoke('LikeAlbum', { album: name, artist: artist, img: img })
+  async SaveAlbum(name, artist, img, id = undefined) {
+    ipcRenderer.invoke('LikeAlbum', { album: name, artist: artist, img: img, id: id })
   }
 
   async dislikeAlbum(name, artist, img) {
     ipcRenderer.invoke('DisLikeAlbum', { album: name, artist: artist, img: img })
   }
 
-  async SaveArtist(artist, img) {
-    ipcRenderer.invoke('LikeArtist', { artist: artist, img: img })
+  async SaveArtist(artist, img, id) {
+    ipcRenderer.invoke('LikeArtist', { artist: artist, img: img, id: id })
   }
 
   async dislikeArtist(artist) {

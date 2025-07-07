@@ -1,11 +1,13 @@
-<script>
-  /* eslint-disable prettier/prettier */
+<script>/* eslint-disable prettier/prettier */
   const defSongPng = new URL('../assets/defaultSongCover.png', import.meta.url).href
   import { onMount } from 'svelte'
   import { createEventDispatcher } from 'svelte'
   import * as renderer from '../main.js'
   import { fade } from 'svelte/transition'
   import SongButton from './pagesElements/SongButton.svelte'
+  import AlbumButton from './pagesElements/AlbumButton.svelte'
+  import ArtistButton from './pagesElements/ArtistButton.svelte'
+  const ipcRenderer = window.electron.ipcRenderer
 
   let Saved = $state(false)
   const LIKEimg = new URL('../assets/like.png', import.meta.url).href
@@ -19,6 +21,8 @@
   let errorMessage = $state('')
 
   let { ArtistQuery } = $props()
+  const artist = ArtistQuery.split('||')[0]
+  const artistID = ArtistQuery.split('||')[1] || undefined
 
   const dispatch = createEventDispatcher()
 
@@ -30,7 +34,12 @@
     shared = renderer.default.shared
 
     try {
-      const data = await shared.GetArtistPage(ArtistQuery)
+      let data
+
+      console.log(artist)
+      console.log(artistID)
+
+      data = await ipcRenderer.invoke('GetArtPage', artist, artistID)
 
       // Verifica che data sia un oggetto valido prima di procedere
       if (data && typeof data === 'object') {
@@ -103,18 +112,18 @@
     if (!AllData || !traks || traks.length === 0) return
 
     try {
-
       const tracce = []
 
       for (const song of traks) {
         tracce.push({
           title: song.title,
-          artist: song.artists[0].name,
+          artist: artist,
           img: song.album.thumbnail,
-          album: song.album.name
+          album: song.album.name,
+          albumid: song.album.id,
+          artistid: artistID
         })
       }
-
 
       shared.PlayPlaylistS(tracce, index)
     } catch (error) {
@@ -139,7 +148,7 @@
     try {
       const thumbnailUrl =
         AllData.thumbnail || (AllData.image && AllData.image[3] && AllData.image[3]['#text'])
-      await shared.SaveArtist(AllData.name, thumbnailUrl)
+      await shared.SaveArtist(AllData.name, thumbnailUrl, artistID)
       await checklike()
     } catch (error) {
       console.error("Errore durante il salvataggio dell'artista:", error)
@@ -217,6 +226,9 @@
                 artist={AllData.name}
                 img={getImageUrl(item, 'song')}
                 onclickEvent={Playtoptraks}
+                songID={item.id}
+                artID={artistID}
+                albID={item.album.id}
               />
             {/if}
           {/each}
@@ -230,49 +242,21 @@
         {#if AllData.albums && AllData.albums.length > 0}
           {#each AllData.albums as album, i}
             {#if i < 6}
-              <button
-                onclick={() =>
-                  CallItem({
-                    query:
-                      (album.artist && album.artist.name ? album.artist.name : AllData.name) +
-                      ' - ' +
-                      (album.name || 'Unknown Album'),
-                    type: 'album'
-                  })}
-                class="albumbutton contextMenuAlbum"
-              >
-                <img
-                  class="--IMGDATA albumimg"
-                  src={album.img[0].url || album.img[1].url}
-                  alt="album cover"
-                />
-                <p class="--ALBUMDATA albumtitle">{album.name || 'Unknown Album'}</p>
-                <p class="--ARTISTDATA albumartist">
-                  {album.artist && album.artist.name ? album.artist.name : AllData.name}
-                </p>
-              </button>
+              <AlbumButton
+                id={album.id}
+                artist={album.artists?.[0]?.name || ''}
+                name={album.name}
+                img={album.img?.[0]?.url || album.img?.[0]?.url || album.img?.[1]?.url}
+                OnClick={CallItem}
+              />
             {:else}
-              <button
-                onclick={() =>
-                  CallItem({
-                    query:
-                      (album.artist && album.artist.name ? album.artist.name : AllData.name) +
-                      ' - ' +
-                      (album.name || 'Unknown Album'),
-                    type: 'album'
-                  })}
-                class="albumbutton Albhidden contextMenuAlbum"
-              >
-                <img
-                  class="--IMGDATA albumimg"
-                  src={album.img[0].url || album.img[1].url}
-                  alt="album cover"
-                />
-                <p class="--ALBUMDATA albumtitle">{album.name || 'Unknown Album'}</p>
-                <p class="--ARTISTDATA albumartist">
-                  {album.artist && album.artist.name ? album.artist.name : AllData.name}
-                </p>
-              </button>
+              <AlbumButton
+                id={album.id}
+                artist={album.artists?.[0]?.name || ''}
+                name={album.name}
+                img={album.img?.[0]?.url || album.img?.[0]?.url || album.img?.[1]?.url}
+                OnClick={CallItem}
+              />
             {/if}
           {/each}
 
@@ -286,13 +270,9 @@
         {#if AllData.similarArtists && AllData.similarArtists.length > 0}
           {#each AllData.similarArtists as artist, i}
             {#if i < 6}
-              <button
-                class="albumbutton contextMenuArtist"
-                onclick={() => CallItem({ query: artist.name || 'Unknown Artist', type: 'artist' })}
-              >
-                <img class="--IMGDATA artimg" src={artist.image} alt="artist cover" />
-                <p class="--ARTISTDATA artName">{artist.name || 'Unknown Artist'}</p>
-              </button>
+
+              <ArtistButton id={artist.id} name={artist.name} img={artist.image} OnClick={CallItem} />
+
             {/if}
           {/each}
         {/if}

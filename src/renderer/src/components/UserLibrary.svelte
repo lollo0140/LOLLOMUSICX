@@ -8,6 +8,8 @@
   import * as renderer from '../main.js'
   import { createEventDispatcher } from 'svelte'
   import { fade } from 'svelte/transition'
+  import AlbumButton from './pagesElements/AlbumButton.svelte'
+  import ArtistButton from './pagesElements/ArtistButton.svelte'
 
   let shared
 
@@ -25,7 +27,6 @@
   let imageSrc = $state(DEFIMG)
 
   onMount(async () => {
-    
     loading = true
     shared = renderer.default.shared
 
@@ -71,7 +72,6 @@
 
     creatingPlist = false
   }
-  
 
   async function ChoseImg() {
     const imgpath = await shared.SelectFile()
@@ -110,16 +110,14 @@
         <div class="NewPlaylistButton">
           {#if creatingPlist}
             <div in:fade class="PlaylistCreator">
-              <img
-                id="NewPlaylistimg"
-                src={imageSrc}
-                alt=""
-              />
-              <button class="NewPlaylistChangeimage" type="button" onclick={() => ChoseImg()}> change image </button>
+              <img id="NewPlaylistimg" src={imageSrc} alt="" />
+              <button class="NewPlaylistChangeimage" type="button" onclick={() => ChoseImg()}>
+                change image
+              </button>
               <input id="NewPlaylistTitle" type="text" />
-  
+
               <button class="NewPlaylistclose" onclick={() => (creatingPlist = false)}>
-                <img class="dwpCloseImg" src={closeX} alt="asdqas">
+                <img class="dwpCloseImg" src={closeX} alt="asdqas" />
               </button>
               <button class="NewPlaylistDone" onclick={() => CreatePlaylist()}>Done</button>
             </div>
@@ -127,21 +125,19 @@
             <button in:fade onclick={() => (creatingPlist = true)} class="albumbutton">+</button>
           {/if}
         </div>
-
       </div>
 
       <p>Albums</p>
 
       <div class="likedAlbums">
         {#each albums as album}
-          <button
-            onclick={() => CallItem({ query: album.artist + ' - ' + album.album, type: 'album' })}
-            class="albumbutton contextMenuAlbum"
-          >
-            <img class="--IMGDATA albumimg" src={album.img} alt="" />
-            <p class="--ALBUMDATA albumtitle">{album.album}</p>
-            <p class="--ARTISTDATA albumartist">{album.artist}</p>
-          </button>
+          <AlbumButton
+            id={album.id}
+            artist={album.artist}
+            name={album.album}
+            img={album.img}
+            OnClick={CallItem}
+          />
         {/each}
       </div>
 
@@ -149,13 +145,9 @@
 
       <div class="likedArtists">
         {#each artists as artist}
-          <button
-            class="albumbutton contextMenuArtist"
-            onclick={() => CallItem({ query: artist.artist, type: 'artist' })}
-          >
-            <img class="--IMGDATA artimg" src={artist.img} alt="" />
-            <p class="--ARTISTDATA artName">{artist.artist}</p>
-          </button>
+        
+          <ArtistButton id={artist.id} name={artist.artist} img={artist.img} OnClick={CallItem} />
+
         {/each}
       </div>
     </div>

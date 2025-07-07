@@ -230,7 +230,7 @@
     <p class="--TITLEDATA PLAYERtitle" style="pointer-events: none;">{playerLocal.title}</p>
     <button
       style="pointer-events: all;"
-      onclick={() => CallItem({ query: playerLocal.artist, type: 'artist' })}
+      onclick={() => CallItem({ query: playerLocal.artist+'||'+playerLocal.artistID, type: 'artist' })}
       class="--ARTISTDATA PLAYERart"
       >{playerLocal.artist}
     </button>
@@ -238,7 +238,7 @@
     <button
       style="pointer-events: all;"
       onclick={() =>
-        CallItem({ query: playerLocal.artist + ' - ' + playerLocal.album, type: 'album' })}
+        CallItem({ query: playerLocal.albumID + ' - ' + playerLocal.artist + ' - ' + playerLocal.album, type: 'album' })}
       class="--ALBUMDATA PLAYERalbum {!Visible ? 'hidden' : ''}"
       >{playerLocal.album}
     </button>

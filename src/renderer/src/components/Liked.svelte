@@ -43,7 +43,21 @@
 
   async function PlayTraks(index) {
     //console.log(songs)
-    shared.PlayPlaylistS(songs, index)
+    let tracce = []
+
+    for (const song of songs) {
+        tracce.push({
+          title: song.title,
+          artist: song.artist,
+          img: song.img,
+          album: song.album,
+          id: song.id,
+          albumid: song.albumID,
+          artistid: song.artistID
+        })
+      }
+
+    shared.PlayPlaylistS(tracce, index)
   }
 </script>
 
@@ -56,7 +70,7 @@
       <div id="likedListDiv">
         {#each songs as song, i}
 
-          <SongButton songIndex={i} title={song.title} album={song.album} artist={song.artist} img={song.img} onclickEvent={PlayTraks}/> 
+          <SongButton artID={song.artistID} albID={song.albumID} songID={song.id} songIndex={i} title={song.title} album={song.album} artist={song.artist} img={song.img} onclickEvent={PlayTraks}/> 
 
         {/each}
       </div>

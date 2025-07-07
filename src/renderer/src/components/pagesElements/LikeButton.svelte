@@ -3,7 +3,7 @@
     import { onMount } from 'svelte'
     import * as renderer from '../../main.js'
 
-    let { title, artist, album, img, video = false } = $props()
+    let { title, artist, album, img, video = false, id, albID, artID } = $props()
 
     const LIKEimg = new URL('../../assets/like.png', import.meta.url).href
 
@@ -25,7 +25,7 @@
         console.log('evento like')
         
         event.stopPropagation()
-        shared.SaveTrackExt(title, artist, album, img, video)
+        shared.SaveTrackExt(title, artist, album, img, video, id, artID, albID)
         liked = !liked
     }
 

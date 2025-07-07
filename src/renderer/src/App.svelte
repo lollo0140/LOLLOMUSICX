@@ -13,7 +13,6 @@
   import UserLibrary from './components/UserLibrary.svelte'
   import Liked from './components/Liked.svelte'
   import Playlist from './components/Playlist.svelte'
-  import ContextMenu from './components/pagesElements/ContextMenu.svelte'
   import Settings from './components/Settings.svelte'
   import LocalAlbum from './components/LocalAlbum.svelte'
   import DownloadPage from './components/DownloadPage.svelte'
@@ -151,7 +150,7 @@
 
   function CallItem(obj) {
     if (obj.type !== 'download') {
-      pagindex = 0
+      pagindex = -1
     }
 
     setTimeout(() => {
@@ -191,6 +190,8 @@
       oldalbum !== playerLocal.album
 
     if (changed) {
+      console.log(renderer.default.shared.Player)
+
       oldtitle = playerLocal.title
       oldartist = playerLocal.artist
       oldalbum = playerLocal.album
@@ -530,6 +531,8 @@
               <Liked on:cambia-variabile={(e) => CallItem(e.detail)} />
             {:else if pagindex === 9}
               <LocalAlbum {Pindex} />
+            {:else if pagindex === -1}
+              <p class="hidden">changing page</p>
             {:else}
               <Settings />
             {/if}
@@ -578,7 +581,7 @@
   {/if}
 
   <dir style="-webkit-app-region: drag;" class="DragRegion">
-    <p class="windowTitle">LOLLOMUSICX BETA 0.8.60 BERN EDITION</p>
+    <p class="windowTitle">LOLLOMUSICX <span style="font-size: 11px;">BETA 0.8.60 </span> </p>
 
     <button
       onclick={() =>

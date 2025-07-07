@@ -2,7 +2,9 @@
   import IsLocal from './IsLocal.svelte'
   import LikeButton from './LikeButton.svelte'
 
-  let { songIndex, title, album, artist, img, onclickEvent, removable, PlaylistIndex } = $props()
+  let { songIndex, title, album, artist, img, onclickEvent, removable, PlaylistIndex, songID, albID, artID } = $props()
+  console.log(songID);
+  
 </script>
 
 <button
@@ -18,6 +20,7 @@
 
     <p class="--PLAYLISTINDEXDATA hidden">{PlaylistIndex}</p>
 
+    <p class="--SONGID hidden">{songID}</p>
     <p class="--ITEMINDEXDATA hidden">{songIndex}</p>
 
     <p class="SongIndex">{songIndex + 1}</p>
@@ -27,7 +30,7 @@
 
   </div>
   <div class="albButtonContainer">
-    <LikeButton {title} {artist} {album} {img} video={false} />
+    <LikeButton {title} {artist} {album} {img} video={false} id={songID} {albID} {artID}/>
     <IsLocal {title} {artist} {album} />
   </div>
 </button>

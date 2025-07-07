@@ -34,6 +34,8 @@ if (!fs.existsSync(dataFolder)) {
   fs.mkdirSync(dataFolder, { recursive: true })
 }
 
+let HomeScreen
+
 // Definisci i percorsi dei file
 let LikedsongsPath = path.join(dataFolder, 'liked.json')
 let LikedalbumsPath = path.join(dataFolder, 'likedalbums.json')
@@ -815,8 +817,8 @@ async function getVideoInfo(videoId) {
   }
 }
 
-ipcMain.handle('getAlbumInfo', async (event, name, artist) => {
-  return await getAlbumInfo(name, artist)
+ipcMain.handle('getAlbumInfo', async (event, name, artist, ID) => {
+  return await getAlbumInfo(name, artist, ID)
 })
 
 async function getAlbumInfo(name, artist) {
@@ -907,11 +909,11 @@ async function tryDeezerFirst(name, artist) {
         url: matchingAlbum.link,
         image: matchingAlbum.cover_big
           ? [
-              { '#text': matchingAlbum.cover_small, size: 'small' },
-              { '#text': matchingAlbum.cover_medium, size: 'medium' },
-              { '#text': matchingAlbum.cover_big, size: 'large' },
-              { '#text': matchingAlbum.cover_xl, size: 'extralarge' }
-            ]
+            { '#text': matchingAlbum.cover_small, size: 'small' },
+            { '#text': matchingAlbum.cover_medium, size: 'medium' },
+            { '#text': matchingAlbum.cover_big, size: 'large' },
+            { '#text': matchingAlbum.cover_xl, size: 'extralarge' }
+          ]
           : [],
         listeners: matchingAlbum.fans ? matchingAlbum.fans.toString() : '0',
         playcount: matchingAlbum.fans ? matchingAlbum.fans.toString() : '0',
@@ -1192,24 +1194,156 @@ ipcMain.handle('getSongDetails', async (event, title, artist) => {
   }
 })
 
-ipcMain.handle('getAlbumDetails', async (event, name, artist) => {
-  const albums = await LolloMusicApi.searchAlbum(`${name} ${artist}`, true, 2)
+ipcMain.handle('getAlbumDetails', async (event, name, artist, ID = undefined) => {
+  if (ID) {
+    const result = await LolloMusicApi.getAlbum(ID)
+    console.log(result)
 
-  for (const album of albums) {
-    if (album.esplicit === true) {
-      return album
+    let songs = []
+
+    if (result.contents && result.contents.length > 0) {
+      // Ottieni le canzoni dell'album in batch
+      const detailedSongs = await LolloMusicApi.batchProcess(
+        result.contents,
+        async (song) => {
+          try {
+            // Estrai correttamente i dati dell'artista dalla struttura di Innertube
+            const songArtists = song.authors || []
+            const artistName =
+              songArtists.length > 0
+                ? songArtists[0]?.name || result.header.strapline_text_one.text
+                : result.header.strapline_text_one.text
+
+            // Costruisci una query più precisa includendo artista e album
+            const songQuery = `${song.title} ${artistName} ${result.header.title.text}`
+            const searchedsong = await LolloMusicApi.searchSong(songQuery)
+
+            if (!searchedsong || !Array.isArray(searchedsong) || searchedsong.length === 0) {
+              console.log('Nessun risultato per:', songQuery)
+              return null
+            }
+
+            // Funzione per verificare la corrispondenza del titolo
+            const isTitleMatch = (foundSong, originalTitle) => {
+              const normalize = (text) =>
+                text
+                  .toLowerCase()
+                  .replace(/[^\w\s]/g, '') // Rimuovi punteggiatura
+                  .replace(/\s+/g, ' ') // Normalizza spazi
+                  .trim()
+
+              const normalizedOriginal = normalize(originalTitle)
+              const normalizedFound = normalize(foundSong.title)
+
+              // Verifica la corrispondenza con diverse strategie
+              return (
+                normalizedFound.includes(normalizedOriginal) ||
+                normalizedOriginal.includes(normalizedFound) ||
+                // Verifica se almeno il 70% del titolo originale è contenuto
+                (normalizedOriginal.length > 3 &&
+                  normalizedFound.includes(
+                    normalizedOriginal.substring(0, Math.floor(normalizedOriginal.length * 0.7))
+                  ))
+              )
+            }
+
+            // Verifica anche la corrispondenza dell'artista
+            const isArtistMatch = (foundSong, artistName) => {
+              if (!artistName || !foundSong.artists || foundSong.artists.length === 0) return true
+
+              const normalize = (text) => text?.toLowerCase().trim() || ''
+              const normalizedArtist = normalize(artistName)
+
+              return foundSong.artists.some(
+                (artist) =>
+                  normalize(artist.name).includes(normalizedArtist) ||
+                  normalizedArtist.includes(normalize(artist.name))
+              )
+            }
+
+            // Filtra per titolo e artista
+            let matchingSongs = searchedsong.filter(
+              (s) => isTitleMatch(s, song.title) && isArtistMatch(s, artistName)
+            )
+
+            // Se non ci sono corrispondenze esatte, prova solo con il titolo
+            if (matchingSongs.length === 0) {
+              matchingSongs = searchedsong.filter((s) => isTitleMatch(s, song.title))
+            }
+
+            if (matchingSongs.length > 0) {
+              // Verifica se l'album ha badge "explicit"
+              const hasExplicitBadge =
+                song.badges?.some((badge) => badge.label?.toLowerCase().includes('explicit')) ||
+                false
+
+              // Se l'album è esplicito, cerca preferibilmente una versione esplicita
+              if (hasExplicitBadge) {
+                const explicitSong = matchingSongs.find((s) => s.esplicit === true)
+                if (explicitSong) {
+                  return explicitSong
+                }
+              }
+
+              return matchingSongs[0]
+            } else {
+              // Se non ci sono corrispondenze, usa il primo risultato con un avviso
+              return searchedsong[0]
+            }
+          } catch (err) {
+            console.log(err)
+            return null
+          }
+        },
+        100 // Batch size più piccolo per le canzoni
+      )
+
+      // Aggiorna l'oggetto songsInfo con le canzoni dettagliate
+      songs = detailedSongs.filter((song) => song !== null)
     }
+
+    // Estrai l'ID dell'artista dal percorso corretto
+    const artistId = result.header.strapline_text_one.endpoint.payload.browseId
+
+    return {
+      name: result.header.title.text,
+      artists: [
+        {
+          name: result.header.strapline_text_one.text,
+          id: artistId
+        }
+      ],
+      img: result.background?.contents?.[0]?.url || result.thumbnail?.thumbnails?.[0]?.url,
+      songs: {
+        songs: songs
+      }
+    }
+  } else {
+    const albums = await LolloMusicApi.searchAlbum(`${name} ${artist}`, true, 2)
+
+    for (const album of albums) {
+      if (album.esplicit === true) {
+        return album
+      }
+    }
+
+    // Se non ci sono album espliciti, ritorna il primo
+    return albums.length > 0 ? albums[0] : null
   }
 })
 
 ipcMain.handle('GetArtistTopAlbum', async (event, name) => {
-  return await GetOtherByArtist(name)
+  return await LolloMusicApi.getArtistReleases(name)
 })
 
-ipcMain.handle('GetArtPage', async (event, name) => {
-  const artist = await LolloMusicApi.searchArtist(name)
-
-  return LolloMusicApi.getArtistPage(artist[0].id)
+ipcMain.handle('GetArtPage', async (event, name, id) => {
+  try {
+    return LolloMusicApi.getArtistPage(id)
+  } catch {
+    const artist = await LolloMusicApi.searchArtist(name)
+    console.log(artist[0].id)
+    return LolloMusicApi.getArtistPage(artist[0].id)
+  }
 })
 
 const ytLinkCache = {}
@@ -1628,46 +1762,56 @@ ipcMain.handle('GetCanvas', async (event, title, artist) => {
 })
 
 // Handler principale
-ipcMain.handle('GetYTlink', async (event, SearchD) => {
-  let infos = SearchD.split(' | ')
+ipcMain.handle('GetYTlink', async (event, SearchD, id) => {
+  console.log('---------------------------------------------------------------------------------')
+  console.log(id)
 
-  const title = infos[0] || ''
-  const artist = infos[1] || ''
-  const album = infos[2] || ''
-
-  const songs = await LolloMusicApi.searchSong(`${title} ${album} ${artist}`)
-
-  console.log(songs)
-
-  let ID = null
-
-  for (const song of songs) {
-    if (song.title === title && artist === song.artists[0].name && song.esplicit === true) {
-      ID = song.id
-      break
-    }
-  }
-
-  console.log('ID del video:', ID)
-
-  if (ID) {
-    return await getStreamingUrl(ID)
+  if (id) {
+    console.log(
+      '---------------------------------------------------------------------------------video id avabile'
+    )
+    return await getStreamingUrl(id)
   } else {
+    let infos = SearchD.split(' | ')
+
+    const title = infos[0] || ''
+    const artist = infos[1] || ''
+    const album = infos[2] || ''
+
+    const songs = await LolloMusicApi.searchSong(`${title} ${album} ${artist}`)
+
+    console.log(songs)
+
+    let ID = null
+
     for (const song of songs) {
-      if (song.title === title && artist === song.artists[0].name) {
+      if (song.title === title && artist === song.artists[0].name && song.esplicit === true) {
         ID = song.id
         break
       }
     }
 
+    console.log('ID del video:', ID)
+
     if (ID) {
       return await getStreamingUrl(ID)
     } else {
-      const video = await PerformBasicSearch(`${title}`)
-      console.log('------------------------------------------------------')
-      console.log(video)
-      console.log('------------------------------------------------------')
-      return await getStreamingUrl(await video)
+      for (const song of songs) {
+        if (song.title === title && artist === song.artists[0].name) {
+          ID = song.id
+          break
+        }
+      }
+
+      if (ID) {
+        return await getStreamingUrl(ID)
+      } else {
+        const video = await PerformBasicSearch(`${title}`)
+        console.log('------------------------------------------------------')
+        console.log(video)
+        console.log('------------------------------------------------------')
+        return await getStreamingUrl(await video)
+      }
     }
   }
 })
@@ -1728,27 +1872,14 @@ ipcMain.handle('LikeSong', async (event, data) => {
 
   let Song
 
-  if (data.video) {
-    Song = {
-      title: data.title || '',
-      album: data.album || '',
-      artist: data.artist || '',
-      img: data.img || '',
-      duration: data.duration || 0,
-      FMurl: data.FMurl || '',
-      YTurl: '',
-      video: true
-    }
-  } else {
-    Song = {
-      title: data.title || '',
-      album: data.album || '',
-      artist: data.artist || '',
-      img: data.img || '',
-      duration: data.duration || 0,
-      FMurl: data.FMurl || '',
-      YTurl: ''
-    }
+  Song = {
+    title: data.title || '',
+    album: data.album || '',
+    artist: data.artist || '',
+    img: data.img || '',
+    id: data.id || '',
+    artistID: data.artID,
+    albumID: data.albID
   }
 
   try {
@@ -1853,7 +1984,8 @@ ipcMain.handle('LikeAlbum', async (event, data) => {
   const Album = {
     album: data.album || '',
     artist: data.artist || '',
-    img: data.img || ''
+    img: data.img || '',
+    id: data.id
   }
 
   try {
@@ -1956,7 +2088,8 @@ ipcMain.handle('LikeArtist', async (event, data) => {
   // Creiamo l'oggetto canzone con valori predefiniti per campi mancanti
   const Artist = {
     artist: data.artist || '',
-    img: data.img || ''
+    img: data.img || '',
+    id: data.id || ''
   }
 
   try {
@@ -2095,7 +2228,8 @@ ipcMain.handle('writeRecent', async (event, data) => {
   }
 })
 
-ipcMain.handle('CreateHomePage', async () => {
+ChomePage()
+async function ChomePage() {
   try {
     const recent = await separateObj(JSON.parse(fs.readFileSync(recentListens)))
 
@@ -2106,14 +2240,13 @@ ipcMain.handle('CreateHomePage', async () => {
     ])
 
     // Ottieni gli album raccomandati solo dopo aver ottenuto gli artisti simili
-    const raccomandedAlbums = await GetracomandedAlbums(similarArtist)
 
-    return {
+    HomeScreen = {
       albums: homegrid.albums,
       playlists: homegrid.playlists,
-      similarArtist,
-      raccomandedAlbums
+      similarArtist
     }
+    return HomeScreen
   } catch (error) {
     console.error('errore nella creazione della homepage: ' + error)
     return {
@@ -2123,6 +2256,10 @@ ipcMain.handle('CreateHomePage', async () => {
       raccomandedAlbums: []
     }
   }
+}
+
+ipcMain.handle('CreateHomePage', async () => {
+  return await HomeScreen
 })
 
 async function GenerateGrid(recent) {
@@ -2206,82 +2343,21 @@ async function SearchSimilarArtist(recent) {
   console.log('Artista più ascoltato:', highest)
 
   try {
-    const similarUrl = new URL(LASTFM_API_URL)
-    similarUrl.searchParams.set('method', 'artist.getsimilar')
-    similarUrl.searchParams.set('artist', highest.artist)
-    similarUrl.searchParams.set('api_key', LASTFM_API_KEY)
-    similarUrl.searchParams.set('format', 'json')
-    similarUrl.searchParams.set('limit', '6')
+    const artInfo = await LolloMusicApi.searchArtist(highest.artist)
 
-    const similarResponse = await fetch(similarUrl)
-    const similarData = await similarResponse.json()
+    const similarData = await LolloMusicApi.getArtistSimilar(artInfo[0].id)
 
-    const filteredArtists = similarData.similarartists.artist
-      .filter((item) => !item.name.includes('&'))
-      .slice(0, 6)
+    let Export = []
 
-    console.log('Risposta Last.fm:', similarData)
+    for (const art of similarData) {
+      const artreleases = await LolloMusicApi.getArtistReleases(art.id)
 
-    // Ottieni i dati Deezer in parallelo
-    const enrichedArtists = await Promise.all(
-      filteredArtists.map(async (artist) => {
-        try {
-          const deezerUrl = new URL('https://api.deezer.com/search/artist')
-          deezerUrl.searchParams.set('q', artist.name)
-          deezerUrl.searchParams.set('limit', '1')
+      Export.push({ art, artreleases })
+    }
 
-          const deezerResponse = await fetch(deezerUrl)
-          const deezerData = await deezerResponse.json()
-
-          if (deezerData.data?.[0]) {
-            const pictures = deezerData.data[0]
-            return {
-              ...artist,
-              image: [
-                { '#text': pictures.picture_small, size: 'small' },
-                { '#text': pictures.picture_medium, size: 'medium' },
-                { '#text': pictures.picture_big, size: 'large' },
-                { '#text': pictures.picture_xl, size: 'extralarge' },
-                { '#text': pictures.picture_xl, size: 'mega' }
-              ]
-            }
-          }
-          return artist
-        } catch (error) {
-          console.error('errore nella creazione degli artisti consigliati: ' + error)
-          return artist
-        }
-      })
-    )
-
-    console.log('Artisti filtrati:', filteredArtists)
-
-    return enrichedArtists
+    return Export
   } catch (error) {
     console.error('Errore in SearchSimilarArtist:', error)
-    return []
-  }
-}
-
-async function GetracomandedAlbums(similarArtist) {
-  try {
-    const albumPromises = similarArtist.slice(0, 3).map(async (artist) => {
-      const albumsUrl = new URL(LASTFM_API_URL)
-      albumsUrl.searchParams.set('method', 'artist.gettopalbums')
-      albumsUrl.searchParams.set('artist', artist.name)
-      albumsUrl.searchParams.set('api_key', LASTFM_API_KEY)
-      albumsUrl.searchParams.set('format', 'json')
-      albumsUrl.searchParams.set('limit', '2')
-
-      const albumresponse = await fetch(albumsUrl)
-      const albumsData = await albumresponse.json()
-      return albumsData.topalbums.album
-    })
-
-    const albumsArrays = await Promise.all(albumPromises)
-    return albumsArrays.flat()
-  } catch (error) {
-    console.error('Errore in GetracomandedAlbums:', error)
     return []
   }
 }
@@ -2667,9 +2743,9 @@ ipcMain.handle('SearchLocalSong', async (event, title, artist, album) => {
   for (const item of songs) {
     const match =
       normalizeText(removeBrakets(item.title)).trim() ===
-        normalizeText(removeBrakets(title)).trim() &&
+      normalizeText(removeBrakets(title)).trim() &&
       normalizeText(removeBrakets(item.artist)).trim() ===
-        normalizeText(removeBrakets(artist)).trim() &&
+      normalizeText(removeBrakets(artist)).trim() &&
       normalizeText(removeBrakets(item.album)).trim() === normalizeText(removeBrakets(album)).trim()
 
     if (match) {

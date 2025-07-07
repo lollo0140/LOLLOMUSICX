@@ -1,10 +1,14 @@
-<script>/* eslint-disable prettier/prettier */
+<script>
+  /* eslint-disable prettier/prettier */
   import { onMount } from 'svelte'
   import * as renderer from '../main.js'
   import { createEventDispatcher } from 'svelte'
 
+  const ipcRenderer = window.electron.ipcRenderer
+
   import { fade } from 'svelte/transition'
   import SongButton from './pagesElements/SongButton.svelte'
+  import AlbumButton from './pagesElements/AlbumButton.svelte'
 
   let { AlbumQuery } = $props()
 
@@ -13,15 +17,22 @@
   // Verifica che AlbumQuery contenga il separatore prima di fare lo split
   let artista = ''
   let nome = ''
+  let albumID = $state()
   let Saved = $state(false)
 
   if (AlbumQuery && AlbumQuery.includes('-')) {
-    artista = AlbumQuery.split('-')[0].trim()
-    nome = AlbumQuery.split('-')[1].trim()
+    try {
+      albumID = AlbumQuery.split('-')[0].trim()
+      artista = AlbumQuery.split('-')[1].trim()
+      nome = AlbumQuery.split('-')[2].trim()
+    } catch {
+      albumID = undefined
+      artista = AlbumQuery.split('-')[0].trim()
+      nome = AlbumQuery.split('-')[1].trim()
+    }
   }
 
   let isLoading = $state(true)
-  let otherAlbumsLoading = $state(true)
 
   let otherAlbums = $state([])
   let albumtitle = $state('')
@@ -30,6 +41,8 @@
   let AlbumTracks = $state(null)
 
   let shared = $state()
+
+  let ID = $state()
 
   onMount(async () => {
     shared = renderer.default.shared
@@ -41,14 +54,11 @@
     // Carichiamo gli altri album dell'artista
     if (artista) {
       try {
-        const result = await shared.GetTopArtistAlbum(artista)
-        if (result && result.topalbums && result.topalbums.album) {
-          otherAlbums = result
-        }
+        console.log(ID)
+        otherAlbums = await shared.GetTopArtistAlbum(await ID)
+        console.log(otherAlbums)
       } catch (error) {
         console.error('Errore nel caricamento degli altri album:', error)
-      } finally {
-        otherAlbumsLoading = false
       }
     }
   })
@@ -60,16 +70,19 @@
     }
 
     try {
-      const result = await shared.getAlbumInfo(nome, artista)
-      
-      
-      
-      console.log(result);
-      AlbumTracks = result.songs.songs
-      albumimg = result.img[0].url || result.img[1].url || result.img[2].url || result.img[3].url
+      const result = await ipcRenderer.invoke('getAlbumDetails', nome, artista, albumID)
+
+      console.log(result)
+      albumimg =
+        result.img[0].url ||
+        result.img[1].url ||
+        result.img[2].url ||
+        result.img[3].url ||
+        result.img
       albumtitle = result.name
       albumartist = result.artists[0].name
-      
+      ID = result.artists[0].id
+      AlbumTracks = result.songs.songs
     } catch (error) {
       console.error("Errore durante il recupero delle informazioni dell'album:", error)
     } finally {
@@ -92,7 +105,7 @@
   }
 
   async function likealbum() {
-    await shared.SaveAlbum(albumtitle.toLowerCase(), albumartist, albumimg)
+    await shared.SaveAlbum(albumtitle.toLowerCase(), albumartist, albumimg, albumID)
     checklike()
   }
 
@@ -102,9 +115,22 @@
   }
 
   async function Play(i) {
-    shared.PlayPlaylistS(AlbumTracks, i)
-  }
+    const tracce = []
 
+    for (const song of AlbumTracks) {
+      tracce.push({
+        title: song.title,
+        artist: albumartist,
+        img: albumimg,
+        album: albumtitle,
+        id: song.id,
+        albumid: albumID,
+        artistid: ID
+      })
+    }
+
+    shared.PlayPlaylistS(tracce, i)
+  }
 </script>
 
 <div style="overflow-y: hidden;">
@@ -116,7 +142,7 @@
         <img id="albumimg" src={albumimg} alt={albumtitle || 'Copertina album'} />
         <div class="infoContainer">
           <p id="albumtitle">{albumtitle}</p>
-          <button onclick={() => CallItem({ query: albumartist, type: 'artist' })} id="albumartist"
+          <button onclick={() => CallItem({ query: albumartist + '||' + ID, type: 'artist' })} id="albumartist"
             >{albumartist}</button
           >
 
@@ -137,9 +163,17 @@
 
         {#if AlbumTracks}
           {#each AlbumTracks as song, i}
-
-            <SongButton songIndex={i} title={song.title} album={albumtitle} artist={albumartist} img={albumimg} onclickEvent={Play}/> 
-
+            <SongButton
+              songIndex={i}
+              title={song.title}
+              album={albumtitle}
+              artist={albumartist}
+              img={albumimg}
+              onclickEvent={Play}
+              songID={song.id}
+              artID={ID}
+              albID={albumID}
+            />
           {/each}
         {:else}
           <p>Error</p>
@@ -149,31 +183,23 @@
       <div id="Other">
         <p style="position: absolute; transform:translateY(-50px);">Others by {albumartist}</p>
 
-        {#if otherAlbumsLoading}
-          <p>Loading</p>
-        {:else if otherAlbums && otherAlbums.topalbums && otherAlbums.topalbums.album && otherAlbums.topalbums.album.length > 0}
-          <div class="otherAlbums">
-            {#each otherAlbums.topalbums.album as album}
-              {#if album.name !== albumtitle}
-                <button
-                  class="albumbutton contextMenuAlbum"
-                  onclick={() =>
-                    CallItem({ query: otherAlbums.artistName + ' - ' + album.name, type: 'album' })}
-                >
-                  <img
-                    class="--IMGDATA albumimg"
-                    src={album.image && album.image[2] ? album.image[2]['#text'] : ''}
-                    alt={album.name || 'Copertina album'}
-                  />
-                  <p class="--ALBUMDATA albumtitle">{album.name}</p>
-                  <p class="--ARTISTDATA albumartist">{albumartist}</p>
-                </button>
-              {/if}
+        <div class="otherAlbums">
+          {#await otherAlbums then result}
+            {#each result.albums as album}
+              <AlbumButton
+                id={album.id}
+                artist={album.artists?.[0]?.name || ''}
+                name={album.name}
+                img={album.img?.[0]?.url ||
+                  album.img?.[1]?.url ||
+                  album.img?.[2]?.url ||
+                  album.img?.[3]?.url ||
+                  album.img?.[4]?.url}
+                OnClick={CallItem}
+              />
             {/each}
-          </div>
-        {:else}
-          <p>No elements found</p>
-        {/if}
+          {/await}
+        </div>
       </div>
     </div>
   {/if}
@@ -207,10 +233,6 @@
 
   #likeAlbum:hover {
     transform: scale(1.1);
-  }
-
-  .albButtonContainer {
-    transform: translate(-10px, 27px);
   }
 
   .infoContainer {
@@ -276,13 +298,6 @@
   #AlbumSongs {
     margin-top: 970px;
     width: 100%;
-  }
-
-  .SongIndex {
-    float: right;
-    position: relative;
-    right: 10px;
-    top: 2px;
   }
 
   header {

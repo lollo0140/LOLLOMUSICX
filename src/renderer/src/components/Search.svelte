@@ -4,6 +4,8 @@
   import * as renderer from '../main.js'
   import '../assets/main.css'
   import SongButton from './pagesElements/SongButton.svelte'
+  import AlbumButton from './pagesElements/AlbumButton.svelte'
+  import ArtistButton from './pagesElements/ArtistButton.svelte'
 
   const dispatch = createEventDispatcher()
   let { pagindex } = $props()
@@ -52,11 +54,6 @@
     searchkey = ''
   }
 
-  function SearchTrackClick(item) {
-    const { title, artists, album, thumbnails, duration, url } = item
-    shared.PlaySong(title, artists[0].name, album.name, thumbnails.album, duration.seconds, url)
-  }
-
   function PlayYTtrack(id) {
     shared.PlaySongYT(id)
   }
@@ -102,7 +99,7 @@
             {#if songs && songs.length > 0}
               {#each songs as item, i}
 
-                <SongButton songIndex={i} title={item.title} album={item.album.name} artist={item.artists?.[0]?.name || ''} img={item.thumbnails?.high ? item.thumbnails.album : defSongPng} onclickEvent={Play}/> 
+                <SongButton songID={item.id} songIndex={i} title={item.title} album={item.album.name} artist={item.artists?.[0]?.name || ''} img={item.thumbnails?.high ? item.thumbnails.album : defSongPng} onclickEvent={Play}/> 
 
               {/each}
             {:else}
@@ -135,23 +132,14 @@
             <h1>Albums</h1>
             {#if albums && albums.length > 0}
               {#each albums as item}
-                <button
-                  onclick={() => CallItem({ query: item.artists?.[0]?.name + ' - ' + item.name, type: 'album' })}
-                  class="albumbutton contextMenuAlbum"
-                >
-                  <img
-                    class="--IMGDATA albumimg"
-                    src={item.img?.[0]?.url ||
-                      item.img?.[1]?.url ||
-                      item.img?.[2]?.url ||
-                      item.img?.[3]?.url ||
-                      item.img?.[4]?.url ||
-                      defSongPng}
-                    alt="copertina album"
-                  />
-                  <p class="--ALBUMDATA albumtitle">{item.name}</p>
-                  <p class="--ARTISTDATA albumartist">{item.artists?.[0]?.name || ''}</p>
-                </button>
+
+                <AlbumButton id={item.id} artist={item.artists?.[0]?.name || ''} name={item.name} img={item.img?.[0]?.url ||
+                  item.img?.[1]?.url ||
+                  item.img?.[2]?.url ||
+                  item.img?.[3]?.url ||
+                  item.img?.[4]?.url ||
+                  defSongPng} OnClick={CallItem} />
+
               {/each}
             {:else}
               <p>Nessun album trovato</p>
@@ -160,17 +148,9 @@
             <h1>Artisti</h1>
             {#if result.artists && result.artists.length > 0}
               {#each result.artists as item}
-                <button
-                  class="albumbutton contextMenuArtist"
-                  onclick={() => CallItem({ query: item.name, type: 'artist' })}
-                >
-                  <img
-                    class="--IMGDATA artimg"
-                    src={item.image || defSongPng}
-                    alt="immagine artista"
-                  />
-                  <p class="--ARTISTDATA artName">{item.name}</p>
-                </button>
+
+                <ArtistButton id={item.id} name={item.name} img={item.image || defSongPng} OnClick={CallItem} />
+
               {/each}
             {:else}
               <p>Nessun artista trovato</p>

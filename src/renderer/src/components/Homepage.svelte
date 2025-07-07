@@ -4,6 +4,7 @@
   import * as renderer from '../main.js'
 
   import { fade } from 'svelte/transition'
+  import ArtistShowcase from './pagesElements/ArtistShowcase.svelte'
 
   let loading = $state(true)
   let shared
@@ -61,43 +62,16 @@
         {/each}
       </div>
 
-      <p class="homelabel">Artists you might like</p>
+      <p class="homelabel" style="transform:translateY(60px);">Content you might like</p>
 
-      {#each data.similarArtist as artist, i}
-        {#if i < 6}
-          <button
-            class="albumbutton contextMenuArtist"
-            onclick={() => CallItem({ query: artist.name, type: 'artist' })}
-          >
-            <img class="--IMGDATA artimg" src={artist.image[4]['#text']} alt="" />
-            <p class="--ARTISTDATA artName">{artist.name}</p>
-          </button>
-        {/if}
+      {#each data.similarArtist as artist}
+
+        <ArtistShowcase {artist} onclick={CallItem}/>
+
+       
       {/each}
-
-      <p class="homelabel">Albums you might like</p>
-
-      <div>
-        {#each data.raccomandedAlbums as album}
-          <button
-            onclick={() =>
-              CallItem({ query: album.artist.name + ' - ' + album.name, type: 'album' })}
-            class="albumbutton contextMenuAlbum"
-          >
-            <img
-              class="--IMGDATA albumimg"
-              src={album.image && album.image[2] ? album.image[2]['#text'] : ''}
-              alt={album.name || 'Copertina album'}
-            />
-            <p class="--ALBUMDATA albumtitle">{album.name}</p>
-            <p class="--ARTISTDATA albumartist">{album.artist.name}</p>
-          </button>
-        {/each}
-      </div>
     </div>
   {:else}
     <p>caricamento...</p>
   {/if}
 </div>
-
-
