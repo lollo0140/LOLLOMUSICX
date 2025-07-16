@@ -1,5 +1,4 @@
-<script>
-  /* eslint-disable prettier/prettier */
+<script>/* eslint-disable prettier/prettier */
   import { onMount } from 'svelte'
   import * as renderer from '../main.js'
   import { fade } from 'svelte/transition'

@@ -1,5 +1,4 @@
-<script>
-/* eslint-disable prettier/prettier */
+<script>/* eslint-disable prettier/prettier */
   import { slide } from "svelte/transition"
 
     let { name, img, artist, index, dirIndex, onclick } = $props()

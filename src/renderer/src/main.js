@@ -1511,7 +1511,11 @@ class shared {
       const menu = [
         {
           text: 'Close to mini player',
-          action: setMiniplayer
+          action: () => {
+            setMiniplayer()
+
+            ipcRenderer.invoke('togleMiniPLayer')
+          }
         },
         {
           text: 'Close to tray',
