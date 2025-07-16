@@ -13,6 +13,7 @@ const ytmusicApi = require('ytmusic-api')
 const ytm = new ytmusicApi()
 const LolloMusicApi = new lollomusicapi()
 import crypto from 'crypto'
+import RPC from 'discord-rpc'
 
 var running = true
 //import { title } from 'process'
@@ -563,11 +564,11 @@ async function tryDeezerFirst(name, artist) {
         url: matchingAlbum.link,
         image: matchingAlbum.cover_big
           ? [
-              { '#text': matchingAlbum.cover_small, size: 'small' },
-              { '#text': matchingAlbum.cover_medium, size: 'medium' },
-              { '#text': matchingAlbum.cover_big, size: 'large' },
-              { '#text': matchingAlbum.cover_xl, size: 'extralarge' }
-            ]
+            { '#text': matchingAlbum.cover_small, size: 'small' },
+            { '#text': matchingAlbum.cover_medium, size: 'medium' },
+            { '#text': matchingAlbum.cover_big, size: 'large' },
+            { '#text': matchingAlbum.cover_xl, size: 'extralarge' }
+          ]
           : [],
         listeners: matchingAlbum.fans ? matchingAlbum.fans.toString() : '0',
         playcount: matchingAlbum.fans ? matchingAlbum.fans.toString() : '0',
@@ -2277,9 +2278,9 @@ ipcMain.handle('SearchLocalSong', async (event, title, artist, album) => {
   for (const item of songs) {
     const match =
       normalizeText(removeBrakets(item.title)).trim() ===
-        normalizeText(removeBrakets(title)).trim() &&
+      normalizeText(removeBrakets(title)).trim() &&
       normalizeText(removeBrakets(item.artist)).trim() ===
-        normalizeText(removeBrakets(artist)).trim() &&
+      normalizeText(removeBrakets(artist)).trim() &&
       normalizeText(removeBrakets(item.album)).trim() === normalizeText(removeBrakets(album)).trim()
 
     if (match) {
@@ -2589,3 +2590,50 @@ ipcMain.handle('togleMiniPLayer', async (event, condition) => {
     }
   }
 })
+
+const rpc = new RPC.Client({ transport: 'ipc' })
+const clientId = '1242579109930864721'
+
+ipcMain.handle('updateDiscordRPC', async (event, data) => {
+  setActivity(data)
+})
+
+async function setActivity(data) {
+  console.log(data)
+
+  const videolink = `https://www.youtube.com/watch?v=${data.id}`
+
+  console.log(videolink)
+
+  if (data.id) {
+    rpc.setActivity({
+      details: data.title,
+      state: data.artist,
+      largeImageKey: 'applabeldiscord',
+      buttons: [{ label: 'Listen', url: videolink }],
+      type: 'LISTENING',
+      instance: false
+    })
+  } else {
+    rpc.setActivity({
+      details: data.title,
+      state: data.artist,
+      largeImageKey: 'applabeldiscord',
+      type: 'LISTENING',
+      instance: false
+    })
+  }
+}
+
+rpc.on('ready', () => {
+  rpc.setActivity({
+    details: 'loading',
+    state: '',
+    largeImageKey: 'applabeldiscord',
+    startTimestamp: new Date(),
+    type: 'LISTENING',
+    instance: false
+  })
+})
+
+rpc.login({ clientId }).catch(console.error)

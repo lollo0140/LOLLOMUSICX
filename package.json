@@ -70,6 +70,7 @@
     "axios": "^1.8.2",
     "child_process": "^1.0.2",
     "crypto": "^1.0.1",
+    "discord-rpc": "^4.0.1",
     "electron-store": "^4.0.0",
     "ffmpeg-static": "^5.2.0",
     "fluent-ffmpeg": "^2.1.3",

@@ -1,9 +1,8 @@
-<script>
-  /* eslint-disable prettier/prettier */
+<script>/* eslint-disable prettier/prettier */
   import { createEventDispatcher } from 'svelte'
   import { onMount } from 'svelte'
   import * as renderer from '../main.js'
-  let { playerLocal, FullScreen, LASTFMsessionOn, SessionKEY } = $props()
+  let { playerLocal, FullScreen } = $props()
 
   import { updateTrackLikeStatus } from '../../stores/trackLikesStore.js'
 
@@ -71,21 +70,6 @@
       Lyric = await GetLyric()
 
       try {
-        if (LASTFMsessionOn) {
-          const timestamp = Math.floor(Date.now() / 1000)
-          ipcRenderer.invoke(
-            'lastfm-api-call',
-            'track.scrobble',
-            {
-              artist: playerLocal.artist,
-              track: playerLocal.title,
-              timestamp: timestamp.toString(),
-              album: playerLocal.album
-            },
-            SessionKEY
-          )
-        }
-
         nextSongLoad = false
 
         const quewe = await shared.GetQuewe()
@@ -96,6 +80,31 @@
       } catch {
         nextSongLoad = false
       }
+
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = new window.MediaMetadata({
+          title: playerLocal.title,
+          artist: playerLocal.artist,
+          album: playerLocal.album,
+          artwork: [{ src: playerLocal.img, sizes: '512x512', type: 'image/png' }]
+        })
+
+        navigator.mediaSession.setActionHandler('previoustrack', () => {
+          shared.previous() // vai alla traccia precedente
+        })
+
+        navigator.mediaSession.setActionHandler('nexttrack', () => {
+          shared.next() // vai alla traccia successiva
+        })
+      }
+
+      const data = {
+        title: playerLocal.title,
+        artist: playerLocal.artist,
+        id: playerLocal.id || undefined
+      }
+
+      ipcRenderer.invoke('updateDiscordRPC', data)
 
       if (Lyric.lyric !== undefined) {
         LyricPannelVisible = true
@@ -215,18 +224,22 @@
 <dir class={FullScreen ? 'FSNowPlayng' : 'NowPlayng'} style="transition: all 600ms;">
   <div
     class="contextMenu NowPlayngCUrrentContainer"
-    oncontextmenu={() => {renderer.default.shared.MenuContent = {type: 'song',
-    songIndex: playngIndex,
-    title: playerLocal.title,
-    album: playerLocal.album,
-    artist: playerLocal.artist,
-    img: playerLocal.img,
-    onclickEvent: undefined,
-    removable: false,
-    PlaylistIndex: undefined,
-    songID: playerLocal.id,
-    albID: playerLocal.albumID,
-    artID: playerLocal.artistID}}}
+    oncontextmenu={() => {
+      renderer.default.shared.MenuContent = {
+        type: 'song',
+        songIndex: playngIndex,
+        title: playerLocal.title,
+        album: playerLocal.album,
+        artist: playerLocal.artist,
+        img: playerLocal.img,
+        onclickEvent: undefined,
+        removable: false,
+        PlaylistIndex: undefined,
+        songID: playerLocal.id,
+        albID: playerLocal.albumID,
+        artID: playerLocal.artistID
+      }
+    }}
     role="button"
     aria-haspopup="true"
     aria-label="Apri menu contestuale per {playerLocal.title}"

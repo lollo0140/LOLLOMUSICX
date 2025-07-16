@@ -23,7 +23,7 @@ const app = mount(App, {
 
 const ipcRenderer = window.electron.ipcRenderer
 
-import { callItemFunction, setMiniplayer } from './App.svelte'
+import { callItemFunction /*setMiniplayer*/ } from './App.svelte'
 
 class shared {
   loading = false
@@ -1508,15 +1508,15 @@ class shared {
 
       ContextMenu.genMenu(menu)
     } else if (data.type === 'close') {
-      const menu = [
-        {
-          text: 'Close to mini player',
-          action: () => {
-            setMiniplayer()
+      //        {
+      //text: 'Close to mini player',
+      //action: async () => {
+      //await setMiniplayer()
+      //ipcRenderer.invoke('togleMiniPLayer')
+      //}
+      //},
 
-            ipcRenderer.invoke('togleMiniPLayer')
-          }
-        },
+      const menu = [
         {
           text: 'Close to tray',
           action: () => {

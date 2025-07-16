@@ -36,6 +36,8 @@
 
   let STARTUP = 0
 
+  const ipcRenderer = window.electron.ipcRenderer
+
   export function callItemFunction(obj) {
     if (obj.type !== 'download') {
       pagindex = -1
@@ -97,7 +99,6 @@
   import { fade, fly } from 'svelte/transition'
   import HomePageLastfm from './components/HomePageLASTFM.svelte'
 
-  const ipcRenderer = window.electron.ipcRenderer
   //imports
 
   var LASTFMsessionOn = $state(false)
