@@ -303,6 +303,7 @@ body {
 
     height: 211px;
     width: 163px;
+    max-width: 163px;
 
     overflow: hidden;
 
@@ -1233,49 +1234,7 @@ body {
     margin: 0px;
 }
 
-#contextmenu {
-    position: absolute;
 
-    z-index: 99999;
-
-    height: auto;
-    width: 200px;
-
-    padding: 2px;
-
-    border: solid 1px rgba(255, 255, 255, 0.27);
-    background: rgba(255, 255, 255, 0.1);
-
-    border-radius: 10px;
-
-    backdrop-filter: blur(10px);
-
-}
-
-.CmenuButton {
-    border: solid 1px rgba(255, 255, 255, 0.27);
-    background: rgba(255, 255, 255, 0.1);
-
-    height: 30px;
-
-    color: white;
-
-    margin-bottom: 2px;
-
-    border-radius: 7px;
-
-    width: 100%;
-
-    text-align: left;
-
-    cursor: pointer;
-
-    transition: all 200ms;
-}
-
-.CmenuButton:hover {
-    background: rgba(255, 255, 255, 0.3);
-}
 
 .PLbutt {
 
@@ -1615,6 +1574,7 @@ body {
     padding: 10px;
 
     height: 350px;
+    width: 253.5px;
 
     border: solid 1px rgba(255, 255, 255, 0.27);
     background: rgba(255, 255, 255, 0.1);
@@ -1686,6 +1646,7 @@ body {
     margin-top: 12px;
 
     height: 70px;
+    width: 274px;
 
     border: solid 1px rgba(255, 255, 255, 0.27);
     background: rgba(255, 255, 255, 0.1);
@@ -2222,4 +2183,225 @@ body {
 
     left: -120px;
     bottom: 22px;
+}
+
+
+#contextmenu {
+
+    width: 200px;
+
+    position: absolute;
+
+    z-index: 99999;
+
+    height: auto;
+
+    padding: 0px;
+
+    margin: 0px;
+
+    background: transparent;
+
+    
+    border-radius: 14px;
+
+    transition: opacity 300ms;
+
+}
+
+#CmenuImg {
+    position: absolute;
+    width: 200px;
+    height: 50px;
+
+    top: 0px;
+    left: 0px;
+
+    border: none;
+    border-radius: 7px;
+
+    mask-image: url('cardgradient.png');
+    object-fit: cover;
+
+    opacity: 0.7;
+}
+
+#CmenuTitle {
+    position: absolute;
+    left: 0px;
+}
+
+#CmenuAlbum {
+    position: absolute;
+}
+
+#CmenuArtist {
+    position: absolute;
+}
+
+#infoContainer {
+
+    margin-bottom: 3px;
+
+    width: 200px;
+
+    height: 50px;
+
+
+    position: relative;
+
+    overflow: hidden;
+    border: solid 1px rgba(255, 255, 255, 0.27);
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 14px;
+    
+    backdrop-filter: blur(10px);
+
+}
+
+#LikeButton {
+    background-image: url('like.png');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: cover;
+
+    border: none;
+    background-color: transparent;
+
+    width: 20px;
+    height: 20px;
+
+    position: absolute;
+    right: 16px;
+    top: 16px;
+
+    cursor: pointer;
+
+    transition: all 200ms;
+
+}
+
+#LikeButton:hover {
+    transform: scale(1.1);
+}
+
+#downloadButton {
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: cover;
+
+    border: none;
+    background-color: transparent;
+
+    width: 18px;
+    height: 18px;
+    right: 53px;
+    top: 16px;
+
+    position: absolute;
+
+    cursor: pointer;
+
+    transition: all 200ms;
+}
+
+#downloadButton:hover {
+    transform: scale(1.1);
+}
+
+.CmenuButton {
+
+    width: 200px;
+    height: 30px;
+
+    padding: 0px;
+    margin: 0px;
+
+    text-align: left;
+
+    padding-left: 10px;
+
+
+    border: solid 1px rgba(255, 255, 255, 0.27);
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 14px;
+
+    backdrop-filter: blur(10px);
+
+    margin-top: 2px;
+
+    cursor: pointer;
+
+    transition: all 200ms;
+}
+
+.CmenuButton:hover {
+    background: rgba(255, 255, 255, 0.3);
+} 
+
+
+.CmPbutton {
+
+    width: 200px;
+    height: 25px;
+
+    overflow: hidden;
+
+}
+
+.contextSubMenu {
+    width: 200px;
+}
+
+.contextMenu {
+    width: 200px;
+    -webkit-app-region: no-drag;
+}
+
+.contextMenuButton {
+    cursor: pointer;
+    width: 200px;
+    height: 40px;
+    margin-top: 1px;
+    border: solid 1px rgba(255, 255, 255, 0.27);
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 14px;
+    transition: all 200ms;
+    padding: 0px;
+    backdrop-filter: blur(10px);
+    overflow-x: auto;
+    overflow-y: hidden;
+    display: flex;
+    align-items: center;
+    /* Definisce la direzione del flex per garantire l'ordine corretto */
+    flex-direction: row;
+}
+
+.contextMenuButton:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.contextMenuButton p {
+    position: relative;
+    width: auto;
+    height: 20px;
+    /* Imposta l'ordine del testo a 2 */
+
+    margin-left: 5px;
+    margin-top: 17px;
+    order: 2;
+}
+
+.contextMenuButton img {
+    position: relative;
+    width: 30px;
+    height: 30px;
+    margin-left: 3px;
+
+    border: solid 1px rgba(255, 255, 255, 0.27);
+    border-radius: 10px;
+
+    object-fit: cover;
+    /* Imposta l'ordine dell'immagine a 1 */
+    order: 1;
 }

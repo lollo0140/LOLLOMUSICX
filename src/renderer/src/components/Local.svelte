@@ -1,9 +1,11 @@
-<script>/* eslint-disable prettier/prettier */
+<script>
+  /* eslint-disable prettier/prettier */
   import { onMount } from 'svelte'
   import * as renderer from '../main.js'
   import { fade } from 'svelte/transition'
   import SongButton from './pagesElements/SongButton.svelte'
-  
+  import LocalAlbumButton from './pagesElements/LocalAlbumButton.svelte'
+
   const { ipcRenderer } = window.electron
   const VIEW = { HOME: 'home', ALBUMS: 'albums', INDIVIDUAL: 'individual' }
 
@@ -18,29 +20,29 @@
   let album = $state(0)
 
   function ensureLocalPrefix(path) {
-    if (!path) return '';
-    return path.startsWith('local:///') ? path : 'local:///' + path;
+    if (!path) return ''
+    return path.startsWith('local:///') ? path : 'local:///' + path
   }
 
   onMount(async () => {
-    shared = renderer.default.shared;
-    
+    shared = renderer.default.shared
+
     const [songsData, libraryData] = await Promise.all([
       ipcRenderer.invoke('GetLocalSongs'),
       ipcRenderer.invoke('readLocalLibrary')
-    ]);
-    
-    songs = songsData.map(song => ({
+    ])
+
+    songs = songsData.map((song) => ({
       ...song,
       img: 'local:///' + song.img
-    }));
-    
+    }))
+
     library = libraryData
     loading = false
   })
 
-  const navigateTo = view => currentView = view;
-  const toggleMode = () => filesmode = !filesmode;
+  const navigateTo = (view) => (currentView = view)
+  const toggleMode = () => (filesmode = !filesmode)
 
   function showAlbum(i) {
     dirIndex = i
@@ -53,17 +55,16 @@
     individualSongs = [...library.folders[dirIndex].albums[album].tracks]
   }
 
-  const playTracks = i => shared.PlayPlaylistS(songs, i)
-  const playAlbum = i => {
+  const playTracks = (i) => shared.PlayPlaylistS(songs, i)
+  const playAlbum = (i) => {
     // Assicurati che tutte le tracce abbiano il prefisso local:/// nelle immagini
-    const tracksWithLocalPrefix = individualSongs.map(song => ({
+    const tracksWithLocalPrefix = individualSongs.map((song) => ({
       ...song,
       img: ensureLocalPrefix(song.img)
-    }));
-    
+    }))
+
     shared.PlayPlaylistS(tracksWithLocalPrefix, i)
   }
-
 </script>
 
 {#if !loading}
@@ -103,27 +104,17 @@
         </div>
       {:else if currentView === VIEW.ALBUMS}
         {#each library.folders[dirIndex].albums as albumItem, i}
-          <button
-            in:fade|global
-            class="albumbutton contextMenuAlbum localAlbum"
-            onclick={() => selectAlbum(i)}
-          >
-            <img class="--IMGDATA albumimg" src={'local:///' + albumItem.img} alt="album cover" />
-            <p class="--ALBUMDATA albumtitle">{albumItem.name}</p>
-            <p class="--ARTISTDATA albumartist">{albumItem.artist}</p>
-            <p class="hidden --FOLDERINDEX">{dirIndex}</p>
-            <p class="hidden --SUBFOLDERINDEX">{i}</p>
-          </button>
+          <LocalAlbumButton name={albumItem.name} img={albumItem.img} artist={albumItem.artist} index={i} dirIndex={dirIndex} onclick={selectAlbum} />
         {/each}
       {:else if currentView === VIEW.INDIVIDUAL}
         {#each library.folders[dirIndex].albums[album].tracks as song, i}
-          <SongButton 
-            songIndex={i} 
-            title={song.title} 
-            album={song.album} 
-            artist={song.artist} 
-            img={'local:///' + song.img} 
-            onclickEvent={playAlbum} 
+          <SongButton
+            songIndex={i}
+            title={song.title}
+            album={song.album}
+            artist={song.artist}
+            img={'local:///' + song.img}
+            onclickEvent={playAlbum}
             removable={false}
           />
         {/each}
@@ -131,13 +122,13 @@
     {:else}
       <div class="SongsContainer">
         {#each songs as song, i}
-          <SongButton 
-            songIndex={i} 
-            title={song.title} 
-            album={song.album} 
-            artist={song.artist} 
-            img={song.img} 
-            onclickEvent={playTracks} 
+          <SongButton
+            songIndex={i}
+            title={song.title}
+            album={song.album}
+            artist={song.artist}
+            img={song.img}
+            onclickEvent={playTracks}
             removable={false}
           />
         {/each}

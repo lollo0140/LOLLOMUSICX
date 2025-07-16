@@ -470,29 +470,26 @@ export class lollomusicapi {
         if (!this.initialized) {
             await this.initialize();
         }
-
+    
         const cacheKey = `album_details_${id}`;
         return this.getCached(cacheKey, async () => {
             try {
-                // Utilizziamo direttamente il risultato di innertube (youtube.music.getAlbum)
-                const albumInfo = await this.youtube.music.getAlbum(id);
-
-                // Trasformiamo il risultato nel formato atteso
-                return {
-                    id: id,
-                    title: albumInfo.header.title.text,
-                    artist: albumInfo.header.strapline_text_one.text,
-                    year: albumInfo.header.strapline_text_two?.text,
-                    thumbnail: albumInfo.thumbnail?.thumbnails?.pop()?.url,
-                    tracks: albumInfo.contents?.map(track => ({
-                        id: track.videoId,
-                        title: track.title,
-                        artist: track.artists?.[0]?.name || '',
-                        duration: track.duration
-                    }))
-                };
+                // Utilizziamo direttamente il risultato di innertube
+                const result = await this.youtube.music.getAlbum(id);
+                
+                // Verifica che result contenga i dati necessari
+                if (!result) {
+                    throw new Error(`Dati album mancanti per ID: ${id}`);
+                }
+                
+                // Log per debug
+                console.log('Album result:', JSON.stringify(result, null, 2));
+                
+                // Restituisci il risultato senza filtri
+                return result;
             } catch (error) {
                 console.error(`Errore nel recuperare l'album ${id}:`, error);
+                // Rethrow per gestire l'errore nel chiamante
                 throw error;
             }
         });

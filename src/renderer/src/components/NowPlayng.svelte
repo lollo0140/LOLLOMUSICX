@@ -1,8 +1,11 @@
-<script>/* eslint-disable prettier/prettier */
+<script>
+  /* eslint-disable prettier/prettier */
   import { createEventDispatcher } from 'svelte'
   import { onMount } from 'svelte'
   import * as renderer from '../main.js'
   let { playerLocal, FullScreen, LASTFMsessionOn, SessionKEY } = $props()
+
+  import { updateTrackLikeStatus } from '../../stores/trackLikesStore.js'
 
   const ipcRenderer = window.electron.ipcRenderer
 
@@ -210,7 +213,25 @@
 </script>
 
 <dir class={FullScreen ? 'FSNowPlayng' : 'NowPlayng'} style="transition: all 600ms;">
-  <div class="contextMenuSong NowPlayngCUrrentContainer">
+  <div
+    class="contextMenu NowPlayngCUrrentContainer"
+    oncontextmenu={() => {renderer.default.shared.MenuContent = {type: 'song',
+    songIndex: playngIndex,
+    title: playerLocal.title,
+    album: playerLocal.album,
+    artist: playerLocal.artist,
+    img: playerLocal.img,
+    onclickEvent: undefined,
+    removable: false,
+    PlaylistIndex: undefined,
+    songID: playerLocal.id,
+    albID: playerLocal.albumID,
+    artID: playerLocal.artistID}}}
+    role="button"
+    aria-haspopup="true"
+    aria-label="Apri menu contestuale per {playerLocal.title}"
+    tabindex="0"
+  >
     <img
       in:fade
       id="Img"
@@ -230,7 +251,8 @@
     <p class="--TITLEDATA PLAYERtitle" style="pointer-events: none;">{playerLocal.title}</p>
     <button
       style="pointer-events: all;"
-      onclick={() => CallItem({ query: playerLocal.artist+'||'+playerLocal.artistID, type: 'artist' })}
+      onclick={() =>
+        CallItem({ query: playerLocal.artist + '||' + playerLocal.artistID, type: 'artist' })}
       class="--ARTISTDATA PLAYERart"
       >{playerLocal.artist}
     </button>
@@ -238,7 +260,10 @@
     <button
       style="pointer-events: all;"
       onclick={() =>
-        CallItem({ query: playerLocal.albumID + ' - ' + playerLocal.artist + ' - ' + playerLocal.album, type: 'album' })}
+        CallItem({
+          query: playerLocal.albumID + ' - ' + playerLocal.artist + ' - ' + playerLocal.album,
+          type: 'album'
+        })}
       class="--ALBUMDATA PLAYERalbum {!Visible ? 'hidden' : ''}"
       >{playerLocal.album}
     </button>
@@ -269,11 +294,25 @@
   </div>
 
   {#if saved}
-    <button class="likeButton" style="position:absolute;" onclick={() => delTrack()}>
+    <button
+      class="likeButton"
+      style="position:absolute;"
+      onclick={async () => {
+        await delTrack()
+        updateTrackLikeStatus(playerLocal.title, playerLocal.artist, playerLocal.album)
+      }}
+    >
       <img class="likeNPbuttonImg" src={LIKEimg} alt="palle" />
     </button>
   {:else}
-    <button class="likeButton" style="position:absolute;" onclick={() => SaveTrack()}>
+    <button
+      class="likeButton"
+      style="position:absolute;"
+      onclick={async () => {
+        await SaveTrack()
+        updateTrackLikeStatus(playerLocal.title, playerLocal.artist, playerLocal.album)
+      }}
+    >
       <img style="opacity: 0.4;" class="likeNPbuttonImg" src={LIKEimg} alt="palle" />
     </button>
   {/if}

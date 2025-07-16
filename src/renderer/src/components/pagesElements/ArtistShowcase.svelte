@@ -12,7 +12,7 @@
   </div>
 
   {#each artist.artreleases.albums as album}
-    <AlbumButton id={album.id} artist={album.artists?.[0]?.name || ''} name={album.name} img={album.img?.[0]?.url ||
+    <AlbumButton id={album.id} artist={album.artists?.[0]?.name || ''} artID={album.artists?.[0]?.id || ''} name={album.name} img={album.img?.[0]?.url ||
       album.img?.[0]?.url ||
       album.img?.[1]?.url 
     } OnClick={onclick} />

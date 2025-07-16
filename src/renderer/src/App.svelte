@@ -1,3 +1,80 @@
+<script module>
+  //setMiniplayer()
+  var MINIPLAYER = $state(false)
+
+  var paused = $state()
+  var shuffle = $state()
+  var repeat = $state()
+
+  var sturtup = true
+
+  var contextmenu = $state(false)
+
+  var Pageloading = $state(true)
+  var loading = $state(true)
+  var LoadingImg = $state('')
+
+  var nextLoaded = $state(false)
+
+  var shared
+  let playerLocal = $state(null)
+  let intervalId
+
+  let dur = $state('')
+  let sec = $state('')
+  let volume = $state(0.5)
+  let AlbumQuery = $state('')
+  let ArtistQuery = $state('')
+  let Pindex = $state(0)
+  let url = $state('')
+  let pagindex = $state(0)
+
+  let downloadPannel = $state(false)
+  let trackToDownload = $state()
+
+  let FullScreen = $state(false)
+
+  let STARTUP = 0
+
+  export function callItemFunction(obj) {
+    if (obj.type !== 'download') {
+      pagindex = -1
+    }
+
+    setTimeout(() => {
+      if (obj.type === 'album') {
+        pagindex = 1
+        AlbumQuery = obj.query
+        //console.log('album chiamato: ' + obj.query)
+      } else if (obj.type === 'artist') {
+        pagindex = 4
+        ArtistQuery = obj.query
+        //console.log('artista chiamato: ' + obj.query)
+      } else if (obj.type === 'liked') {
+        pagindex = 7
+      } else if (obj.type === 'playlist') {
+        Pindex = obj.query
+        pagindex = 6
+      } else if (obj.type === 'localAlbum') {
+        Pindex = obj.query
+        pagindex = 9
+      } else if (obj.type === 'download') {
+        if (!downloadPannel) {
+          trackToDownload = obj.query
+          downloadPannel = true
+        } else {
+          downloadPannel = false
+        }
+      }
+    }, 500)
+  }
+
+  export async function setMiniplayer() {
+    MINIPLAYER = true
+    ipcRenderer.invoke('togleMiniPLayer', true)
+  }
+</script>
+
 <script>
   //imports
   import { onMount, onDestroy } from 'svelte'
@@ -35,55 +112,6 @@
   const CLOSE = new URL('./assets/other/exit.png', import.meta.url).href
   const EXPAND = new URL('./assets/expand.png', import.meta.url).href
 
-  var MINIPLAYER = $state(false)
-
-  var paused = $state()
-  var shuffle = $state()
-  var repeat = $state()
-
-  var sturtup = true
-
-  var contextmenu = $state(false)
-  var menuX = $state(),
-    menuY = $state(),
-    clickedElement = $state()
-
-  var Pageloading = $state(true)
-  var loading = $state(true)
-  var LoadingImg = $state('')
-
-  var nextLoaded = $state(false)
-
-  var shared
-  let playerLocal = $state(null)
-  let intervalId
-
-  let dur = $state('')
-  let sec = $state('')
-  let volume = $state(0.5)
-  let AlbumQuery = $state('')
-  let ArtistQuery = $state('')
-  let Pindex = $state(0)
-  let url = $state('')
-  let pagindex = $state(0)
-
-  let downloadPannel = $state(false)
-  let trackToDownload = $state()
-
-  let FullScreen = $state(false)
-
-  let STARTUP = 0
-
-  document.addEventListener('contextmenu', (event) => {
-    event.preventDefault()
-
-    menuX = event.x
-    menuY = event.y
-    clickedElement = event.target
-
-    contextmenu = true
-  })
-
   document.addEventListener('click', () => {
     if (contextmenu) {
       if (pagindex === 7 || pagindex === 6 || pagindex === 3) {
@@ -103,6 +131,8 @@
   onMount(async () => {
     shared = renderer.default.shared
     playerLocal = renderer.default.shared.Player
+
+    shared.Createmenu()
 
     try {
       if (localStorage.getItem('lastfm_session_key') !== '') {
@@ -404,47 +434,6 @@
     }
   }
 
-  let LASTFMToken
-  let clickAllow = $state(false)
-  async function login() {
-    const Token = await ipcRenderer.invoke('lastfm-get-auth-token')
-
-    await ipcRenderer.invoke('lastfm-open-auth-url', Token)
-    LASTFMToken = Token
-    clickAllow = true
-  }
-
-  async function ContinueLongin() {
-    try {
-      const data = await ipcRenderer.invoke('lastfm-get-session', LASTFMToken)
-
-      localStorage.setItem('lastfm_session_key', data.key)
-      localStorage.setItem('lastfm_username', data.name)
-
-      SessionName = data.name
-      SessionKEY = data.key
-
-      LASTFMsessionOn = true
-    } catch {
-      LASTFMsessionOn = false
-      clickAllow = false
-      localStorage.setItem('lastfm_session_key', '')
-      localStorage.setItem('lastfm_username', '')
-    }
-  }
-
-  async function logout() {
-    localStorage.setItem('lastfm_session_key', '')
-    localStorage.setItem('lastfm_username', '')
-
-    LASTFMsessionOn = false
-  }
-
-  async function setMiniplayer() {
-    MINIPLAYER = true
-    ipcRenderer.invoke('togleMiniPLayer', true)
-  }
-
   async function setNormalplayer() {
     MINIPLAYER = false
     ipcRenderer.invoke('togleMiniPLayer', false)
@@ -477,34 +466,6 @@
               on:cambia-variabile={(e) => CallItem(e.detail)}
               {pagindex}
             />
-
-            <div class="LogContainer">
-              {#if !LASTFMsessionOn}
-                {#if !clickAllow}
-                  <button
-                    onclick={() => {
-                      login()
-                    }}
-                    class="LoginButton">Log In</button
-                  >
-                {:else}
-                  <p class="ClickAllowText">
-                    Click the "allow" button on the browser and press continue
-                  </p>
-                  <button class="ClickAllow" onclick={() => ContinueLongin()}>Continue</button>
-                {/if}
-              {:else}
-                <p class="Sessionplaceholder">Logged as</p>
-                <p class="SessionName">{SessionName}</p>
-                <button
-                  class="LoginButton"
-                  onclick={() => {
-                    logout()
-                  }}>Log Out</button
-                >
-              {/if}
-            </div>
-
             {#if pagindex === 0}
               {#if LASTFMsessionOn}
                 <HomePageLastfm
@@ -567,31 +528,20 @@
         <Controls max={dur} {sec} {FullScreen} {paused} shuffled={shuffle} {repeat} />
       </div>
     {/if}
-
-    {#if contextmenu}
-      <ContextMenu
-        {menuX}
-        {menuY}
-        {clickedElement}
-        on:cambia-variabile={(e) => CallItem(e.detail)}
-      />
-    {/if}
   {:else}
     <p>loading...</p>
   {/if}
 
   <dir style="-webkit-app-region: drag;" class="DragRegion">
-    <p class="windowTitle">LOLLOMUSICX <span style="font-size: 11px;">BETA 0.8.60 </span> </p>
+    <p class="windowTitle">LOLLOMUSICX <span style="font-size: 11px;">BETA 0.9.0 </span></p>
 
     <button
-      onclick={() =>
-        !shared.settings.playerSettings.general.miniPlayerWhenClosed
-          ? ipcRenderer.invoke('closeWin')
-          : setMiniplayer()}
-      style="-webkit-app-region: no-drag;"
-      class="windowBarButton"
+      onclick={() => ipcRenderer.invoke('closeWin')}
+      style="-webkit-app-region: no-drag; width: 30px;"
+      class="windowBarButton contextMenu"
+      oncontextmenu={() => (renderer.default.shared.MenuContent = { type: 'close' })}
     >
-      <img class="img" src={CLOSE} alt="palle" />
+      <img style="pointer-events: none;" class="img" src={CLOSE} alt="palle" />
     </button>
 
     <button

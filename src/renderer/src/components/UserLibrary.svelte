@@ -1,15 +1,11 @@
-<script>/* eslint-disable prettier/prettier */
-
-  const LIKE = new URL('../assets/LikePlaylistCover.png', import.meta.url).href
-  const DEFIMG = new URL('../assets/defaultSongCover.png', import.meta.url).href
-  const closeX = new URL('../assets/other/exit.png', import.meta.url).href
-
+<script module>/* eslint-disable prettier/prettier */
   import { onMount } from 'svelte'
   import * as renderer from '../main.js'
   import { createEventDispatcher } from 'svelte'
   import { fade } from 'svelte/transition'
   import AlbumButton from './pagesElements/AlbumButton.svelte'
   import ArtistButton from './pagesElements/ArtistButton.svelte'
+  import PlaylistButton from './pagesElements/PlaylistButton.svelte'
 
   let shared
 
@@ -23,6 +19,22 @@
   let creatingPlist = $state(false)
 
   //let playlists = []
+
+
+
+  export async function ReloadLibrary() {
+    albums = await shared.GetLikedAlbums()
+    artists = await shared.GetLikedArtists()
+
+    playlists = await shared.ReadPlaylist()
+  }
+
+</script>
+
+<script>
+  const LIKE = new URL('../assets/LikePlaylistCover.png', import.meta.url).href
+  const DEFIMG = new URL('../assets/defaultSongCover.png', import.meta.url).href
+  const closeX = new URL('../assets/other/exit.png', import.meta.url).href
 
   let imageSrc = $state(DEFIMG)
 
@@ -81,14 +93,15 @@
 
 <div>
   {#if !loading}
-    <div transition:fade>
+    <div in:fade>
       <p>Playlists</p>
 
       <div class="playlists">
         <button
           type="button"
-          class="albumbutton contextMenuLiked"
+          class="albumbutton contextMenu"
           onclick={() => CallItem({ query: '', type: 'liked' })}
+          oncontextmenu={() => (renderer.default.shared.MenuContent = { type: 'liked', img: LIKE })}
         >
           <img style="object-fit: cover;" class="--IMGDATA albumimg" src={LIKE} alt="img" />
           <p class="--PLAYLISTNAMEDATA albumtitle">Liked</p>
@@ -96,15 +109,13 @@
         </button>
 
         {#each playlists as item, i}
-          <button
-            class="albumbutton contextMenuPlaylist"
-            onclick={() => CallItem({ query: i, type: 'playlist' })}
-          >
-            <img style="object-fit: cover;" class="--IMGDATA albumimg" src={item.img} alt="" />
-            <p class="--PLAYLISTNAMEDATA albumtitle">{item.name}</p>
-            <p class="albumartist">{item.tracks.length} tracks</p>
-            <p class="--PLAYLISTINDEXDATA">{i + 1}</p>
-          </button>
+          <PlaylistButton
+            onclick={CallItem}
+            index={i}
+            tracks={item.tracks}
+            name={item.name}
+            img={item.img}
+          />
         {/each}
 
         <div class="NewPlaylistButton">
@@ -137,6 +148,7 @@
             name={album.album}
             img={album.img}
             OnClick={CallItem}
+            artID={album.artistID}
           />
         {/each}
       </div>
@@ -145,9 +157,7 @@
 
       <div class="likedArtists">
         {#each artists as artist}
-        
           <ArtistButton id={artist.id} name={artist.artist} img={artist.img} OnClick={CallItem} />
-
         {/each}
       </div>
     </div>

@@ -1,53 +1,58 @@
 <script>/* eslint-disable prettier/prettier */
+  import { onMount } from 'svelte'
+  // Importa lo store 'trackLikes' e le funzioni di azione dal tuo file store
+  // Assicurati che il percorso sia corretto per il tuo progetto
+  import {
+    trackLikes,
+    updateTrackLikeStatus,
+    likeTrack,
+    dislikeTrack
+  } from '../../../stores/trackLikesStore.js'
 
-    import { onMount } from 'svelte'
-    import * as renderer from '../../main.js'
+  // Definisci le props con la rune $props()
+  let { title, artist, album, img, video = false, id, albID, artID } = $props()
 
-    let { title, artist, album, img, video = false, id, albID, artID } = $props()
+  const LIKEimg = new URL('../../assets/like.png', import.meta.url).href
 
-    const LIKEimg = new URL('../../assets/like.png', import.meta.url).href
+  // Crea una chiave unica per questa specifica traccia.
+  // Questa è una variabile normale, non reattiva di per sé.
+  const trackKey = `${title}-${artist}-${album}`
 
-    let liked = $state(false)
-    let shared
+  // Utilizza la rune $derived per calcolare lo stato 'isThisTrackLiked'
+  // '$trackLikes' (con il $) è ancora necessario per accedere al valore dello store.
+  // Ogni volta che il valore di '$trackLikes' cambia, questa espressione verrà rivalutata
+  // e 'isThisTrackLiked' si aggiornerà automaticamente.
+  let isThisTrackLiked = $derived($trackLikes[trackKey] || false)
 
-    onMount(async () => {
-        shared = renderer.default.shared
+  onMount(async () => {
+    // Quando il componente viene montato, chiediamo allo store di
+    // controllare e aggiornare lo stato del like per questa traccia.
+    // Questo popolerà lo store e di conseguenza 'isThisTrackLiked' (tramite $derived)
+    // si aggiornerà riflettendo il dato dal backend.
+    await updateTrackLikeStatus(title, artist, album)
+  })
 
-        if (await shared.CheckIfLiked(title, artist, album)) {
-            liked = true
-        } else {
-            liked = false
-        }
-         
-    })
+  async function handleLike(event) {
+    event.stopPropagation()
+    // Chiamiamo la funzione 'likeTrack' dallo store.
+    // Questa funzione aggiornerà lo store, e di conseguenza 'isThisTrackLiked' si aggiornerà.
+    await likeTrack({ title, artist, album, img, video, id, artID, albID })
+  }
 
-    async function LIKE(event) {
-        console.log('evento like')
-        
-        event.stopPropagation()
-        shared.SaveTrackExt(title, artist, album, img, video, id, artID, albID)
-        liked = !liked
-    }
-
-    async function DISLIKE(event) {
-        console.log('evento like')
-        event.stopPropagation(event)
-        shared.dislikeTrackExt(title, artist, album, img)
-        liked = !liked
-    }
-
+  async function handleDislike(event) {
+    event.stopPropagation()
+    // Chiamiamo la funzione 'dislikeTrack' dallo store.
+    // Questa funzione aggiornerà lo store, e di conseguenza 'isThisTrackLiked' si aggiornerà.
+    await dislikeTrack({ title, artist, album, img })
+  }
 </script>
 
-{#if liked}
-    
-    <button class="LikeButton" onclick={(event) => DISLIKE(event)}>
-        <img class="LikeButtonimg" src={LIKEimg} alt="">
-    </button>
-
-    {:else}
-
-    <button class="LikeButton" onclick={(event) => LIKE(event)}>
-        <img style="opacity: 0.1;" class="LikeButtonimg" src={LIKEimg} alt="">
-    </button>
-
+{#if isThisTrackLiked}
+  <button class="LikeButton" onclick={(event) => handleDislike(event)}>
+    <img class="LikeButtonimg" src={LIKEimg} alt="" />
+  </button>
+{:else}
+  <button class="LikeButton" onclick={(event) => handleLike(event)}>
+    <img style="opacity: 0.1;" class="LikeButtonimg" src={LIKEimg} alt="" />
+  </button>
 {/if}

@@ -2,21 +2,34 @@
   import IsLocal from './IsLocal.svelte'
   import LikeButton from './LikeButton.svelte'
 
+
+  import * as renderer from '../../main.js'
+  import { slide } from 'svelte/transition'
+
+
+
+
+
+
+  
+
   let { songIndex, title, album, artist, img, onclickEvent, removable, PlaylistIndex, songID, albID, artID } = $props()
   console.log(songID);
   
 </script>
 
-<button
+<button transition:slide
+  id="pulsante"
   onclick={() => onclickEvent(songIndex)}
   style="width: 100%;"
-  class="bottone contextMenuSong {removable ? 'removable' : ''}"
+  class="bottone contextMenu {removable ? 'removable' : ''}"
+  oncontextmenu={ () => renderer.default.shared.MenuContent = {type:'song', songIndex, title, album, artist, img, onclickEvent, removable, PlaylistIndex, songID, albID, artID}}
 >
   <div class="ButContentContainer">
     <img src={img} class="--IMGDATA imgCanzone" alt={title || 'Copertina brano'} />
     <p class="--TITLEDATA titolo">{title}</p>
     <p class="--ARTISTDATA artista">{artist}</p>
-    <p class="--ALBUMDATA songalbum">{album}</p>
+    <p class="--ALBUMDATA songalbum">{album || title}</p>
 
     <p class="--PLAYLISTINDEXDATA hidden">{PlaylistIndex}</p>
 

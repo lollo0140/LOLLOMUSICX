@@ -439,352 +439,6 @@ ipcMain.handle('GetTracks', async () => {
 //
 //
 
-async function GetArtistHomePage(artName) {
-  const artist = encodeURIComponent(artName)
-
-  // API Last.fm per album, tracce, artisti simili e info
-  const albumsUrl = `${LASTFM_API_URL}?method=artist.gettopalbums&artist=${artist}&api_key=${LASTFM_API_KEY}&format=json&limit=50`
-  const albumresponse = await fetch(albumsUrl)
-  const albumsData = await albumresponse.json()
-
-  const topTracksurl = `${LASTFM_API_URL}?method=artist.gettoptracks&artist=${artist}&api_key=${LASTFM_API_KEY}&format=json&limit=20`
-  const traksresponse = await fetch(topTracksurl)
-  const topTraksData = await traksresponse.json()
-
-  let NewSongs = []
-
-  for (const song of topTraksData.toptracks.track) {
-    const infos = await getTrack(song.name, artName)
-
-    console.log('--------------------------------------------------------------')
-    console.log(infos.track)
-    console.log('--------------------------------------------------------------')
-
-    try {
-      NewSongs.push({
-        title: song.name,
-        artist: artName,
-        img:
-          infos.track.album.image ||
-          infos.track.album.image[3]['#text'] ||
-          infos.track.album.image[2]['#text'] ||
-          infos.track.album.image[1]['#text'] ||
-          infos.track.album.image[0]['#text'] ||
-          undefined,
-        album: infos.track.album.name || ''
-      })
-    } catch {
-      NewSongs.push({
-        title: song.title,
-        artist: song.artist,
-        img: undefined
-      })
-    }
-  }
-
-  const similarurl = `${LASTFM_API_URL}?method=artist.getsimilar&artist=${artist}&api_key=${LASTFM_API_KEY}&format=json&limit=10`
-  const similarresponse = await fetch(similarurl)
-  const similarData = await similarresponse.json()
-  let similarDataResult = []
-  for (const item of similarData.similarartists.artist) {
-    if (!item.name.includes('&')) {
-      similarDataResult.push(item)
-    }
-  }
-
-  const infourl = `${LASTFM_API_URL}?method=artist.getinfo&artist=${artist}&api_key=${LASTFM_API_KEY}&format=json`
-  const inforesponse = await fetch(infourl)
-  const infoData = await inforesponse.json()
-
-  // Ottieni l'immagine da Deezer per l'artista principale
-  const deezerArtistUrl = `https://api.deezer.com/search/artist?q=${artist}&limit=1`
-  const deezerArtistResponse = await fetch(deezerArtistUrl)
-  const deezerArtistData = await deezerArtistResponse.json()
-
-  // Sostituisci l'immagine dell'artista principale con quella di Deezer
-  if (deezerArtistData.data && deezerArtistData.data.length > 0) {
-    infoData.artist.image = [
-      { '#text': deezerArtistData.data[0].picture_small, size: 'small' },
-      { '#text': deezerArtistData.data[0].picture_medium, size: 'medium' },
-      { '#text': deezerArtistData.data[0].picture_big, size: 'large' },
-      { '#text': deezerArtistData.data[0].picture_xl, size: 'extralarge' },
-      { '#text': deezerArtistData.data[0].picture_xl, size: 'mega' }
-    ]
-  }
-
-  // Ottieni e sostituisci le immagini per gli artisti simili
-  for (let i = 0; i < similarDataResult.length; i++) {
-    const similarArtist = encodeURIComponent(similarDataResult[i].name)
-    const deezerSimilarUrl = `https://api.deezer.com/search/artist?q=${similarArtist}&limit=1`
-    const deezerSimilarResponse = await fetch(deezerSimilarUrl)
-    const deezerSimilarData = await deezerSimilarResponse.json()
-
-    if (deezerSimilarData.data && deezerSimilarData.data.length > 0) {
-      similarDataResult[i].image = [
-        { '#text': deezerSimilarData.data[0].picture_small, size: 'small' },
-        { '#text': deezerSimilarData.data[0].picture_medium, size: 'medium' },
-        { '#text': deezerSimilarData.data[0].picture_big, size: 'large' },
-        { '#text': deezerSimilarData.data[0].picture_xl, size: 'extralarge' },
-        { '#text': deezerSimilarData.data[0].picture_xl, size: 'mega' }
-      ]
-    }
-  }
-
-  let result = {
-    TopTraks: NewSongs,
-    albums: albumsData.topalbums.album,
-    similarArtists: similarDataResult,
-    artInfo: infoData.artist
-  }
-
-  return result
-}
-
-async function GetOtherByArtist(artName) {
-  try {
-    console.log(`Ricerca artista: "${artName}"`)
-
-    // Fase 1: Cerca l'artista per ottenere possibili corrispondenze
-    const encodedSearchArtist = encodeURIComponent(artName)
-    // Aumentiamo il limite per avere più opzioni tra cui scegliere
-    const searchArtistUrl = `${LASTFM_API_URL}?method=artist.search&artist=${encodedSearchArtist}&api_key=${LASTFM_API_KEY}&format=json&limit=5`
-
-    const searchResponse = await fetch(searchArtistUrl)
-    const searchData = await searchResponse.json()
-
-    // Verifica se abbiamo trovato artisti
-    if (
-      !searchData.results ||
-      !searchData.results.artistmatches ||
-      !searchData.results.artistmatches.artist ||
-      searchData.results.artistmatches.artist.length === 0
-    ) {
-      console.log(`Nessun artista trovato per "${artName}"`)
-      return { error: `Artista "${artName}" non trovato` }
-    }
-
-    // Ottieni tutti gli artisti trovati
-    const foundArtists = searchData.results.artistmatches.artist
-    console.log(`Trovati ${foundArtists.length} possibili artisti per "${artName}"`)
-
-    // Funzione per normalizzare il testo (per confronti più accurati)
-    const normalizeText = (text) => {
-      return text
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '') // Rimuove accenti
-        .replace(/[^\w\s]/g, ' ') // Rimuove caratteri speciali
-        .replace(/\s+/g, ' ')
-        .trim()
-    }
-
-    // Funzione per calcolare la somiglianza tra due stringhe
-    const calculateSimilarity = (str1, str2) => {
-      const a = normalizeText(str1)
-      const b = normalizeText(str2)
-
-      // Corrispondenza esatta dopo normalizzazione
-      if (a === b) return 1.0
-
-      // Implementazione della distanza di Levenshtein
-      const matrix = []
-
-      // Inizializza la matrice
-      for (let i = 0; i <= b.length; i++) {
-        matrix[i] = [i]
-      }
-      for (let j = 0; j <= a.length; j++) {
-        matrix[0][j] = j
-      }
-
-      // Riempi la matrice
-      for (let i = 1; i <= b.length; i++) {
-        for (let j = 1; j <= a.length; j++) {
-          if (b.charAt(i - 1) === a.charAt(j - 1)) {
-            matrix[i][j] = matrix[i - 1][j - 1]
-          } else {
-            matrix[i][j] = Math.min(
-              matrix[i - 1][j - 1] + 1, // sostituzione
-              matrix[i][j - 1] + 1, // inserimento
-              matrix[i - 1][j] + 1 // eliminazione
-            )
-          }
-        }
-      }
-
-      // Calcola la similarità come percentuale
-      const maxLength = Math.max(a.length, b.length)
-      const distance = matrix[b.length][a.length]
-      return 1 - distance / maxLength
-    }
-
-    // Funzione per verificare se una stringa è contenuta in un'altra
-    const isSubstring = (needle, haystack) => {
-      return normalizeText(haystack).includes(normalizeText(needle))
-    }
-
-    // Calcola un punteggio di somiglianza per ogni artista trovato
-    const scoredArtists = foundArtists.map((artist) => {
-      const nameSimilarity = calculateSimilarity(artName, artist.name)
-
-      // Bonus se il nome cercato è contenuto nel nome dell'artista
-      const containsSearchName = isSubstring(artName, artist.name) ? 0.1 : 0
-
-      // Bonus per popolarità (ma con peso minore rispetto alla somiglianza del nome)
-      // listeners è il numero di ascoltatori su LastFM
-      const popularityScore = artist.listeners
-        ? Math.min(parseInt(artist.listeners) / 1000000, 0.1)
-        : 0
-
-      // Calcola il punteggio finale
-      const finalScore = nameSimilarity + containsSearchName + popularityScore
-
-      return {
-        ...artist,
-        score: finalScore,
-        debug: {
-          nameSimilarity,
-          containsSearchName,
-          popularityScore
-        }
-      }
-    })
-
-    // Ordina gli artisti per punteggio
-    scoredArtists.sort((a, b) => b.score - a.score)
-
-    // Log dei migliori risultati per il debug
-    console.log('Artisti ordinati per rilevanza:')
-    scoredArtists.forEach((artist, index) => {
-      console.log(
-        `${index + 1}. "${artist.name}" (Score: ${artist.score.toFixed(2)}, Listeners: ${artist.listeners})`
-      )
-      console.log(`   Debug: ${JSON.stringify(artist.debug)}`)
-    })
-
-    // Seleziona il miglior risultato
-    const bestMatch = scoredArtists[0]
-    console.log(
-      `Miglior corrispondenza: "${bestMatch.name}" (Score: ${bestMatch.score.toFixed(2)})`
-    )
-
-    // Fase 2: Usa il nome dell'artista migliore per ottenere gli album
-    const encodedCorrectArtist = encodeURIComponent(bestMatch.name)
-    const albumsUrl = `${LASTFM_API_URL}?method=artist.gettopalbums&artist=${encodedCorrectArtist}&api_key=${LASTFM_API_KEY}&format=json&limit=6`
-
-    const albumsResponse = await fetch(albumsUrl)
-    const albumsData = await albumsResponse.json()
-
-    if (albumsData.error) {
-      console.error(`Errore API LastFM: ${albumsData.error} - ${albumsData.message}`)
-      return { error: albumsData.message }
-    }
-
-    // Verifica che ci siano album
-    if (
-      !albumsData.topalbums ||
-      !albumsData.topalbums.album ||
-      albumsData.topalbums.album.length === 0
-    ) {
-      console.log(`Nessun album trovato per "${bestMatch.name}"`)
-      return {
-        topalbums: {
-          album: []
-        }
-      }
-    }
-
-    console.log(`Trovati ${albumsData.topalbums.album.length} album per "${bestMatch.name}"`)
-
-    // Aggiungiamo il nome corretto dell'artista ai dati di ritorno
-    albumsData.artistName = bestMatch.name
-
-    return albumsData
-  } catch (error) {
-    console.error('Errore durante la richiesta a LastFM:', error)
-    return { error: error.message }
-  }
-}
-
-async function getTrack(title, artist) {
-  // Prima richiesta a Last.fm per le informazioni della traccia
-  const searchUrlLFM = `${LASTFM_API_URL}?method=track.getInfo&track=${encodeURIComponent(title)}&artist=${encodeURIComponent(artist)}&api_key=${LASTFM_API_KEY}&format=json&limit=30`
-  const responseLFM = await fetch(searchUrlLFM)
-  const dataLFM = await responseLFM.json()
-
-  //console.log(dataLFM)
-
-  // Estrai l'immagine da Last.fm (se disponibile)
-  let LFMimg
-  try {
-    LFMimg = dataLFM.track.album.image[dataLFM.track.album.image.length - 1]['#text']
-  } catch {
-    //console.log(error)
-
-    LFMimg = undefined
-  }
-
-  try {
-    // Richiesta a Deezer per le informazioni della traccia
-    const searchUrl = `https://api.deezer.com/search?q=${encodeURIComponent(`${title} ${artist}`)}&limit=1`
-
-    const response = await fetch(searchUrl)
-    const data = await response.json()
-
-    // Verifica se ci sono risultati da Deezer
-    if (data.data && data.data.length > 0) {
-      const track = data.data[0]
-
-      // Scegli l'immagine: prima prova con Deezer, se non disponibile usa Last.fm
-      const albumImage = track.album.cover_xl || LFMimg || ''
-
-      return {
-        track: {
-          title: track.title,
-          artist: {
-            name: track.artist.name
-          },
-          album: {
-            title: track.album.title,
-            image: albumImage // Una sola immagine combinata
-          },
-          url: track.link,
-          duration: track.duration
-        }
-      }
-    } else {
-      // Se non ci sono risultati da Deezer, usa solo i dati di Last.fm
-      return {
-        track: {
-          name: title,
-          artist: {
-            name: artist
-          },
-          album: {
-            title: dataLFM.track?.album?.title || '',
-            image: LFMimg || '' // Usa l'immagine di Last.fm se disponibile
-          }
-        }
-      }
-    }
-  } catch {
-    // In caso di errore, usa solo i dati di Last.fm
-    //console.log(error)
-    return {
-      track: {
-        name: title,
-        artist: {
-          name: artist
-        },
-        album: {
-          title: dataLFM.track?.album?.title || '',
-          image: LFMimg || '' // Usa l'immagine di Last.fm se disponibile
-        }
-      }
-    }
-  }
-}
-
 async function getVideoInfo(videoId) {
   try {
     const youtube = await Innertube.create()
@@ -909,11 +563,11 @@ async function tryDeezerFirst(name, artist) {
         url: matchingAlbum.link,
         image: matchingAlbum.cover_big
           ? [
-            { '#text': matchingAlbum.cover_small, size: 'small' },
-            { '#text': matchingAlbum.cover_medium, size: 'medium' },
-            { '#text': matchingAlbum.cover_big, size: 'large' },
-            { '#text': matchingAlbum.cover_xl, size: 'extralarge' }
-          ]
+              { '#text': matchingAlbum.cover_small, size: 'small' },
+              { '#text': matchingAlbum.cover_medium, size: 'medium' },
+              { '#text': matchingAlbum.cover_big, size: 'large' },
+              { '#text': matchingAlbum.cover_xl, size: 'extralarge' }
+            ]
           : [],
         listeners: matchingAlbum.fans ? matchingAlbum.fans.toString() : '0',
         playcount: matchingAlbum.fans ? matchingAlbum.fans.toString() : '0',
@@ -993,131 +647,6 @@ async function getLastFmAlbumInfo(name, artist) {
   return dataLFM
 }
 
-async function SearchSong(query) {
-  const searchUrl = `${LASTFM_API_URL}?method=track.search&track=${query}&api_key=${LASTFM_API_KEY}&format=json&limit=6`
-  const response = await fetch(searchUrl)
-  const data = await response.json()
-
-  var result = []
-
-  //const youtube = await Innertube.create()
-
-  //console.log(data.results.trackmatches.track)
-
-  for (const item of data.results.trackmatches.track) {
-    //const query = item.artist + ' ' + item.name
-    //const risultati = await youtube.search(query, { type: 'music' })
-
-    const track = {
-      title: item.name,
-      artist: item.artist,
-      image: item.name + '||' + item.artist,
-      lastfm: item.url,
-      YTid: 'none'
-    }
-
-    result.push(track)
-  }
-  return result
-}
-
-async function SearchAlbums(query) {
-  const searchUrl = `${LASTFM_API_URL}?method=album.search&album=${query}&api_key=${LASTFM_API_KEY}&format=json&limit=5`
-  const response = await fetch(searchUrl)
-  const data = await response.json()
-
-  let result = []
-
-  for (const album of data.results.albummatches.album) {
-    console.log(album)
-
-    const data = await getAlbumInfo(album.name, album.artist)
-
-    try {
-      console.log(data.album)
-
-      // Verifica se l'album ha delle tracce
-      const hasTracks =
-        (data.album.tracks && data.album.tracks.data && data.album.tracks.data.length > 0) ||
-        (data.album.tracks &&
-          data.album.tracks.track &&
-          (Array.isArray(data.album.tracks.track)
-            ? data.album.tracks.track.length > 0
-            : data.album.tracks.track))
-
-      if (hasTracks) {
-        if (album.image[3]['#text'] !== undefined && album.image[3]['#text'] !== '') {
-          result.push({
-            name: album.name,
-            artist: album.artist,
-            image: album.image[3]['#text']
-          })
-        } else {
-          result.push({
-            name: album.name,
-            artist: album.artist,
-            image: './src/assets/defaultSongCover.png'
-          })
-        }
-      }
-    } catch (error) {
-      console.log('skipping album', error)
-    }
-  }
-
-  return result
-}
-
-async function SearchArtists(query) {
-  try {
-    const searchUrl = `${LASTFM_API_URL}?method=artist.search&artist=${query}&api_key=${LASTFM_API_KEY}&format=json&limit=5`
-    const response = await fetch(searchUrl)
-    const data = await response.json()
-
-    let result = []
-
-    for (const artist of data.results.artistmatches.artist) {
-      try {
-        const encodedName = encodeURIComponent(artist.name)
-
-        // Effettua la richiesta all'API di Deezer
-        const response = await fetch(
-          `https://api.deezer.com/search/artist?q=${encodedName}&limit=1`
-        )
-
-        // Converti la risposta in JSON
-        const data = await response.json()
-
-        if (data.data && data.data.length > 0) {
-          const artistDeez = data.data[0]
-
-          let img = artistDeez.picture_big
-
-          result.push({
-            name: artist.name,
-            img: img
-          })
-        } else {
-          result.push({
-            name: artist.name,
-            img: './src/assets/defaultSongCover.png'
-          })
-        }
-      } catch (error) {
-        console.log(error)
-        result.push({
-          name: artist.name,
-          img: './src/assets/defaultSongCover.png'
-        })
-      }
-    }
-    return result
-  } catch (error) {
-    console.log('nessun artista trovato: ' + error)
-    return []
-  }
-}
-
 async function SearchYtVideos(query) {
   try {
     // Usiamo il tipo 'music' per cercare contenuti musicali
@@ -1195,7 +724,8 @@ ipcMain.handle('getSongDetails', async (event, title, artist) => {
 })
 
 ipcMain.handle('getAlbumDetails', async (event, name, artist, ID = undefined) => {
-  if (ID) {
+  console.log('id fornito: ', ID)
+  try {
     const result = await LolloMusicApi.getAlbum(ID)
     console.log(result)
 
@@ -1318,7 +848,9 @@ ipcMain.handle('getAlbumDetails', async (event, name, artist, ID = undefined) =>
         songs: songs
       }
     }
-  } else {
+  } catch (error) {
+    console.log(error, '  tryng again with manual search')
+
     const albums = await LolloMusicApi.searchAlbum(`${name} ${artist}`, true, 2)
 
     for (const album of albums) {
@@ -1337,9 +869,10 @@ ipcMain.handle('GetArtistTopAlbum', async (event, name) => {
 })
 
 ipcMain.handle('GetArtPage', async (event, name, id) => {
-  try {
+  console.log('info artista fornite :', name, id)
+  if (id) {
     return LolloMusicApi.getArtistPage(id)
-  } catch {
+  } else {
     const artist = await LolloMusicApi.searchArtist(name)
     console.log(artist[0].id)
     return LolloMusicApi.getArtistPage(artist[0].id)
@@ -1985,7 +1518,8 @@ ipcMain.handle('LikeAlbum', async (event, data) => {
     album: data.album || '',
     artist: data.artist || '',
     img: data.img || '',
-    id: data.id
+    id: data.id,
+    artistID: data.artistID
   }
 
   try {
@@ -2427,7 +1961,7 @@ ipcMain.handle('CreatePlaylist', async (event, data) => {
 
 ipcMain.handle('DelPlaylist', async (event, index) => {
   let playlists = await ReadPlaylists()
-  playlists.splice(index - 1, 1)
+  playlists.splice(index, 1)
 
   fs.writeFileSync(userPlaylists, JSON.stringify(joinObj(playlists, 'playlist')), 'utf8')
 })
@@ -2743,9 +2277,9 @@ ipcMain.handle('SearchLocalSong', async (event, title, artist, album) => {
   for (const item of songs) {
     const match =
       normalizeText(removeBrakets(item.title)).trim() ===
-      normalizeText(removeBrakets(title)).trim() &&
+        normalizeText(removeBrakets(title)).trim() &&
       normalizeText(removeBrakets(item.artist)).trim() ===
-      normalizeText(removeBrakets(artist)).trim() &&
+        normalizeText(removeBrakets(artist)).trim() &&
       normalizeText(removeBrakets(item.album)).trim() === normalizeText(removeBrakets(album)).trim()
 
     if (match) {
@@ -2784,8 +2318,9 @@ ipcMain.handle('PinPlaylists', async (event, index) => {
 })
 
 async function PinPlaylists(index) {
+  console.log(index)
   const playlists = await separateObj(JSON.parse(fs.readFileSync(userPlaylists)))
-  playlists[index - 1].pinned = true
+  playlists[index].pinned = true
 
   const ToWrite = joinObj(playlists, 'playlist')
   fs.writeFileSync(userPlaylists, JSON.stringify(ToWrite), 'utf8')
@@ -2796,8 +2331,10 @@ ipcMain.handle('UnpinPlaylists', async (event, index) => {
 })
 
 async function UnpinPlaylists(index) {
+  console.log(index)
+
   const playlists = await separateObj(JSON.parse(fs.readFileSync(userPlaylists)))
-  playlists[index - 1].pinned = false
+  playlists[index].pinned = false
 
   const ToWrite = joinObj(playlists, 'playlist')
 
@@ -2838,6 +2375,13 @@ async function CheckPin(index) {
 
 ipcMain.handle('closeWin', () => {
   CloseWindow()
+})
+
+ipcMain.handle('closeApp', async () => {
+  running = false
+  await mainWindow.close()
+  app.isQuitting = true
+  app.quit()
 })
 
 ipcMain.handle('minimize', () => {

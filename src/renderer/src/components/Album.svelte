@@ -97,7 +97,7 @@
   }
 
   async function checklike() {
-    if (await shared.CheckIfLikedAlbum(albumtitle.toLowerCase(), albumartist)) {
+    if (await shared.CheckIfLikedAlbum(albumtitle, albumartist)) {
       Saved = true
     } else {
       Saved = false
@@ -105,12 +105,12 @@
   }
 
   async function likealbum() {
-    await shared.SaveAlbum(albumtitle.toLowerCase(), albumartist, albumimg, albumID)
+    await shared.SaveAlbum(albumtitle, albumartist, albumimg, albumID, ID)
     checklike()
   }
 
   async function dislikealbum() {
-    await shared.dislikeAlbum(albumtitle.toLowerCase(), albumartist, albumimg)
+    await shared.dislikeAlbum(albumtitle, albumartist, albumimg)
     checklike()
   }
 
@@ -196,6 +196,7 @@
                   album.img?.[3]?.url ||
                   album.img?.[4]?.url}
                 OnClick={CallItem}
+                artID={album.artists?.[0]?.id || ''}
               />
             {/each}
           {/await}

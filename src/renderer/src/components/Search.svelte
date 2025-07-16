@@ -1,4 +1,5 @@
-<script>/* eslint-disable prettier/prettier */
+<script>
+  /* eslint-disable prettier/prettier */
   import { onMount, createEventDispatcher } from 'svelte'
   import { fade } from 'svelte/transition'
   import * as renderer from '../main.js'
@@ -41,10 +42,10 @@
     loading = true
 
     searchResoult = await shared.Search(searchkey)
-    console.log("Risultati ricerca:", searchResoult) // Aggiungi log per debug
+    console.log('Risultati ricerca:', searchResoult) // Aggiungi log per debug
     albums = await searchResoult.albums
     songs = await searchResoult.Songs
-    console.log("Canzoni trovate:", songs) // Aggiungi log per debug
+    console.log('Canzoni trovate:', songs) // Aggiungi log per debug
 
     if (!recentSearchs.includes(searchkey)) {
       shared.addRecentSearchs(searchkey)
@@ -52,10 +53,6 @@
 
     loading = false
     searchkey = ''
-  }
-
-  function PlayYTtrack(id) {
-    shared.PlaySongYT(id)
   }
 
   function CallItem(query, Type) {
@@ -76,6 +73,24 @@
     shared.PlayPlaylistS(songs, index)
   }
 
+  async function PlayYT(index) {
+    const Videos = []
+
+
+    for (const element of searchResoult.canzoniYT) {
+      Videos.push({
+        title: element.title,
+        album: undefined,
+        artist: element.artist,
+        img: element.image,
+        id: element.id,
+        albumID: undefined,
+        artistID: element.artist || ''
+      })
+    }
+
+    shared.PlayPlaylistS(Videos, index)
+  }
 </script>
 
 <div transition:fade class={pagindex === 2 ? 'home' : 'homesmall'}>
@@ -98,9 +113,17 @@
             <h1>Brani</h1>
             {#if songs && songs.length > 0}
               {#each songs as item, i}
-
-                <SongButton songID={item.id} songIndex={i} title={item.title} album={item.album.name} artist={item.artists?.[0]?.name || ''} img={item.thumbnails?.high ? item.thumbnails.album : defSongPng} onclickEvent={Play}/> 
-
+                <SongButton
+                  albID={item.album.id}
+                  artID={item.artists?.[0]?.id || ''}
+                  songID={item.id}
+                  songIndex={i}
+                  title={item.title}
+                  album={item.album.name}
+                  artist={item.artists?.[0]?.name || ''}
+                  img={item.thumbnails?.high ? item.thumbnails.album : defSongPng}
+                  onclickEvent={Play}
+                />
               {/each}
             {:else}
               <p>Nessun brano trovato</p>
@@ -110,19 +133,17 @@
             {#if result.canzoniYT && result.canzoniYT.length > 0}
               {#each result.canzoniYT as item, i}
                 {#if item.title}
-                  <button
-                    class="bottone contextMenuSong YTvideo"
-                    onclick={() => PlayYTtrack(item.id)}
-                  >
-                    <p class="--TITLEDATA titoloYT">{item.title}</p>
-                    <img
-                      class="--IMGDATA imgCanzoneYT"
-                      src={item.image || defSongPng}
-                      alt="copertina"
-                      data-index={i}
-                    />
-                    <p class="--ARTISTDATA artistaYT">{item.artist}</p>
-                  </button>
+                  <SongButton
+                    albID={undefined}
+                    artID={item.artist}
+                    songID={item.id}
+                    songIndex={i}
+                    title={item.title}
+                    album={undefined}
+                    artist={item.artist}
+                    img={item.image}
+                    onclickEvent={PlayYT}
+                  />
                 {/if}
               {/each}
             {:else}
@@ -132,14 +153,19 @@
             <h1>Albums</h1>
             {#if albums && albums.length > 0}
               {#each albums as item}
-
-                <AlbumButton id={item.id} artist={item.artists?.[0]?.name || ''} name={item.name} img={item.img?.[0]?.url ||
-                  item.img?.[1]?.url ||
-                  item.img?.[2]?.url ||
-                  item.img?.[3]?.url ||
-                  item.img?.[4]?.url ||
-                  defSongPng} OnClick={CallItem} />
-
+                <AlbumButton
+                  id={item.id}
+                  artist={item.artists?.[0]?.name || ''}
+                  name={item.name}
+                  img={item.img?.[0]?.url ||
+                    item.img?.[1]?.url ||
+                    item.img?.[2]?.url ||
+                    item.img?.[3]?.url ||
+                    item.img?.[4]?.url ||
+                    defSongPng}
+                  OnClick={CallItem}
+                  artID={item.artists?.[0]?.id || ''}
+                />
               {/each}
             {:else}
               <p>Nessun album trovato</p>
@@ -148,9 +174,12 @@
             <h1>Artisti</h1>
             {#if result.artists && result.artists.length > 0}
               {#each result.artists as item}
-
-                <ArtistButton id={item.id} name={item.name} img={item.image || defSongPng} OnClick={CallItem} />
-
+                <ArtistButton
+                  id={item.id}
+                  name={item.name}
+                  img={item.image || defSongPng}
+                  OnClick={CallItem}
+                />
               {/each}
             {:else}
               <p>Nessun artista trovato</p>

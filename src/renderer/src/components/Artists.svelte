@@ -256,6 +256,7 @@
                 name={album.name}
                 img={album.img?.[0]?.url || album.img?.[0]?.url || album.img?.[1]?.url}
                 OnClick={CallItem}
+                artID={album.artists?.[0]?.id || ''}
               />
             {/if}
           {/each}
