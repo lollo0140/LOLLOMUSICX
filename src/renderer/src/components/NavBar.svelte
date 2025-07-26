@@ -1,7 +1,7 @@
 <script>/* eslint-disable prettier/prettier */
   import { createEventDispatcher, onMount } from 'svelte'
   import * as renderer from '../main.js'
-  // eslint-disable-next-line no-unused-vars
+  import PlaylistMiniButton from './pagesElements/PlaylistMiniButton.svelte'
   let { pag } = $props()
 
   const SEARCHimg = new URL('../assets/search.png', import.meta.url).href
@@ -35,16 +35,16 @@
 </script>
 
 <div id="NavBar">
-  <button style="left:2.5px ; top:2.5px ;" class="navButton" onclick={() => dispatch('changePage', 2)}> 
+  <button style="left:2.5px ; top:2.5px ;" class="navButton {pag === 2 ? 'ActivenavButton' : ''}" onclick={() => dispatch('changePage', 2)}> 
     <img class="buttonImg" src={SEARCHimg} alt="">
   </button>
-  <button style="left:2.5px ; top:57.5px ;" class="navButton" onclick={() => dispatch('changePage', 0)}>  
+  <button style="left:2.5px ; top:57.5px ;" class="navButton {pag === 0 ? 'ActivenavButton' : ''}" onclick={() => dispatch('changePage', 0)}>  
     <img class="buttonImg" src={HOMEimg} alt="">
   </button>
-  <button style="left:2.5px ; top:113px ;" class="navButton" onclick={() => dispatch('changePage', 3)}>  
+  <button style="left:2.5px ; top:113px ;" class="navButton {pag === 3 ? 'ActivenavButton' : ''}" onclick={() => dispatch('changePage', 3)}>  
     <img class="buttonImg" src={LIBRARYimg} alt="">
   </button>
-  <button style="left:2.5px ; top:168px ;" class="navButton" onclick={() => dispatch('changePage', 5)}> 
+  <button style="left:2.5px ; top:168px ;" class="navButton {pag === 5 ? 'ActivenavButton' : ''}" onclick={() => dispatch('changePage', 5)}> 
     <img class="buttonImg" src={FILESimg} alt="">
   </button>
 
@@ -53,16 +53,16 @@
   <div class="PlaylistsContainer">
     {#each Playlists as P, i}
       {#if P.pinned === true}
-        <button class="PlbuttonNav" onclick={() => CallPlaylist(i)}>
-          <img class="Plimg" style="object-fit: cover;" src={P.img} alt="pimg" />
-        </button>
+
+        <PlaylistMiniButton img={P.img} name={P.name} click={CallPlaylist} index={i}/>
+
       {/if}
     {/each}
   </div>
 
   <div style="left: 18.5px; bottom: 57.5px;" class="divider"></div>
 
-  <button class="navButton"
+  <button class="navButton {pag === 8 ? 'ActivenavButton' : ''}"
     onclick={() => dispatch('changePage', 8)}
     style="position:absolute; bottom:2.5px; left:2.5px;"
   >
@@ -94,7 +94,6 @@
 
     background: transparent;
 
-    overflow: hidden;
   }
 
   .navButton {
@@ -115,10 +114,15 @@
 
     cursor: pointer;
 
-    opacity: 0.7;
+    opacity: 0.2;
 
     transition: all 200ms;
 
+  }
+
+  .ActivenavButton {
+    
+    opacity: 1;
   }
   
   .navButton:hover {
@@ -138,43 +142,6 @@
     width: 50px;
   }
 
-
-  .PlbuttonNav {
-
-    cursor: pointer;
-
-    padding: 0px;
-
-    width: 40px;
-    height: 40px;
-
-    background: transparent;
-
-    border: none;
-    
-    transition: all 200ms;
-
-  }
-
-  .PlbuttonNav:hover {
-    transform: scale(1.1);
-  }
-
-  .Plimg {
-
-    border: 1px rgba(255, 255, 255, 0.27) solid;
-
-    border-radius: 3px;
-
-    position: relative;
-
-    left: -0.5px;
-    top: 0px;
-
-    width: 40px;
-    height: 40px;
-  }
-
   #NavBar {
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.27);
@@ -186,6 +153,7 @@
     bottom: 4px;
     width: 55px;
     border-radius: 10px;
-    overflow: hidden;
+
+    z-index: 999;
   }
 </style>

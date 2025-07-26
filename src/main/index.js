@@ -47,6 +47,7 @@ let recentSearchs = path.join(dataFolder, 'recentSearchs.json')
 let SettingsPath = path.join(dataFolder, 'Settings.json')
 let localDataDir = path.join(dataFolder, 'LocalData')
 let LastListened = path.join(dataFolder, 'LastListened.json')
+let SavedHomeScreen = path.join(dataFolder, 'SavedHomeScreen.json')
 
 console.log(SettingsPath)
 
@@ -103,6 +104,7 @@ function initializeConfigFiles() {
     { path: userPlaylists, defaultValue: {} },
     { path: recentSearchs, defaultValue: {} },
     { path: LastListened, defaultValue: {} },
+    { path: SavedHomeScreen, defaultValue: '' },
     { path: SettingsPath, defaultValue: defSettingsValue }
   ]
 
@@ -262,6 +264,12 @@ async function initializeyt() {
 
 app.whenReady().then(async () => {
   // Set app user model id for windows
+
+  try {
+    HomeScreen = JSON.parse(fs.readFileSync(SavedHomeScreen))
+  } catch (error) {
+    console.log(error)
+  }
 
   try {
     let imagePath
@@ -1781,6 +1789,9 @@ async function ChomePage() {
       playlists: homegrid.playlists,
       similarArtist
     }
+
+    fs.writeFileSync(SavedHomeScreen, JSON.stringify(HomeScreen), 'utf8')
+
     return HomeScreen
   } catch (error) {
     console.error('errore nella creazione della homepage: ' + error)
@@ -2037,6 +2048,14 @@ ipcMain.handle('addtorecentSearchs', async (event, keyword) => {
   const data = await separateObj(await READRECENTSEARCHS())
 
   data.push(keyword)
+
+  fs.writeFileSync(recentSearchs, JSON.stringify(joinObj(data, 'key')), 'utf8')
+})
+
+ipcMain.handle('deltorecentSearchs', async (event, index) => {
+  const data = await separateObj(await READRECENTSEARCHS())
+
+  data.splice(index, 1)
 
   fs.writeFileSync(recentSearchs, JSON.stringify(joinObj(data, 'key')), 'utf8')
 })
@@ -2538,56 +2557,62 @@ ipcMain.handle('lastfm-api-call', async (event, method, params, sessionKey) => {
 
 //miniPlayer and global shortcuts
 
-var beforeheight, beforewidth
-var beforeResizable, beforeFullScreenable
-var beforePosition
+let windowState = {
+  beforeheight: null,
+  beforewidth: null,
+  beforePosition: null
+}
 
 ipcMain.handle('togleMiniPLayer', async (event, condition) => {
-  if (condition) {
-    // Salva lo stato attuale
-    const bounds = mainWindow.getBounds()
-    beforewidth = bounds.width
-    beforeheight = bounds.height
-    beforePosition = { x: bounds.x, y: bounds.y }
-    beforeResizable = mainWindow.isResizable()
-    beforeFullScreenable = mainWindow.isFullScreenable()
+  try {
+    if (condition) {
+      // Salva lo stato attuale
+      const bounds = mainWindow.getBounds()
+      windowState.beforewidth = bounds.width
+      windowState.beforeheight = bounds.height
+      windowState.beforePosition = { x: bounds.x, y: bounds.y }
 
-    // Imposta dimensioni mini player
-    mainWindow.setMinimumSize(200, 100)
-    mainWindow.setSize(200, 100)
+      console.log(windowState)
 
-    mainWindow.setAlwaysOnTop(true, 'floating')
-    mainWindow.setSkipTaskbar(true)
+      // Imposta dimensioni mini player
+      mainWindow.setMinimumSize(200, 100)
+      mainWindow.setSize(200, 100)
 
-    // Disabilita resize e fullscreen
-    mainWindow.setResizable(false)
-    mainWindow.setFullScreenable(false)
+      mainWindow.setAlwaysOnTop(true, 'floating')
+      mainWindow.setSkipTaskbar(true)
 
-    // Posiziona in alto al centro, 50px fuori dallo schermo
-    const { width: screenWidth } = require('electron').screen.getPrimaryDisplay().workAreaSize
-    const x = Math.floor((screenWidth - 200) / 2)
-    mainWindow.setPosition(x, -50) // Usa -50 invece di 0 per posizionare 50px fuori dallo schermo
-  } else {
-    // Ripristina le dimensioni minime normali
+      // Disabilita resize e fullscreen
+      mainWindow.setResizable(false)
+      mainWindow.setFullScreenable(false)
 
-    // Ripristina la possibilità di resize e fullscreen
-    mainWindow.setResizable(beforeResizable !== undefined ? beforeResizable : true)
-    mainWindow.setFullScreenable(beforeFullScreenable !== undefined ? beforeFullScreenable : true)
-
-    // Ripristina dimensioni
-    mainWindow.setSize(beforewidth || 800, beforeheight || 600)
-
-    mainWindow.setAlwaysOnTop(false)
-    mainWindow.setSkipTaskbar(false)
-
-    mainWindow.setMinimumSize(378, 585)
-
-    // Ripristina posizione
-    if (beforePosition) {
-      mainWindow.setPosition(beforePosition.x, beforePosition.y)
+      // Posiziona in alto al centro, 50px fuori dallo schermo
+      const { width: screenWidth } = require('electron').screen.getPrimaryDisplay().workAreaSize
+      const x = Math.floor((screenWidth - 200) / 2)
+      mainWindow.setPosition(x, -50) // Usa -50 invece di 0 per posizionare 50px fuori dallo schermo
     } else {
-      mainWindow.center()
+      // Ripristina le dimensioni minime normali
+
+      // Ripristina la possibilità di resize e fullscreen
+      mainWindow.setResizable(true)
+      mainWindow.setFullScreenable(true)
+
+      // Ripristina dimensioni
+      mainWindow.setSize(windowState.beforewidth || 800, windowState.beforeheight || 600)
+
+      mainWindow.setAlwaysOnTop(false)
+      mainWindow.setSkipTaskbar(false)
+
+      mainWindow.setMinimumSize(378, 585)
+
+      // Ripristina posizione
+      if (windowState.beforePosition) {
+        mainWindow.setPosition(windowState.beforePosition.x, windowState.beforePosition.y)
+      } else {
+        mainWindow.center()
+      }
     }
+  } catch (error) {
+    console.log(error)
   }
 })
 
@@ -2637,3 +2662,45 @@ rpc.on('ready', () => {
 })
 
 rpc.login({ clientId }).catch(console.error)
+
+ipcMain.handle('GetSearchSuggestion', async (event, key) => {
+  try {
+    const suggestions = await ytengine.music.getSearchSuggestions(key);
+    
+    // Logga la struttura per debug
+    console.log('Struttura suggestions completa:', JSON.stringify(suggestions, null, 2));
+    
+    let result = [];
+    
+    // Estrai i suggerimenti dal primo blocco (SearchSuggestion)
+    if (suggestions[0]?.type === "SearchSuggestionsSection" && suggestions[0]?.contents) {
+      const firstBlockSuggestions = suggestions[0].contents.map(item => {
+        if (item.type === "SearchSuggestion" && item.suggestion?.text) {
+          return item.suggestion.text;
+        }
+        return '';
+      });
+      result = [...result, ...firstBlockSuggestions];
+    }
+    
+    // Estrai i suggerimenti dal secondo blocco (MusicResponsiveListItem)
+    if (suggestions[1]?.type === "SearchSuggestionsSection" && suggestions[1]?.contents) {
+      const secondBlockSuggestions = suggestions[1].contents.map(item => {
+        if (item.type === "MusicResponsiveListItem" && item.flex_columns && item.flex_columns.length > 0) {
+          const firstColumn = item.flex_columns[0];
+          if (firstColumn?.title?.text) {
+            return firstColumn.title.text;
+          }
+        }
+        return '';
+      });
+      result = [...result, ...secondBlockSuggestions];
+    }
+    return result.filter(Boolean);
+  } catch (error) {
+    console.error('Errore nel recupero dei suggerimenti:', error);
+    return [];
+  }
+});
+
+

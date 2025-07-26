@@ -75,6 +75,14 @@
     MINIPLAYER = true
     ipcRenderer.invoke('togleMiniPLayer', true)
   }
+
+  export async function ObscureContent(bool) {
+    if (bool) {
+      document.getElementById('toBlur').style.opacity = '0.2'
+    } else {
+      document.getElementById('toBlur').style.opacity = '1'
+    }
+  }
 </script>
 
 <script>
@@ -97,7 +105,6 @@
   import DownloadPage from './components/DownloadPage.svelte'
   import Background from './components/Background.svelte'
   import { fade, fly } from 'svelte/transition'
-  import HomePageLastfm from './components/HomePageLASTFM.svelte'
 
   //imports
 
@@ -467,37 +474,32 @@
               on:cambia-variabile={(e) => CallItem(e.detail)}
               {pagindex}
             />
-            {#if pagindex === 0}
-              {#if LASTFMsessionOn}
-                <HomePageLastfm
-                  {SessionKEY}
-                  {SessionName}
-                  on:cambia-variabile={(e) => CallItem(e.detail)}
-                />
-              {:else}
+
+            <div id="toBlur" style="transition: all 200ms;">
+              {#if pagindex === 0}
                 <Homepage on:cambia-variabile={(e) => CallItem(e.detail)} />
+              {:else if pagindex === 1}
+                <Album {AlbumQuery} on:cambia-variabile={(e) => CallItem(e.detail)} />
+              {:else if pagindex === 2}
+                <p class="hidden">search</p>
+              {:else if pagindex === 3}
+                <UserLibrary on:cambia-variabile={(e) => CallItem(e.detail)} />
+              {:else if pagindex === 4}
+                <Artists {ArtistQuery} on:cambia-variabile={(e) => CallItem(e.detail)} />
+              {:else if pagindex === 5}
+                <Local />
+              {:else if pagindex === 6}
+                <Playlist {Pindex} />
+              {:else if pagindex === 7}
+                <Liked on:cambia-variabile={(e) => CallItem(e.detail)} />
+              {:else if pagindex === 9}
+                <LocalAlbum {Pindex} />
+              {:else if pagindex === -1}
+                <p class="hidden">changing page</p>
+              {:else}
+                <Settings />
               {/if}
-            {:else if pagindex === 1}
-              <Album {AlbumQuery} on:cambia-variabile={(e) => CallItem(e.detail)} />
-            {:else if pagindex === 2}
-              <p class="hidden">search</p>
-            {:else if pagindex === 3}
-              <UserLibrary on:cambia-variabile={(e) => CallItem(e.detail)} />
-            {:else if pagindex === 4}
-              <Artists {ArtistQuery} on:cambia-variabile={(e) => CallItem(e.detail)} />
-            {:else if pagindex === 5}
-              <Local />
-            {:else if pagindex === 6}
-              <Playlist {Pindex} />
-            {:else if pagindex === 7}
-              <Liked on:cambia-variabile={(e) => CallItem(e.detail)} />
-            {:else if pagindex === 9}
-              <LocalAlbum {Pindex} />
-            {:else if pagindex === -1}
-              <p class="hidden">changing page</p>
-            {:else}
-              <Settings />
-            {/if}
+            </div>
           </div>
 
           {#if downloadPannel}
@@ -588,10 +590,19 @@
       {/if}
     </button>
   </div>
-  <button class="MiniPlayerCloseButton" onclick={() => setNormalplayer()}>
+  <button
+    class="MiniPlayerCloseButton"
+    onclick={() => {
+      setNormalplayer()
+    }}
+  >
     <img class="MiniPlayerCloseButtonImg" src={CLOSE} alt="close" />
   </button>
-  <img src={playerLocal.img} alt="BG" class="MiniPlayerimg" />
+  <img
+    src={Array.isArray(playerLocal.img) ? playerLocal.img[0] : playerLocal.img}
+    alt="BG"
+    class="MiniPlayerimg"
+  />
 {/if}
 
 <style>

@@ -23,7 +23,7 @@ const app = mount(App, {
 
 const ipcRenderer = window.electron.ipcRenderer
 
-import { callItemFunction /*setMiniplayer*/ } from './App.svelte'
+import { callItemFunction, setMiniplayer } from './App.svelte'
 
 class shared {
   loading = false
@@ -1508,15 +1508,13 @@ class shared {
 
       ContextMenu.genMenu(menu)
     } else if (data.type === 'close') {
-      //        {
-      //text: 'Close to mini player',
-      //action: async () => {
-      //await setMiniplayer()
-      //ipcRenderer.invoke('togleMiniPLayer')
-      //}
-      //},
-
       const menu = [
+        {
+          text: 'Close to mini player',
+          action: async () => {
+            await setMiniplayer()
+          }
+        },
         {
           text: 'Close to tray',
           action: () => {
@@ -1528,6 +1526,123 @@ class shared {
           action: () => {
             ipcRenderer.invoke('closeApp')
           }
+        }
+      ]
+
+      ContextMenu.genMenu(menu)
+    } else if (data.type === 'quewe') {
+      const CmenuImg = document.createElement('img')
+      CmenuImg.src = data.img
+      const infoContainer = document.createElement('div')
+      const LikeButtonConteiner = document.createElement('div')
+
+      infoContainer.appendChild(CmenuImg)
+      infoContainer.appendChild(LikeButtonConteiner)
+
+      const LikeButton = document.createElement('button')
+      LikeButton.id = 'LikeButton'
+
+      const downloadButton = document.createElement('button')
+      downloadButton.id = 'downloadButton'
+
+      CmenuImg.id = 'CmenuImg'
+      infoContainer.id = 'infoContainer'
+
+      let liked = await this.CheckIfLiked(data.title, data.artist, data.album)
+
+      let local = false
+      if (await ipcRenderer.invoke('SearchLocalSong', data.title, data.artist, data.album)) {
+        local = true
+      }
+
+      if (local) {
+        const LOCALimg = new URL('./assets/local.png', import.meta.url).href
+        downloadButton.style.backgroundImage = `url('${LOCALimg}')`
+      } else {
+        const LOCALimg = new URL('./assets/download.png', import.meta.url).href
+        downloadButton.style.backgroundImage = `url('${LOCALimg}')`
+      }
+
+      if (!liked) {
+        LikeButton.addEventListener('click', () => {
+          this.SaveTrackExt(
+            data.title,
+            data.artist,
+            data.album,
+            data.img,
+            false,
+            data.songID,
+            data.artID,
+            data.albID
+          )
+        })
+
+        LikeButton.style.opacity = '0.4'
+      } else {
+        LikeButton.addEventListener('click', () => {
+          this.dislikeTrackExt(data.title, data.artist, data.album, data.img)
+        })
+        LikeButton.style.opacity = '1'
+      }
+
+      LikeButtonConteiner.appendChild(LikeButton)
+      LikeButtonConteiner.appendChild(downloadButton)
+
+      const playlists = await this.ReadPlaylist()
+
+      let index = 0
+      let submenuButtons = []
+      for (const playlist of playlists) {
+        const pind = index
+
+        submenuButtons.push({
+          text: playlist.name,
+          icon: playlist.img,
+          action: () => {
+            this.addtoPlaylist(
+              pind,
+              data.title,
+              data.artist,
+              data.album,
+              data.img,
+              data.songID,
+              data.artID,
+              data.albID
+            )
+          }
+        })
+        index++
+      }
+
+      const menu = [
+        infoContainer,
+        {
+          text: 'Remove from quewe',
+          action: () => {
+            this.SongsQuewe.splice(data.songIndex, 1)
+          }
+        },
+        {
+          text: 'Go to album',
+          action: () => {
+            callItemFunction({
+              query: data.albID + ' - ' + data.artist + ' - ' + data.album,
+              type: 'album'
+            })
+          }
+        },
+        {
+          text: 'Go to artist',
+          action: () => {
+            callItemFunction({
+              query: data.artist + '||' + data.artID,
+              type: 'artist'
+            })
+          }
+        },
+        {
+          text: 'Add to playlist',
+          content: submenuButtons
         }
       ]
 

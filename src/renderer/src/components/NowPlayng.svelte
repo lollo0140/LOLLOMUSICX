@@ -19,6 +19,7 @@
   import { fade, slide } from 'svelte/transition'
   import LyricPannel from './pagesElements/LyricPannel.svelte'
   import CanvaPLayer from './pagesElements/CanvaPLayer.svelte'
+  import QueweButton from './pagesElements/QueweButton.svelte'
 
   const QUEWEimg = new URL('../assets/quewe.png', import.meta.url).href
   const LIKEimg = new URL('../assets/like.png', import.meta.url).href
@@ -156,6 +157,7 @@
 
     setInterval(async () => {
       quewe = await shared.GetQuewe()
+      
       playngIndex = await shared.GetPIndex()
       loading = shared.LOADING
       LoadingImg = shared.LoadingImg
@@ -190,11 +192,23 @@
 
   async function togleQuewePannel() {
     const pannello = document.getElementById('quewePannel')
+    const NowPlayngCUrrentContainer = document.getElementById('NowPlayngCUrrentContainer')
 
     if (quewewPannel) {
-      pannello.style.height = '100%'
+      pannello.style.margin = '11px'
+      pannello.style.opacity = '1'
+      pannello.style.width = '274px'
+      pannello.style.height = 'calc(100% - 190px)'
+
+      NowPlayngCUrrentContainer.style.opacity = '0.5'
+
     } else {
+      pannello.style.margin = '0px'
+      pannello.style.opacity = '0'
+      pannello.style.width = '0px'
       pannello.style.height = '0px'
+
+      NowPlayngCUrrentContainer.style.opacity = '1'
     }
 
     quewewPannel = !quewewPannel
@@ -219,11 +233,17 @@
       CanvaContainer.style.opacity = '0'
     }
   }
+
+  async function ChangeQueweIndexname(i) {
+    shared.ChangeQueweIndex(i)
+  } 
+
 </script>
 
 <dir class={FullScreen ? 'FSNowPlayng' : 'NowPlayng'} style="transition: all 600ms;">
   <div
-    class="contextMenu NowPlayngCUrrentContainer"
+    class="NowPlayngCUrrentContainer contextMenu"
+    id="NowPlayngCUrrentContainer"
     oncontextmenu={() => {
       renderer.default.shared.MenuContent = {
         type: 'song',
@@ -332,56 +352,23 @@
 
   <div id="quewePannel">
     <div style="position:absolute; width:100%;  top:21px;">
+
       {#await quewe}
         <p>Loading quewe...</p>
       {:then result}
         {#each result as item, i}
           {#if playngIndex === i}
-            <button
-              in:slide|global
-              class="queweButtonActive contextMenuSong"
-              onclick={() => {
-                shared.ChangeQueweIndex(i)
-              }}
-            >
-              <img class="--IMGDATA queweImg" src={item.img} alt="img" />
-              <p class="--TITLEDATA queweTitle">{item.title}</p>
-              <br />
-              <p class="--ARTISTDATA queweArtist">{item.artist}</p>
+            
+            <QueweButton songIndex={i} title={item.title} album={item.album} artist={item.artist} img={item.img} onclickEvent={ChangeQueweIndexname} songID={item.id || ''} albID={item.albumID || ""} artID={item.artistID || ""} listening={true} listened={false}/>
 
-              <p style="float: right;">{i + 1}</p>
-            </button>
           {:else if i < playngIndex}
-            <button
-              in:slide|global
-              style="opacity:0.4;"
-              class="queweButton contextMenuSong"
-              onclick={() => {
-                shared.ChangeQueweIndex(i)
-              }}
-            >
-              <img class="--IMGDATA queweImg" src={item.img} alt="img" />
-              <p class="--TITLEDATA queweTitle">{item.title}</p>
-              <br />
-              <p class="--ARTISTDATA queweArtist">{item.artist}</p>
+            
+            <QueweButton songIndex={i} title={item.title} album={item.album} artist={item.artist} img={item.img} onclickEvent={ChangeQueweIndexname} songID={item.id || ''} albID={item.albumID || ""} artID={item.artistID || ""} listening={false} listened={true}/>
 
-              <p style="float: right;">{i + 1}</p>
-            </button>
           {:else}
-            <button
-              in:slide|global
-              class="queweButton contextMenuSong"
-              onclick={() => {
-                shared.ChangeQueweIndex(i)
-              }}
-            >
-              <img class="--IMGDATA queweImg" src={item.img} alt="img" />
-              <p class="--TITLEDATA queweTitle">{item.title}</p>
-              <br />
-              <p class="--ARTISTDATA queweArtist">{item.artist}</p>
 
-              <p style="float: right;">{i + 1}</p>
-            </button>
+            <QueweButton songIndex={i} title={item.title} album={item.album} artist={item.artist} img={item.img} onclickEvent={ChangeQueweIndexname} songID={item.id || ''} albID={item.albumID || ""} artID={item.artistID || ""} listening={false} listened={false}/>
+
           {/if}
         {/each}
       {/await}
@@ -495,24 +482,4 @@
     }
   }
 
-  #quewePannel {
-    position: absolute;
-    left: 0px;
-    right: 0px;
-    bottom: 0px;
-
-    height: 0px;
-
-    transition: all 300ms;
-
-    background-color: transparent;
-
-    overflow-y: scroll;
-
-    backdrop-filter: blur(20px);
-  }
-
-  .queweButton {
-    opacity: 1;
-  }
 </style>
