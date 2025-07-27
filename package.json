@@ -1,6 +1,7 @@
 {
   "name": "lollomusicx",
-  "version": "0.9.0",
+  "productName": "LOLLOMUSICX",
+  "version": "0.9.15",
   "description": "LOLLOMUSICX",
   "main": "./out/main/index.js",
   "author": "Lorenzo Orlandini",

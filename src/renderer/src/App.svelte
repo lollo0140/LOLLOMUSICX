@@ -256,38 +256,38 @@
     try {
       nextLoaded = false
 
-      //console.log('URL ricevuto:', url) // Log per debug
-      // Determina se l'URL è remoto o locale
-      const isRemoteUrl = url.startsWith('http://') || url.startsWith('https://')
-
-      // Ottieni il contenitore per il player
       const playerContainer = document.getElementById('videoContainer')
       if (!playerContainer) {
         console.error('Contenitore del player non trovato')
         return
       }
 
-      // Rimuovi qualsiasi elemento player esistente
+      // IMPORTANTE: Ferma e rimuovi tutti gli elementi multimediali esistenti
+      const existingMediaElements = playerContainer.querySelectorAll('audio, video')
+      existingMediaElements.forEach((element) => {
+        element.pause()
+        element.src = '' // Rimuove la sorgente
+        element.load() // Forza il reset dell'elemento
+        element.remove()
+      })
+
+      // Rimuovi qualsiasi altro elemento rimasto
       while (playerContainer.firstChild) {
         playerContainer.firstChild.remove()
       }
 
-      // Determina il tipo di media (audio o video)
+      const isRemoteUrl = url.startsWith('http://') || url.startsWith('https://')
       const isAudio = !isRemoteUrl && url.toLowerCase().endsWith('.mp3')
 
-      // Crea l'elemento appropriato
       const mediaElement = document.createElement(isAudio ? 'audio' : 'video')
       mediaElement.id = 'MediaPlayer'
       mediaElement.className = 'media-player'
       mediaElement.controls = false
-
       mediaElement.volume = shared.settings.playerSettings.audio.volume
 
-      // Aggiungi l'elemento al contenitore
       playerContainer.appendChild(mediaElement)
 
-      // Configura l'evento di fine riproduzione
-
+      // Resto del codice rimane uguale...
       mediaElement.addEventListener('timeupdate', () => {
         dur = mediaElement.duration
         sec = mediaElement.currentTime
@@ -300,22 +300,16 @@
         shared.next()
       })
 
-      loading = true // Impostiamo loading prima di iniziare
+      loading = true
 
-      // Impostiamo la sorgente
       if (isRemoteUrl) {
-        // Per URL remoti, usa direttamente l'URL
         mediaElement.src = url
-        //console.log('URL remoto del media:', url)
       } else {
-        // Per file locali, usa la funzione per creare un Blob URL
         const blobUrl = window.mediaAPI.createMediaUrl(url)
         if (!blobUrl) {
           throw new Error('Impossibile creare URL per il file: ' + url)
         }
-
         mediaElement.src = blobUrl
-        //console.log('Blob URL del media locale:', blobUrl)
       }
 
       await new Promise((resolve, reject) => {
@@ -332,12 +326,11 @@
           reject(error)
         }
 
-        // Timeout per evitare attese infinite
         const timeoutId = setTimeout(() => {
           mediaElement.removeEventListener('canplaythrough', onCanPlay)
           mediaElement.removeEventListener('error', onError)
           reject(new Error('Timeout durante il caricamento del media'))
-        }, 30000) // 30 secondi di timeout
+        }, 30000)
 
         mediaElement.addEventListener('canplaythrough', () => {
           clearTimeout(timeoutId)
@@ -351,8 +344,6 @@
 
         mediaElement.load()
       })
-
-      // Avviamo la riproduzione
 
       if (STARTUP === 0) {
         await mediaElement.play()
@@ -368,12 +359,7 @@
       console.error("Errore nell'inizializzazione del player:", error)
       loading = false
 
-      // Sistema di fallback
-      //console.log('Tentativo di ripristino dopo errore...')
-
-      // Attendi un po' prima di ritentare
       setTimeout(() => {
-        // Verifica se dobbiamo passare alla traccia successiva o riprovare quella attuale
         const shouldSkip =
           error.message &&
           (error.message.includes('Impossibile creare URL') ||
@@ -382,12 +368,8 @@
             error.message.includes('ENOENT'))
 
         if (shouldSkip) {
-          // Se il file non esiste o è inaccessibile, passa alla traccia successiva
-          //console.log('File non accessibile, passaggio alla traccia successiva')
           shared.next()
         } else {
-          // Per altri errori (come problemi di rete), riprova la stessa traccia
-          //console.log('Ritentativo di riproduzione della stessa traccia')
           initializePlayer()
         }
       }, 1000)
@@ -536,7 +518,7 @@
   {/if}
 
   <dir style="-webkit-app-region: drag;" class="DragRegion">
-    <p class="windowTitle">LOLLOMUSICX <span style="font-size: 11px;">BETA 0.9.0 </span></p>
+    <p class="windowTitle">LOLLOMUSICX <span style="font-size: 11px;">BETA 0.9.15 </span></p>
 
     <button
       onclick={() => ipcRenderer.invoke('closeWin')}

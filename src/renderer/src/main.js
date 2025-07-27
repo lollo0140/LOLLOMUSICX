@@ -43,6 +43,10 @@ class shared {
     this.downloading = false
     this.LOADING = false
     this.MenuContent = ''
+    this.LastCalled = {
+      quary: '',
+      playng: true
+    }
   }
 
   //testi palle
@@ -214,6 +218,7 @@ class shared {
       //console.log(query)
       //console.log(info)
 
+      this.LastCalled.quary = query
       const response = await ipcRenderer.invoke('SearchLocalSong', info[0], info[1], info[2], ID)
 
       //console.log(response)
@@ -445,7 +450,15 @@ class shared {
         }
         this.LoadingImg = currentSong.img
         this.LOADING = true
-        currentSong.YTurl = await this.GetYTlink(Query, currentSong.id)
+
+        const data = await this.GetYTlink(Query, currentSong.id)
+
+        if (data.url) {
+          currentSong.YTurl = data.url
+        } else {
+          currentSong.YTurl = data
+        }
+
         this.LOADING = false
       }
 
@@ -495,7 +508,13 @@ class shared {
 
         if (!Query || Query.trim() === '|  |') return
 
-        nextSong.YTurl = await this.GetYTlink(Query, nextSong.id)
+        const data = await this.GetYTlink(Query, nextSong.id)
+
+        if (data.url) {
+          nextSong.YTurl = data.url
+        } else {
+          nextSong.YTurl = data
+        }
       }
     } catch (error) {
       console.error('Errore in LoadNextUrl:', error)
@@ -534,7 +553,13 @@ class shared {
 
         if (!Query || Query.trim() === '|  |') return
 
-        nextSong.YTurl = await this.GetYTlink(Query, nextSong.id)
+        const data = await this.GetYTlink(Query, nextSong.id)
+
+        if (data.url) {
+          nextSong.YTurl = data.url
+        } else {
+          nextSong.YTurl = data
+        }
       }
     } catch (error) {
       console.error('Errore in LoadNextUrl:', error)
@@ -574,7 +599,17 @@ class shared {
         // Carica l'URL e attendi che sia disponibile
         this.LoadingImg = currentSong.img
         this.LOADING = true
-        currentSong.YTurl = await this.GetYTlink(Query, currentSong.id)
+
+        const data = await this.GetYTlink(Query, currentSong.id)
+
+        if (Query === this.LastCalled.quary) {
+          if (data.url) {
+            currentSong.YTurl = data.url
+          } else {
+            currentSong.YTurl = data
+          }
+          this.LastCalled.playng = true
+        }
         this.LOADING = false
 
         console.log('URL ottenuto in preload:', currentSong.YTurl)

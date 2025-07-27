@@ -15,6 +15,21 @@ const LolloMusicApi = new lollomusicapi()
 import crypto from 'crypto'
 import RPC from 'discord-rpc'
 
+app.setAppUserModelId('com.lorenzo.lollomusicx')
+
+if (process.platform === 'win32') {
+  app.setAppUserModelId('com.tuodominio.nomeapp')
+  
+  // Forza la registrazione
+  app.on('ready', () => {
+    if (process.env.NODE_ENV !== 'development') {
+      // Solo in produzione
+      const { spawn } = require('child_process')
+      spawn('powershell', ['-Command', `Get-AppxPackage -Name "*${app.getName()}*" | Remove-AppxPackage`], { stdio: 'ignore' })
+    }
+  })
+}
+
 var running = true
 //import { title } from 'process'
 //import * as axios from 'axios'
@@ -133,6 +148,7 @@ function createWindow() {
     height: 670,
     minWidth: 378,
     minHeight: 585,
+    title: 'LOLLOMUSIC X',
     show: false,
     frame: false,
     autoHideMenuBar: true,
@@ -572,11 +588,11 @@ async function tryDeezerFirst(name, artist) {
         url: matchingAlbum.link,
         image: matchingAlbum.cover_big
           ? [
-            { '#text': matchingAlbum.cover_small, size: 'small' },
-            { '#text': matchingAlbum.cover_medium, size: 'medium' },
-            { '#text': matchingAlbum.cover_big, size: 'large' },
-            { '#text': matchingAlbum.cover_xl, size: 'extralarge' }
-          ]
+              { '#text': matchingAlbum.cover_small, size: 'small' },
+              { '#text': matchingAlbum.cover_medium, size: 'medium' },
+              { '#text': matchingAlbum.cover_big, size: 'large' },
+              { '#text': matchingAlbum.cover_xl, size: 'extralarge' }
+            ]
           : [],
         listeners: matchingAlbum.fans ? matchingAlbum.fans.toString() : '0',
         playcount: matchingAlbum.fans ? matchingAlbum.fans.toString() : '0',
@@ -1312,7 +1328,14 @@ ipcMain.handle('GetYTlink', async (event, SearchD, id) => {
     console.log(
       '---------------------------------------------------------------------------------video id avabile'
     )
-    return await getStreamingUrl(id)
+
+    const Return = {
+      quary: SearchD,
+      id: id,
+      url: await getStreamingUrl(id)
+    }
+
+    return Return
   } else {
     let infos = SearchD.split(' | ')
 
@@ -1352,7 +1375,14 @@ ipcMain.handle('GetYTlink', async (event, SearchD, id) => {
         console.log('------------------------------------------------------')
         console.log(video)
         console.log('------------------------------------------------------')
-        return await getStreamingUrl(await video)
+
+        const Return = {
+          quary: SearchD,
+          id: id,
+          url: await getStreamingUrl(await video)
+        }
+
+        return Return
       }
     }
   }
@@ -2297,9 +2327,9 @@ ipcMain.handle('SearchLocalSong', async (event, title, artist, album) => {
   for (const item of songs) {
     const match =
       normalizeText(removeBrakets(item.title)).trim() ===
-      normalizeText(removeBrakets(title)).trim() &&
+        normalizeText(removeBrakets(title)).trim() &&
       normalizeText(removeBrakets(item.artist)).trim() ===
-      normalizeText(removeBrakets(artist)).trim() &&
+        normalizeText(removeBrakets(artist)).trim() &&
       normalizeText(removeBrakets(item.album)).trim() === normalizeText(removeBrakets(album)).trim()
 
     if (match) {
@@ -2665,42 +2695,44 @@ rpc.login({ clientId }).catch(console.error)
 
 ipcMain.handle('GetSearchSuggestion', async (event, key) => {
   try {
-    const suggestions = await ytengine.music.getSearchSuggestions(key);
-    
+    const suggestions = await ytengine.music.getSearchSuggestions(key)
+
     // Logga la struttura per debug
-    console.log('Struttura suggestions completa:', JSON.stringify(suggestions, null, 2));
-    
-    let result = [];
-    
+    console.log('Struttura suggestions completa:', JSON.stringify(suggestions, null, 2))
+
+    let result = []
+
     // Estrai i suggerimenti dal primo blocco (SearchSuggestion)
-    if (suggestions[0]?.type === "SearchSuggestionsSection" && suggestions[0]?.contents) {
-      const firstBlockSuggestions = suggestions[0].contents.map(item => {
-        if (item.type === "SearchSuggestion" && item.suggestion?.text) {
-          return item.suggestion.text;
+    if (suggestions[0]?.type === 'SearchSuggestionsSection' && suggestions[0]?.contents) {
+      const firstBlockSuggestions = suggestions[0].contents.map((item) => {
+        if (item.type === 'SearchSuggestion' && item.suggestion?.text) {
+          return item.suggestion.text
         }
-        return '';
-      });
-      result = [...result, ...firstBlockSuggestions];
+        return ''
+      })
+      result = [...result, ...firstBlockSuggestions]
     }
-    
+
     // Estrai i suggerimenti dal secondo blocco (MusicResponsiveListItem)
-    if (suggestions[1]?.type === "SearchSuggestionsSection" && suggestions[1]?.contents) {
-      const secondBlockSuggestions = suggestions[1].contents.map(item => {
-        if (item.type === "MusicResponsiveListItem" && item.flex_columns && item.flex_columns.length > 0) {
-          const firstColumn = item.flex_columns[0];
+    if (suggestions[1]?.type === 'SearchSuggestionsSection' && suggestions[1]?.contents) {
+      const secondBlockSuggestions = suggestions[1].contents.map((item) => {
+        if (
+          item.type === 'MusicResponsiveListItem' &&
+          item.flex_columns &&
+          item.flex_columns.length > 0
+        ) {
+          const firstColumn = item.flex_columns[0]
           if (firstColumn?.title?.text) {
-            return firstColumn.title.text;
+            return firstColumn.title.text
           }
         }
-        return '';
-      });
-      result = [...result, ...secondBlockSuggestions];
+        return ''
+      })
+      result = [...result, ...secondBlockSuggestions]
     }
-    return result.filter(Boolean);
+    return result.filter(Boolean)
   } catch (error) {
-    console.error('Errore nel recupero dei suggerimenti:', error);
-    return [];
+    console.error('Errore nel recupero dei suggerimenti:', error)
+    return []
   }
-});
-
-
+})
