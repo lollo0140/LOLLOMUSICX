@@ -17,15 +17,16 @@ import RPC from 'discord-rpc'
 
 app.setAppUserModelId('com.lorenzo.lollomusicx')
 
-if (process.platform === 'win32') {
-  app.setAppUserModelId('com.tuodominio.nomeapp')
-  
-  // Forza la registrazione
-  app.on('ready', () => {
-    if (process.env.NODE_ENV !== 'development') {
-      // Solo in produzione
-      const { spawn } = require('child_process')
-      spawn('powershell', ['-Command', `Get-AppxPackage -Name "*${app.getName()}*" | Remove-AppxPackage`], { stdio: 'ignore' })
+const gotTheLock = app.requestSingleInstanceLock()
+
+if (!gotTheLock) {
+  app.quit()
+} else {
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore()
+      mainWindow.focus()
+      mainWindow.show()
     }
   })
 }
@@ -2594,56 +2595,60 @@ let windowState = {
 }
 
 ipcMain.handle('togleMiniPLayer', async (event, condition) => {
-  try {
-    if (condition) {
-      // Salva lo stato attuale
-      const bounds = mainWindow.getBounds()
-      windowState.beforewidth = bounds.width
-      windowState.beforeheight = bounds.height
-      windowState.beforePosition = { x: bounds.x, y: bounds.y }
+  mainWindow.unmaximize()
 
-      console.log(windowState)
+  setTimeout(() => {
+    try {
+      if (condition) {
+        // Salva lo stato attuale
+        const bounds = mainWindow.getBounds()
+        windowState.beforewidth = bounds.width
+        windowState.beforeheight = bounds.height
+        windowState.beforePosition = { x: bounds.x, y: bounds.y }
 
-      // Imposta dimensioni mini player
-      mainWindow.setMinimumSize(200, 100)
-      mainWindow.setSize(200, 100)
+        console.log(windowState)
 
-      mainWindow.setAlwaysOnTop(true, 'floating')
-      mainWindow.setSkipTaskbar(true)
+        // Imposta dimensioni mini player
+        mainWindow.setMinimumSize(200, 100)
+        mainWindow.setSize(200, 100)
 
-      // Disabilita resize e fullscreen
-      mainWindow.setResizable(false)
-      mainWindow.setFullScreenable(false)
+        mainWindow.setAlwaysOnTop(true, 'floating')
+        mainWindow.setSkipTaskbar(true)
 
-      // Posiziona in alto al centro, 50px fuori dallo schermo
-      const { width: screenWidth } = require('electron').screen.getPrimaryDisplay().workAreaSize
-      const x = Math.floor((screenWidth - 200) / 2)
-      mainWindow.setPosition(x, -50) // Usa -50 invece di 0 per posizionare 50px fuori dallo schermo
-    } else {
-      // Ripristina le dimensioni minime normali
+        // Disabilita resize e fullscreen
+        mainWindow.setResizable(false)
+        mainWindow.setFullScreenable(false)
 
-      // Ripristina la possibilità di resize e fullscreen
-      mainWindow.setResizable(true)
-      mainWindow.setFullScreenable(true)
-
-      // Ripristina dimensioni
-      mainWindow.setSize(windowState.beforewidth || 800, windowState.beforeheight || 600)
-
-      mainWindow.setAlwaysOnTop(false)
-      mainWindow.setSkipTaskbar(false)
-
-      mainWindow.setMinimumSize(378, 585)
-
-      // Ripristina posizione
-      if (windowState.beforePosition) {
-        mainWindow.setPosition(windowState.beforePosition.x, windowState.beforePosition.y)
+        // Posiziona in alto al centro, 50px fuori dallo schermo
+        const { width: screenWidth } = require('electron').screen.getPrimaryDisplay().workAreaSize
+        const x = Math.floor((screenWidth - 200) / 2)
+        mainWindow.setPosition(x, -50) // Usa -50 invece di 0 per posizionare 50px fuori dallo schermo
       } else {
-        mainWindow.center()
+        // Ripristina le dimensioni minime normali
+
+        // Ripristina la possibilità di resize e fullscreen
+        mainWindow.setResizable(true)
+        mainWindow.setFullScreenable(true)
+
+        // Ripristina dimensioni
+        mainWindow.setSize(windowState.beforewidth || 800, windowState.beforeheight || 600)
+
+        mainWindow.setAlwaysOnTop(false)
+        mainWindow.setSkipTaskbar(false)
+
+        mainWindow.setMinimumSize(378, 585)
+
+        // Ripristina posizione
+        if (windowState.beforePosition) {
+          mainWindow.setPosition(windowState.beforePosition.x, windowState.beforePosition.y)
+        } else {
+          mainWindow.center()
+        }
       }
+    } catch (error) {
+      console.log(error)
     }
-  } catch (error) {
-    console.log(error)
-  }
+  }, 50)
 })
 
 const rpc = new RPC.Client({ transport: 'ipc' })
