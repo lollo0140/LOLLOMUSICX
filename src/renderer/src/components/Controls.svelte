@@ -1,7 +1,7 @@
 <script>/* eslint-disable prettier/prettier */
   import { onMount } from 'svelte'
   import * as renderer from '../main.js'
-  import { fade } from 'svelte/transition'
+  import { fade, fly } from 'svelte/transition'
 
   let { sec, max, paused, FullScreen, nextLoaded } = $props()
 
@@ -112,7 +112,7 @@
   }
 </script>
 
-<div class={!FullScreen ? "Controlls" : "ControllsFS"}  >
+<div transition:fly={{ y: 500, duration: 600 }} class={!FullScreen ? "Controlls" : "ControllsFS"}  >
   <p id="SECONDS"></p>
 
   <p id="DURATION"></p>
@@ -330,20 +330,6 @@
     margin: 0px;
     width: 40px;
     height: 40px;
-
-    transition: all 500ms;
-  }
-
-  .Controlls {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.27);
-    border-radius: 15px;
-    position: absolute;
-    height: 60px;
-    left: 25px;
-    bottom: 25px;
-    right: 25px;
-    border-radius: 15px;
 
     transition: all 500ms;
   }

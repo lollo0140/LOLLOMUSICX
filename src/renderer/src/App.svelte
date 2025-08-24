@@ -34,9 +34,17 @@
 
   let FullScreen = $state(false)
 
+  let CanShowCurrentSong = $state(false)
+
   let STARTUP = 0
 
   const ipcRenderer = window.electron.ipcRenderer
+
+  export function ChangePag(index) {
+    console.log('pagina chiamata: ' + index)
+
+    pagindex = index
+  }
 
   export function callItemFunction(obj) {
     if (obj.type !== 'download') {
@@ -87,7 +95,8 @@
 
 <script>
   //imports
-  import { onMount, onDestroy } from 'svelte'
+
+  import { onMount, onDestroy, createEventDispatcher } from 'svelte'
   import Controls from './components/Controls.svelte'
   import NowPlayng from './components/NowPlayng.svelte'
   import NavBar from './components/NavBar.svelte'
@@ -105,6 +114,10 @@
   import DownloadPage from './components/DownloadPage.svelte'
   import Background from './components/Background.svelte'
   import { fade, fly } from 'svelte/transition'
+  import { online } from 'svelte/reactivity/window'
+  import { SetSong, CURRENTSONG } from './components/pagesElements/ElementsStores/CurrentPlayng.js'
+  import { SETTINGS } from './components/pagesElements/ElementsStores/Settings.js'
+  import ChangeLog from './components/ChangeLog.svelte'
 
   //imports
 
@@ -120,6 +133,8 @@
   const CLOSE = new URL('./assets/other/exit.png', import.meta.url).href
   const EXPAND = new URL('./assets/expand.png', import.meta.url).href
 
+  let ChangelogShowing = $state(false)
+
   document.addEventListener('click', () => {
     if (contextmenu) {
       if (pagindex === 7 || pagindex === 6 || pagindex === 3) {
@@ -133,8 +148,18 @@
     }
   })
 
-  let SessionKEY = $state(),
-    SessionName = $state()
+  let statoOnline = $state()
+
+  document.addEventListener('DOMContentLoaded', () => {
+    // Questo codice viene eseguito solo quando il DOM è completamente caricato.
+    statoOnline = navigator.onLine
+
+    console.log('online status: ' + statoOnline)
+
+    if (!statoOnline) {
+      pagindex = 3
+    }
+  })
 
   onMount(async () => {
     shared = renderer.default.shared
@@ -144,9 +169,6 @@
 
     try {
       if (localStorage.getItem('lastfm_session_key') !== '') {
-        SessionName = localStorage.getItem('lastfm_username')
-        SessionKEY = localStorage.getItem('lastfm_session_key')
-
         LASTFMsessionOn = true
       } else {
         LASTFMsessionOn = false
@@ -221,13 +243,30 @@
 
   let oldtitle, oldartist, oldalbum
 
-  $effect(() => {
+  let initialQuewe = $state(false)
+  $effect(async () => {
+    const mainContent = document.getElementById('mainContent')
+
+    if (playerLocal.title) {
+      CanShowCurrentSong = true
+      mainContent.style.right = '349px'
+      mainContent.style.bottom = '110px'
+    } else {
+      CanShowCurrentSong = false
+      mainContent.style.bottom = '25px'
+      mainContent.style.right = '25px'
+    }
+
     let changed =
       oldtitle !== playerLocal.title ||
       oldartist !== playerLocal.artist ||
       oldalbum !== playerLocal.album
 
     if (changed) {
+      if (!CanShowCurrentSong) {
+        CanShowCurrentSong = true
+      }
+
       console.log(renderer.default.shared.Player)
 
       oldtitle = playerLocal.title
@@ -248,7 +287,25 @@
 
       // Rimuoviamo il loading qui perché lo gestiamo in PlayPlayer
 
-      initializePlayer()
+      let local = false
+
+      if (
+        await ipcRenderer.invoke(
+          'SearchLocalSong',
+          playerLocal.title,
+          playerLocal.artist,
+          playerLocal.album
+        )
+      ) {
+        local = true
+      }
+
+      if (local || statoOnline) {
+        initializePlayer()
+        SetSong(playerLocal)
+      } else {
+        shared.next()
+      }
     }
   })
 
@@ -334,6 +391,11 @@
 
         mediaElement.addEventListener('canplaythrough', () => {
           clearTimeout(timeoutId)
+
+          //aggiorna lo store della canzone corrente
+
+          //SetSong(playerLocal)
+
           onCanPlay()
         })
 
@@ -351,16 +413,23 @@
 
       shared.WriteLastListened()
       shared.SaveListen()
-      shared.LoadPreviousUrl()
-      LoadNext()
+
+      try {
+        shared.LoadPreviousUrl()
+        LoadNext()
+      } catch (error) {
+        console.log()
+      }
 
       loading = false
     } catch (error) {
       console.error("Errore nell'inizializzazione del player:", error)
       loading = false
 
+      let shouldSkip = false
+
       setTimeout(() => {
-        const shouldSkip =
+        shouldSkip =
           error.message &&
           (error.message.includes('Impossibile creare URL') ||
             error.message.includes('no such file') ||
@@ -374,7 +443,7 @@
         }
       }, 1000)
     }
-    if (sturtup) {
+    if (sturtup && $SETTINGS.playerSettings.audio.rememberListen === true) {
       sturtup = false
       shared.PlayPause()
     }
@@ -440,88 +509,133 @@
   {#if !Pageloading}
     <Background img={playerLocal.img || ''} />
 
-    {#if !FullScreen}
-      <div transition:fade={{ duration: 200 }}>
-        <div id="mainContent">
-          <NavBar
-            {LoadingImg}
-            pag={pagindex}
-            on:changePage={(e) => (pagindex = e.detail)}
-            on:cambia-variabile={(e) => CallItem(e.detail)}
-          />
-
-          <div id="content">
-            <Search
+    {#if !ChangelogShowing}
+      {#if !FullScreen}
+        <div transition:fade={{ duration: 200 }}>
+          <div id="mainContent">
+            <NavBar
+              {LoadingImg}
+              pag={pagindex}
               on:changePage={(e) => (pagindex = e.detail)}
               on:cambia-variabile={(e) => CallItem(e.detail)}
-              {pagindex}
             />
 
-            <div id="toBlur" style="transition: all 200ms;">
-              {#if pagindex === 0}
-                <Homepage on:cambia-variabile={(e) => CallItem(e.detail)} />
-              {:else if pagindex === 1}
-                <Album {AlbumQuery} on:cambia-variabile={(e) => CallItem(e.detail)} />
-              {:else if pagindex === 2}
-                <p class="hidden">search</p>
-              {:else if pagindex === 3}
-                <UserLibrary on:cambia-variabile={(e) => CallItem(e.detail)} />
-              {:else if pagindex === 4}
-                <Artists {ArtistQuery} on:cambia-variabile={(e) => CallItem(e.detail)} />
-              {:else if pagindex === 5}
-                <Local />
-              {:else if pagindex === 6}
-                <Playlist {Pindex} />
-              {:else if pagindex === 7}
-                <Liked on:cambia-variabile={(e) => CallItem(e.detail)} />
-              {:else if pagindex === 9}
-                <LocalAlbum {Pindex} />
-              {:else if pagindex === -1}
-                <p class="hidden">changing page</p>
-              {:else}
-                <Settings />
-              {/if}
+            <div id="content">
+              <Search
+                on:changePage={(e) => (pagindex = e.detail)}
+                on:cambia-variabile={(e) => CallItem(e.detail)}
+                {pagindex}
+              />
+
+              <div id="toBlur" style="transition: all 200ms;">
+                {#if pagindex === 0}
+                  <Homepage on:cambia-variabile={(e) => CallItem(e.detail)} />
+                {:else if pagindex === 1}
+                  <Album {AlbumQuery} on:cambia-variabile={(e) => CallItem(e.detail)} />
+                {:else if pagindex === 2}
+                  <p class="hidden">search</p>
+                {:else if pagindex === 3}
+                  <UserLibrary on:cambia-variabile={(e) => CallItem(e.detail)} />
+                {:else if pagindex === 4}
+                  <Artists {ArtistQuery} on:cambia-variabile={(e) => CallItem(e.detail)} />
+                {:else if pagindex === 5}
+                  <Local />
+                {:else if pagindex === 6}
+                  <Playlist {Pindex} />
+                {:else if pagindex === 7}
+                  <Liked on:cambia-variabile={(e) => CallItem(e.detail)} />
+                {:else if pagindex === 9}
+                  <LocalAlbum {Pindex} />
+                {:else if pagindex === -1}
+                  <p class="hidden">changing page</p>
+                {:else}
+                  <Settings />
+                {/if}
+              </div>
             </div>
+
+            {#if downloadPannel}
+              <DownloadPage {trackToDownload} on:cambia-variabile={(e) => CallItem(e.detail)} />
+            {/if}
           </div>
 
-          {#if downloadPannel}
-            <DownloadPage {trackToDownload} on:cambia-variabile={(e) => CallItem(e.detail)} />
+          {#if CanShowCurrentSong}
+            <NowPlayng
+              {FullScreen}
+              {loading}
+              {playerLocal}
+              {LASTFMsessionOn}
+              on:cambia-variabile={(e) => CallItem(e.detail)}
+            />
           {/if}
-        </div>
-        <NowPlayng
-          {FullScreen}
-          {loading}
-          {playerLocal}
-          {SessionName}
-          {SessionKEY}
-          {LASTFMsessionOn}
-          on:cambia-variabile={(e) => CallItem(e.detail)}
-        />
-        <Controls max={dur} {sec} {FullScreen} {paused} shuffled={shuffle} {repeat} {nextLoaded} />
-      </div>
-    {:else}
-      <div class="FScontainerout" transition:fly={{ y: 200 }}>
-        <div class="FScontainer">
-          <img class="FSimg" src={playerLocal.img} alt="salsa" />
-          <p class="FStitle">{playerLocal.title}</p>
-          <p class="FSartist">{playerLocal.artist}</p>
 
-          {#if !playerLocal.title === playerLocal.album}
-            <p class="FSalbum">{playerLocal.album}</p>
+          {#if CanShowCurrentSong}
+            <Controls
+              max={dur}
+              {sec}
+              {FullScreen}
+              {paused}
+              shuffled={shuffle}
+              {repeat}
+              {nextLoaded}
+            />
           {/if}
         </div>
-        <Controls max={dur} {sec} {FullScreen} {paused} shuffled={shuffle} {repeat} />
-      </div>
+      {:else}
+        <div class="FScontainerout" transition:fly={{ y: 200 }}>
+          <div class="FScontainer">
+            <img class="FSimg" src={playerLocal.img} alt="salsa" />
+            <p class="FStitle">{playerLocal.title}</p>
+            <p class="FSartist">{playerLocal.artist}</p>
+
+            {#if !playerLocal.title === playerLocal.album}
+              <p class="FSalbum">{playerLocal.album}</p>
+            {/if}
+          </div>
+          <Controls max={dur} {sec} {FullScreen} {paused} shuffled={shuffle} {repeat} />
+        </div>
+      {/if}
+    {:else}
+      <ChangeLog />
     {/if}
   {:else}
     <p>loading...</p>
   {/if}
 
   <dir style="-webkit-app-region: drag;" class="DragRegion">
-    <p class="windowTitle">LOLLOMUSICX <span style="font-size: 11px;">BETA 0.9.15 </span></p>
+    <button
+      class="windowTitle"
+      onclick={() => {
+        ChangelogShowing = !ChangelogShowing
+      }}
+    >
+      LOLLOMUSICX <span style="font-size: 11px;">BETA 0.9.502 </span>
+      {!statoOnline ? 'OFFLINE' : ''}
+    </button>
 
     <button
-      onclick={() => ipcRenderer.invoke('closeWin')}
+      onclick={() => {
+
+        console.log($SETTINGS);
+
+        if ($SETTINGS.playerSettings.general.killLollomusicOnClose === true) {
+          //killLollomusicOnClose
+          //miniPlayerWhenClosed
+
+          ipcRenderer.invoke('closeApp')
+
+        } else {
+          if ($SETTINGS.playerSettings.general.miniPlayerWhenClosed === true) {
+
+            setMiniplayer()
+
+          } else {
+          
+            ipcRenderer.invoke('closeWin')
+          
+          }
+        }
+      }}
       style="-webkit-app-region: no-drag; width: 30px;"
       class="windowBarButton contextMenu"
       oncontextmenu={() => (renderer.default.shared.MenuContent = { type: 'close' })}
@@ -588,6 +702,20 @@
 {/if}
 
 <style>
+  .windowTitle {
+    background-color: transparent;
+    border: none;
+
+    font-size: 17px;
+
+    margin-top: 14px;
+    transform: translateX(-10px);
+
+    cursor: pointer;
+
+    -webkit-app-region: no-drag;
+  }
+
   .MPNextLoadedIndicator {
     background: rgb(104, 255, 104);
 
@@ -795,18 +923,6 @@
 
   #videoContainer {
     display: none;
-  }
-
-  #mainContent {
-    position: absolute;
-    left: 25px;
-    top: 50px;
-    bottom: 110px;
-    right: 349px;
-    border-radius: 15px;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.27);
-    transition: all 500ms;
   }
 
   #content {

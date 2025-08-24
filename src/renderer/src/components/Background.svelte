@@ -4,15 +4,25 @@
     import * as renderer from '../main.js'
     let { img } = $props()
 
+    import { SETTINGS } from './pagesElements/ElementsStores/Settings.js'
+
     let shared
     let bgType = $state()
     let bgImmage = $state()
 
-    onMount( () => {
-      shared = renderer.default.shared
+    onMount(async () => {
+      console.log(await $SETTINGS.playerSettings.interface);
 
-      bgType = shared.settings.playerSettings.interface.Background
-      bgImmage = shared.settings.playerSettings.interface.BackgroundImage
+      bgType = $SETTINGS.playerSettings.interface.Background
+      bgImmage = $SETTINGS.playerSettings.interface.BackgroundImage
+    })
+
+    $effect( async () => {
+      
+      console.log(await $SETTINGS.playerSettings.interface);
+
+      bgType = $SETTINGS.playerSettings.interface.Background
+      bgImmage = $SETTINGS.playerSettings.interface.BackgroundImage
     })
 
 </script>
@@ -97,7 +107,7 @@
       width: calc(100% + 80px);
       height: calc(100% + 80px);
 
-      filter: blur(15px) brightness(60%);
+      filter: blur(20px) brightness(60%);
       object-fit: cover;
     }
 

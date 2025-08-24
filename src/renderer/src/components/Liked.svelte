@@ -28,8 +28,10 @@
 
 <script>
   /* eslint-disable no-unused-vars */
+  const LIKE = new URL('../assets/LikePlaylistCover.png', import.meta.url).href
   import LikeButton from './pagesElements/LikeButton.svelte'
   import IsLocal from './pagesElements/IsLocal.svelte'
+  import PlaylistsHeade from './pagesElements/PlaylistsHeade.svelte'
 
   onMount(async () => {
     loading = true
@@ -43,7 +45,9 @@
   })
 
   async function PlayTraks(index) {
-    //console.log(songs)
+    console.log(songs)
+    console.log(index);
+    
     let tracce = []
 
     for (const song of songs) {
@@ -60,13 +64,32 @@
 
     shared.PlayPlaylistS(tracce, index)
   }
+
+  const playShuffled = async (index) => {
+    await PlayTraks(index)
+    
+    setTimeout(() => {
+      shared.ShuffleQuewe()
+    }, 500);
+    
+  }
+
 </script>
 
 <div>
   {#if !loading}
     <div transition:fade>
-      <p class="LikedTitle">Favorite tracks</p>
-      <p class="LikedIndicator">{numOfSongs} songs</p>
+
+      <PlaylistsHeade
+          Type="liked"
+          Tracks={songs}
+          img={LIKE}
+          title='Liked music'
+          artist=""
+          playAction={PlayTraks}
+          playAction2={playShuffled}
+          dwnAction={undefined}
+        />
 
       <div id="likedListDiv">
         {#each songs as song, i}
@@ -88,3 +111,9 @@
     <p>loading...</p>
   {/if}
 </div>
+
+<style> 
+  #likedListDiv {
+    margin-top: 440px;  
+  }
+</style>

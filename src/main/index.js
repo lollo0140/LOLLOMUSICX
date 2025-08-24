@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import { Tray, Menu, net, protocol, dialog, app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
@@ -11,8 +12,9 @@ import { ytUrls } from './yt-urls.js'
 import { lollomusicapi } from './lollomusicapi.js'
 const ytmusicApi = require('ytmusic-api')
 const ytm = new ytmusicApi()
+import { WindowManager } from './WindowManager.js'
+const WinTransitions = new WindowManager()
 const LolloMusicApi = new lollomusicapi()
-import crypto from 'crypto'
 import RPC from 'discord-rpc'
 
 app.setAppUserModelId('com.lorenzo.lollomusicx')
@@ -27,6 +29,14 @@ if (!gotTheLock) {
       if (mainWindow.isMinimized()) mainWindow.restore()
       mainWindow.focus()
       mainWindow.show()
+
+      WinTransitions.AnimateAll(mainWindow, {
+        opacity: 1,
+        duration: 300,
+        framerate: 240,
+        animtype: 'ease'
+      })
+
     }
   })
 }
@@ -38,9 +48,9 @@ var running = true
 
 var ytengine
 
-const LASTFM_API_KEY = '81d1abb0e9e24219499ba934854bd3d7'
-const LASTFM_API_KEY_SECRETE = '67bdd640bf6ed99c4cb59d190e8f8215'
-const LASTFM_API_URL = ' http://ws.audioscrobbler.com/2.0/'
+
+
+
 const userDataPath = app.getPath('userData')
 const dataFolder = path.join(userDataPath, 'data')
 
@@ -164,7 +174,16 @@ function createWindow() {
     if (running) {
       event.preventDefault()
       // Nasconde la finestra invece di chiuderla
-      mainWindow.hide()
+
+      WinTransitions.AnimateAll(mainWindow, {
+        opacity: 0,
+        duration: 300,
+        framerate: 240,
+        autoHideAtEnd: true,
+        animtype: 'ease'
+      })
+
+
     }
   })
 
@@ -254,29 +273,34 @@ function createWindow() {
 }
 
 async function initializeyt() {
-  ytengine = await Innertube.create({
-    // Impostazioni specifiche per YouTube Music invece di YouTube normale
-    clientType: 'MUSIC_WEB',
 
-    // Abilita i cookie e la persistenza della sessione
-    enablePersistence: true,
+  try {
+    ytengine = await Innertube.create({
+      // Impostazioni specifiche per YouTube Music invece di YouTube normale
+      clientType: 'MUSIC_WEB',
 
-    // Opzioni di fetch personalizzate
-    fetchOptions: {
-      // Timeout più lungo per richieste più affidabili
-      timeout: 30000,
+      // Abilita i cookie e la persistenza della sessione
+      enablePersistence: true,
 
-      // Headers personalizzati
-      headers: {
-        // Simula un browser desktop per risultati migliori
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-        'Accept-Language': 'it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7'
+      // Opzioni di fetch personalizzate
+      fetchOptions: {
+        // Timeout più lungo per richieste più affidabili
+        timeout: 30000,
+
+        // Headers personalizzati
+        headers: {
+          // Simula un browser desktop per risultati migliori
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+          'Accept-Language': 'it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7'
+        }
       }
-    }
-  })
+    })
 
-  console.log('inizializzato')
+    console.log('inizializzato')
+  } catch {
+    console.log('errore nella api di youtube continuando offline');
+  }
 }
 
 app.whenReady().then(async () => {
@@ -306,7 +330,17 @@ app.whenReady().then(async () => {
     const contextMenu = Menu.buildFromTemplate([
       {
         label: 'Show window',
-        click: () => mainWindow.show()
+        click: () => {
+
+          mainWindow.show()
+
+          WinTransitions.AnimateAll(mainWindow, {
+            opacity: 1,
+            duration: 300,
+            framerate: 240,
+            animtype: 'ease'
+          })
+        }
       },
       {
         label: 'close',
@@ -325,6 +359,14 @@ app.whenReady().then(async () => {
     // Opzionale: mostra l'app al click sull'icona della tray
     tray.on('click', () => {
       mainWindow.show()
+
+      WinTransitions.AnimateAll(mainWindow, {
+        opacity: 1,
+        duration: 300,
+        framerate: 240,
+        animtype: 'ease'
+      })
+
     })
   } catch (error) {
     console.log(error)
@@ -381,6 +423,15 @@ app.on('window-all-closed', () => {
 ipcMain.handle('RELAPPLICATION', async () => {
   mainWindow.reload()
 })
+
+let canDeleteQuewe = false
+
+app.on('will-quit', () => {
+  if (canDeleteQuewe) {
+    fs.writeFileSync(LastListened, '', 'utf8')
+  }
+})
+
 //
 //
 //
@@ -495,182 +546,6 @@ async function getVideoInfo(videoId) {
     console.error('Errore durante il recupero delle informazioni del video:', error)
     return null
   }
-}
-
-ipcMain.handle('getAlbumInfo', async (event, name, artist, ID) => {
-  return await getAlbumInfo(name, artist, ID)
-})
-
-async function getAlbumInfo(name, artist) {
-  try {
-    // Prima prova con Deezer
-    const deezerResult = await tryDeezerFirst(name, artist)
-    if (deezerResult) {
-      return deezerResult
-    }
-
-    // Se non ci sono risultati da Deezer, prova con Last.fm
-    return await getLastFmAlbumInfo(name, artist)
-  } catch (error) {
-    console.error("Errore durante la ricerca dell'album:", error)
-    // In caso di errore, prova comunque con Last.fm
-    try {
-      return await getLastFmAlbumInfo(name, artist)
-    } catch (lastFmError) {
-      console.error('Errore anche con Last.fm:', lastFmError)
-      return {
-        album: {
-          name: name,
-          artist: artist,
-          url: '',
-          image: [],
-          listeners: '0',
-          playcount: '0',
-          tracks: { track: [] },
-          tags: { tag: [] },
-          wiki: { summary: '', content: '' },
-          error: 'Nessuna informazione trovata per questo album'
-        }
-      }
-    }
-  }
-}
-
-// Funzione per cercare prima su Deezer
-async function tryDeezerFirst(name, artist) {
-  const searchUrlDeezer = `https://api.deezer.com/search/album?q=${encodeURIComponent(artist + ' ' + name)}`
-  const responseDeezer = await fetch(searchUrlDeezer)
-  const dataDeezer = await responseDeezer.json()
-
-  // Se Deezer ha trovato risultati
-  if (dataDeezer.data && dataDeezer.data.length > 0) {
-    // Normalizza il nome dell'album per il confronto
-    const normalizedSearchName = name.toLowerCase().trim()
-
-    // Cerca un album che contenga il nome cercato
-    const matchingAlbum = dataDeezer.data.find((album) => {
-      const albumTitle = album.title.toLowerCase().trim()
-      const artistName = album.artist.name.toLowerCase().trim()
-      const searchArtist = artist.toLowerCase().trim()
-      // Verifica che il titolo dell'album contenga il nome cercato
-      // e che l'artista corrisponda
-      return albumTitle.includes(normalizedSearchName) && artistName.includes(searchArtist)
-    })
-
-    // Se non c'è un album che corrisponde ai criteri, restituisci null
-    if (!matchingAlbum) {
-      console.log(
-        `Nessun album trovato su Deezer con il titolo contenente "${name}" dell'artista "${artist}"`
-      )
-      return null
-    }
-
-    // Ottieni tutte le tracce dell'album (gestendo la paginazione)
-    const allTracks = await getAllTracks(matchingAlbum.tracklist)
-
-    // Formatta le tracce nel formato standard
-    const tracks = {
-      track: allTracks.map((track) => ({
-        name: track.title,
-        url: track.link,
-        duration: track.duration ? (track.duration * 1000).toString() : '0',
-        '@attr': { rank: track.track_position ? track.track_position.toString() : '0' },
-        artist: {
-          name: track.artist ? track.artist.name : matchingAlbum.artist.name,
-          url: track.artist ? track.artist.link : ''
-        }
-      }))
-    }
-
-    return {
-      album: {
-        name: matchingAlbum.title,
-        artist: matchingAlbum.artist.name,
-        url: matchingAlbum.link,
-        image: matchingAlbum.cover_big
-          ? [
-              { '#text': matchingAlbum.cover_small, size: 'small' },
-              { '#text': matchingAlbum.cover_medium, size: 'medium' },
-              { '#text': matchingAlbum.cover_big, size: 'large' },
-              { '#text': matchingAlbum.cover_xl, size: 'extralarge' }
-            ]
-          : [],
-        listeners: matchingAlbum.fans ? matchingAlbum.fans.toString() : '0',
-        playcount: matchingAlbum.fans ? matchingAlbum.fans.toString() : '0',
-        tracks: tracks,
-        tags: { tag: [] },
-        wiki: { summary: '', content: '' }
-      }
-    }
-  }
-
-  // Se non ci sono risultati da Deezer, restituisci null
-  return null
-}
-
-// Funzione per ottenere tutte le tracce gestendo la paginazione
-async function getAllTracks(tracklistUrl) {
-  let allTracks = []
-  let nextUrl = tracklistUrl
-
-  while (nextUrl) {
-    const response = await fetch(nextUrl)
-    const data = await response.json()
-
-    if (data.data && data.data.length > 0) {
-      allTracks = [...allTracks, ...data.data]
-    }
-
-    // Controlla se c'è una pagina successiva
-    nextUrl = data.next || null
-  }
-
-  return allTracks
-}
-
-// Funzione separata per ottenere dati da Last.fm
-async function getLastFmAlbumInfo(name, artist) {
-  const searchUrlLFM = `${LASTFM_API_URL}?method=album.getinfo&album=${encodeURIComponent(name)}&artist=${encodeURIComponent(artist)}&api_key=${LASTFM_API_KEY}&format=json`
-  const responseLFM = await fetch(searchUrlLFM)
-  const dataLFM = await responseLFM.json()
-
-  // Assicurati che la struttura sia completa
-  if (dataLFM && dataLFM.album) {
-    // Assicurati che tutti i campi siano presenti
-    if (!dataLFM.album.tracks) dataLFM.album.tracks = { track: [] }
-    else if (dataLFM.album.tracks.track && !Array.isArray(dataLFM.album.tracks.track)) {
-      // Se c'è una sola traccia, convertila in array
-      dataLFM.album.tracks.track = [dataLFM.album.tracks.track]
-    }
-
-    if (!dataLFM.album.tags) dataLFM.album.tags = { tag: [] }
-    else if (dataLFM.album.tags.tag && !Array.isArray(dataLFM.album.tags.tag)) {
-      // Se c'è un solo tag, convertilo in array
-      dataLFM.album.tags.tag = [dataLFM.album.tags.tag]
-    }
-
-    if (!dataLFM.album.wiki) dataLFM.album.wiki = { summary: '', content: '' }
-    if (!dataLFM.album.listeners) dataLFM.album.listeners = '0'
-    if (!dataLFM.album.playcount) dataLFM.album.playcount = '0'
-    if (!dataLFM.album.image) dataLFM.album.image = []
-  } else {
-    // Se non ci sono dati, restituisci una struttura vuota ma completa
-    return {
-      album: {
-        name: name,
-        artist: artist,
-        url: '',
-        image: [],
-        listeners: '0',
-        playcount: '0',
-        tracks: { track: [] },
-        tags: { tag: [] },
-        wiki: { summary: '', content: '' }
-      }
-    }
-  }
-
-  return dataLFM
 }
 
 async function SearchYtVideos(query) {
@@ -1559,7 +1434,8 @@ ipcMain.handle('LikeAlbum', async (event, data) => {
     artist: data.artist || '',
     img: data.img || '',
     id: data.id,
-    artistID: data.artistID
+    artistID: data.artistID,
+    tracks: data.tracks
   }
 
   try {
@@ -1614,6 +1490,22 @@ ipcMain.handle('LikeAlbum', async (event, data) => {
       return { success: false, message: 'Impossibile aggiungere l album ai preferiti' }
     }
   }
+})
+
+ipcMain.handle('searchLocalAlbum', async (event, album, artist, id) => {
+  
+  const LikedAlbums = await separateObj(JSON.parse(fs.readFileSync(LikedalbumsPath)))
+
+  for (const item of LikedAlbums) {
+    
+    if (album === item.album && artist === item.artist && id === item.id) {
+      return item
+    }
+
+  }
+
+  return false
+
 })
 
 ipcMain.handle('DisLikeAlbum', async (event, album) => {
@@ -1824,8 +1716,8 @@ async function ChomePage() {
     fs.writeFileSync(SavedHomeScreen, JSON.stringify(HomeScreen), 'utf8')
 
     return HomeScreen
-  } catch (error) {
-    console.error('errore nella creazione della homepage: ' + error)
+  } catch {
+    console.error('errore nella creazione della homepage')
     return {
       albums: [],
       playlists: [],
@@ -2002,6 +1894,42 @@ ipcMain.handle('CreatePlaylist', async (event, data) => {
   }
 })
 
+ipcMain.handle('editPlaylist', async (event, newName, newImg, i) => {
+
+  if (newName !== undefined) {
+    await ChangePlaylistName(newName, i)
+  }
+
+  if (newImg !== undefined) {
+    await ChangePlaylistImmage(newImg, i)
+  }
+
+})
+
+
+async function ChangePlaylistName(name, i) {
+  let Playlist = await ReadPlaylists()
+
+  Playlist[i].name = name
+
+  const data = joinObj(Playlist, 'playlist')
+
+  fs.writeFileSync(userPlaylists, JSON.stringify(data), 'utf8')
+
+}
+
+async function ChangePlaylistImmage(img, i) {
+  let Playlist = await ReadPlaylists()
+
+  Playlist[i].img = img
+
+  const data = joinObj(Playlist, 'playlist')
+
+  fs.writeFileSync(userPlaylists, JSON.stringify(data), 'utf8')
+
+}
+
+
 ipcMain.handle('DelPlaylist', async (event, index) => {
   let playlists = await ReadPlaylists()
   playlists.splice(index, 1)
@@ -2096,11 +2024,29 @@ function readS() {
 }
 
 ipcMain.handle('readSettings', async () => {
-  return readS()
+
+  const Sett = await readS()
+
+  console.log('-------------------------------------------------------------------');
+  console.log(Sett);
+  if (Sett.playerSettings.audio.rememberListen === false) {
+
+    canDeleteQuewe = true
+  }
+  console.log(canDeleteQuewe);
+  console.log('-------------------------------------------------------------------');
+
+  
+
+  
+
+
+  return Sett
 })
 
 ipcMain.handle('APPLYSettings', async (event, data) => {
   const settingsString = JSON.stringify(data)
+
   fs.writeFileSync(SettingsPath, settingsString, 'utf8')
 })
 
@@ -2149,7 +2095,9 @@ async function ScanForMedia() {
               }
             }
 
-            await LoadAlbumCover(data.image.imageBuffer, img)
+            if (data.image && data.image.imageBuffer) {
+              await LoadAlbumCover(data.image.imageBuffer, img)
+            }
 
             result.push(metadaticanzone)
           }
@@ -2328,9 +2276,9 @@ ipcMain.handle('SearchLocalSong', async (event, title, artist, album) => {
   for (const item of songs) {
     const match =
       normalizeText(removeBrakets(item.title)).trim() ===
-        normalizeText(removeBrakets(title)).trim() &&
+      normalizeText(removeBrakets(title)).trim() &&
       normalizeText(removeBrakets(item.artist)).trim() ===
-        normalizeText(removeBrakets(artist)).trim() &&
+      normalizeText(removeBrakets(artist)).trim() &&
       normalizeText(removeBrakets(item.album)).trim() === normalizeText(removeBrakets(album)).trim()
 
     if (match) {
@@ -2489,103 +2437,6 @@ ipcMain.handle('getSonglyrics', async (event, title, artist, album) => {
   return await GetLyrics(title, artist, album)
 })
 
-//0Auth
-
-// Funzione per generare MD5 hash
-function md5(string) {
-  return crypto.createHash('md5').update(string).digest('hex')
-}
-
-// Genera firma API per Last.fm
-function generateSignature(params) {
-  const keys = Object.keys(params).sort()
-  let signature = ''
-
-  keys.forEach((key) => {
-    signature += key + params[key]
-  })
-
-  signature += LASTFM_API_KEY_SECRETE
-  return md5(signature)
-}
-
-// Gestisci richiesta di autenticazione dal renderer
-ipcMain.handle('lastfm-get-auth-token', async () => {
-  const url = `https://ws.audioscrobbler.com/2.0/?method=auth.gettoken&api_key=${LASTFM_API_KEY}&format=json`
-
-  try {
-    const response = await fetch(url)
-    const data = await response.json()
-    return data.token
-  } catch (error) {
-    console.error('Errore nel recupero del token:', error)
-    throw error
-  }
-})
-
-// Apri URL di autorizzazione nel browser predefinito
-ipcMain.handle('lastfm-open-auth-url', (event, token) => {
-  const authURL = `https://www.last.fm/api/auth/?api_key=${LASTFM_API_KEY}&token=${token}`
-  shell.openExternal(authURL)
-  return true
-})
-
-// Ottieni sessione dopo autorizzazione
-ipcMain.handle('lastfm-get-session', async (event, token) => {
-  const params = {
-    method: 'auth.getSession',
-    api_key: LASTFM_API_KEY,
-    token: token
-  }
-
-  const api_sig = generateSignature(params)
-
-  const url = `https://ws.audioscrobbler.com/2.0/?method=auth.getSession&api_key=${LASTFM_API_KEY}&token=${token}&api_sig=${api_sig}&format=json`
-
-  try {
-    const response = await fetch(url)
-    const data = await response.json()
-    return data.session
-  } catch (error) {
-    console.error('Errore nel recupero della sessione:', error)
-    throw error
-  }
-})
-
-// Gestisci richieste API autenticate (es. scrobble)
-ipcMain.handle('lastfm-api-call', async (event, method, params, sessionKey) => {
-  const apiParams = {
-    method: method,
-    api_key: LASTFM_API_KEY,
-    sk: sessionKey,
-    ...params
-  }
-
-  const api_sig = generateSignature(apiParams)
-
-  const formData = new URLSearchParams()
-  Object.keys(apiParams).forEach((key) => {
-    formData.append(key, apiParams[key])
-  })
-  formData.append('api_sig', api_sig)
-  formData.append('format', 'json')
-
-  try {
-    const response = await fetch('https://ws.audioscrobbler.com/2.0/', {
-      method: 'POST',
-      body: formData,
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      }
-    })
-
-    return await response.json()
-  } catch (error) {
-    console.error(`Errore durante ${method}:`, error)
-    throw error
-  }
-})
-
 //miniPlayer and global shortcuts
 
 let windowState = {
@@ -2608,30 +2459,48 @@ ipcMain.handle('togleMiniPLayer', async (event, condition) => {
 
         console.log(windowState)
 
-        // Imposta dimensioni mini player
-        mainWindow.setMinimumSize(200, 100)
-        mainWindow.setSize(200, 100)
-
-        mainWindow.setAlwaysOnTop(true, 'floating')
-        mainWindow.setSkipTaskbar(true)
-
-        // Disabilita resize e fullscreen
-        mainWindow.setResizable(false)
-        mainWindow.setFullScreenable(false)
 
         // Posiziona in alto al centro, 50px fuori dallo schermo
         const { width: screenWidth } = require('electron').screen.getPrimaryDisplay().workAreaSize
         const x = Math.floor((screenWidth - 200) / 2)
-        mainWindow.setPosition(x, -50) // Usa -50 invece di 0 per posizionare 50px fuori dallo schermo
+
+        mainWindow.setMinimumSize(10, 10)
+
+        WinTransitions.AnimateAll(mainWindow, {
+          height: 100,
+          width: 200,
+          X: x,
+          Y: -50,
+          duration: 300,
+          framerate: 240,
+          animtype: 'ease'
+        })
+
+        setTimeout(() => {
+          mainWindow.setAlwaysOnTop(true, 'floating')
+          mainWindow.setSkipTaskbar(true)
+
+          mainWindow.setResizable(false)
+          mainWindow.setFullScreenable(false)
+        }, 1000);
+
       } else {
         // Ripristina le dimensioni minime normali
 
         // Ripristina la possibilità di resize e fullscreen
+
+
         mainWindow.setResizable(true)
         mainWindow.setFullScreenable(true)
-
-        // Ripristina dimensioni
-        mainWindow.setSize(windowState.beforewidth || 800, windowState.beforeheight || 600)
+        WinTransitions.AnimateAll(mainWindow, {
+          height: windowState.beforeheight || 600,
+          width: windowState.beforewidth || 800,
+          X: windowState.beforePosition.x,
+          Y: windowState.beforePosition.y,
+          duration: 300,
+          framerate: 240,
+          animtype: 'ease'
+        })
 
         mainWindow.setAlwaysOnTop(false)
         mainWindow.setSkipTaskbar(false)
@@ -2639,9 +2508,7 @@ ipcMain.handle('togleMiniPLayer', async (event, condition) => {
         mainWindow.setMinimumSize(378, 585)
 
         // Ripristina posizione
-        if (windowState.beforePosition) {
-          mainWindow.setPosition(windowState.beforePosition.x, windowState.beforePosition.y)
-        } else {
+        if (!windowState.beforePosition) {
           mainWindow.center()
         }
       }
@@ -2651,8 +2518,16 @@ ipcMain.handle('togleMiniPLayer', async (event, condition) => {
   }, 50)
 })
 
-const rpc = new RPC.Client({ transport: 'ipc' })
-const clientId = '1242579109930864721'
+let rpc
+let clientid
+try {
+  rpc = new RPC.Client({ transport: 'ipc' })
+  clientid = '1242579109930864721'
+} catch {
+  console.log('impossibile connettersi a discord');
+
+}
+
 
 ipcMain.handle('updateDiscordRPC', async (event, data) => {
   setActivity(data)
@@ -2686,17 +2561,23 @@ async function setActivity(data) {
 }
 
 rpc.on('ready', () => {
-  rpc.setActivity({
-    details: 'loading',
-    state: '',
-    largeImageKey: 'applabeldiscord',
-    startTimestamp: new Date(),
-    type: 'LISTENING',
-    instance: false
-  })
+
+  try {
+    rpc.setActivity({
+      details: 'loading',
+      state: '',
+      largeImageKey: 'applabeldiscord',
+      startTimestamp: new Date(),
+      type: 'LISTENING',
+      instance: false
+    })
+  } catch {
+    console.log('impossibile collegarsi a discord');
+
+  }
 })
 
-rpc.login({ clientId }).catch(console.error)
+rpc.login({ clientid }).catch(console.error)
 
 ipcMain.handle('GetSearchSuggestion', async (event, key) => {
   try {

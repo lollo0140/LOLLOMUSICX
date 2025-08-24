@@ -3,12 +3,14 @@
   import { onMount } from 'svelte'
   import * as renderer from '../main.js'
   import { createEventDispatcher } from 'svelte'
+  const DOWNLOAD = new URL('./../assets/download.png', import.meta.url).href
 
   const ipcRenderer = window.electron.ipcRenderer
 
   import { fade } from 'svelte/transition'
   import SongButton from './pagesElements/SongButton.svelte'
   import AlbumButton from './pagesElements/AlbumButton.svelte'
+  import PlaylistsHeade from './pagesElements/PlaylistsHeade.svelte'
 
   let { AlbumQuery } = $props()
 
@@ -44,12 +46,26 @@
 
   let ID = $state()
 
+  let downloadedCounter = $state(0)
+
   onMount(async () => {
     shared = renderer.default.shared
 
     // Carichiamo i dati dell'album
     await updateData()
     await checklike()
+
+    let totalDownload = 0
+
+    for (const item of AlbumTracks) {
+      const data = await ipcRenderer.invoke('SearchLocalSong', item.title, item.artist, item.album)
+      console.log(data)
+      if (data) {
+        totalDownload++
+      }
+    }
+
+    downloadedCounter = totalDownload + '/' + AlbumTracks.length + ' Downloaded'
 
     // Carichiamo gli altri album dell'artista
     if (artista) {
@@ -69,24 +85,42 @@
       return
     }
 
-    try {
-      const result = await ipcRenderer.invoke('getAlbumDetails', nome, artista, albumID)
+    const localData = await ipcRenderer.invoke('searchLocalAlbum', nome, artista, albumID)
 
-      console.log(result)
-      albumimg =
-        result.img[0].url ||
-        result.img[1].url ||
-        result.img[2].url ||
-        result.img[3].url ||
-        result.img
-      albumtitle = result.name
-      albumartist = result.artists[0].name
-      ID = result.artists[0].id
-      AlbumTracks = result.songs.songs
-    } catch (error) {
-      console.error("Errore durante il recupero delle informazioni dell'album:", error)
-    } finally {
+    console.log(localData)
+
+    if (localData) {
+      albumimg = localData.img
+      albumtitle = localData.album
+      albumartist = localData.artist
+      ID = localData.artistID
+      AlbumTracks = localData.tracks || []
+
+      console.log('using local data')
+
       isLoading = false
+    } else {
+      try {
+        const result = await ipcRenderer.invoke('getAlbumDetails', nome, artista, albumID)
+
+        console.log(result)
+        albumimg =
+          result.img[0].url ||
+          result.img[1].url ||
+          result.img[2].url ||
+          result.img[3].url ||
+          result.img
+        albumtitle = result.name
+        albumartist = result.artists[0].name
+        ID = result.artists[0].id
+        AlbumTracks = result.songs.songs
+
+        console.log(AlbumTracks)
+      } catch (error) {
+        console.error("Errore durante il recupero delle informazioni dell'album:", error)
+      } finally {
+        isLoading = false
+      }
     }
   }
 
@@ -105,13 +139,35 @@
   }
 
   async function likealbum() {
-    await shared.SaveAlbum(albumtitle, albumartist, albumimg, albumID, ID)
+    const tracce = []
+
+    for (const song of AlbumTracks) {
+      tracce.push({
+        title: song.title,
+        artist: albumartist,
+        img: albumimg,
+        album: albumtitle,
+        id: song.id,
+        albumid: albumID,
+        artistid: ID
+      })
+    }
+
+    await shared.SaveAlbum(albumtitle, albumartist, albumimg, albumID, ID, tracce)
     checklike()
   }
 
   async function dislikealbum() {
     await shared.dislikeAlbum(albumtitle, albumartist, albumimg)
     checklike()
+  }
+
+  const LikeAction = () => {
+    if (Saved) {
+      dislikealbum()
+    } else {
+      likealbum()
+    }
   }
 
   async function Play(i) {
@@ -131,36 +187,35 @@
 
     shared.PlayPlaylistS(tracce, i)
   }
+
+  async function PlayShuffle(i) {
+    await Play(i)
+    shared.ShuffleQuewe()
+  } 
+  
+
+
 </script>
 
-<div style="overflow-y: hidden;">
+<div style="overflow-x: hidden;">
   {#if isLoading}
     <p>Loading</p>
   {:else}
     <div transition:fade>
-      <header>
-        <img id="albumimg" src={albumimg} alt={albumtitle || 'Copertina album'} />
-        <div class="infoContainer">
-          <p id="albumtitle">{albumtitle}</p>
-          <button onclick={() => CallItem({ query: albumartist + '||' + ID, type: 'artist' })} id="albumartist"
-            >{albumartist}</button
-          >
-
-          {#if !Saved}
-            <button style="opacity: 0.2;" onclick={() => likealbum()} id="likeAlbum">
-              <img class="likeimg" src={LIKEimg} alt="palle" />
-            </button>
-          {:else}
-            <button onclick={() => dislikealbum()} id="likeAlbum">
-              <img class="likeimg" src={LIKEimg} alt="palle" />
-            </button>
-          {/if}
-        </div>
-      </header>
+      <PlaylistsHeade
+        Type='album'
+        Tracks={AlbumTracks}
+        img={albumimg}
+        title={albumtitle}
+        artist={albumartist}
+        playAction={Play}
+        playAction2={PlayShuffle}
+        dwnAction={undefined}
+        likeAction={LikeAction}
+        LikeOrPin={Saved}
+      />
 
       <div id="AlbumSongs">
-        <p>Tracks</p>
-
         {#if AlbumTracks}
           {#each AlbumTracks as song, i}
             <SongButton
@@ -207,6 +262,59 @@
 </div>
 
 <style>
+  .downloadButton {
+    position: absolute;
+    top: 282px;
+    left: 200px;
+
+    width: 50px;
+    height: 50px;
+
+    background: none;
+    border: none;
+    padding: 0px;
+
+    cursor: pointer;
+
+    transition: all 200ms;
+  }
+
+  .downloadButton:hover {
+    transform: scale(1.1);
+  }
+
+  .downloadButton img {
+    width: 50px;
+    height: 50px;
+  }
+
+  .PlistLenght {
+    position: absolute;
+    top: 225px;
+    left: 290px;
+
+    font-size: 40px;
+    font-weight: 800;
+
+    width: 200px;
+
+    text-wrap: none;
+  }
+
+  .PlistDownloadCounter {
+    position: absolute;
+    top: 285px;
+    left: 290px;
+
+    font-size: 25px;
+    font-weight: 800;
+
+    overflow: visible;
+    width: 400px;
+
+    opacity: 0.4;
+  }
+
   .likeimg {
     position: relative;
     margin: 0px;
@@ -229,7 +337,10 @@
 
     transition: all 200ms;
 
-    margin-left: 5px;
+    position: absolute;
+
+    left: 60px;
+    top: 285px;
   }
 
   #likeAlbum:hover {
@@ -261,28 +372,40 @@
   }
 
   #albumtitle {
-    font-size: 130px;
+    text-wrap: none;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    width: 100%;
+
+    position: absolute;
+    left: 51px;
+    top: -30px;
+
+    font-size: 72px;
     font-weight: 800;
     display: block;
-
-    font-size: clamp(4.4vw, 3vw, 1.2rem);
   }
 
   #albumartist {
+    position: absolute;
+
+    left: 49px;
+    top: 160px;
+
     z-index: 1;
 
-    font-size: 60px;
-    font-weight: 500;
+    font-size: 55px;
+    font-weight: 800;
 
     opacity: 0.7;
 
     display: block;
     background: transparent;
     border: none;
-    transform: translate(-6px, -2.3vw);
     cursor: pointer;
-
-    font-size: clamp(3.4vw, 3vw, 1.2rem);
 
     line-height: 0px;
   }
@@ -297,12 +420,14 @@
   }
 
   #AlbumSongs {
-    margin-top: 970px;
+    margin-top: 440px;
     width: 100%;
   }
 
   header {
-    mask-image: url('../assets/albumgradientbig.png');
+    mask-image: linear-gradient(to bottom, black, transparent);
+    mask-position: center;
+    mask-size: cover;
 
     overflow-y: hidden;
 
@@ -313,7 +438,7 @@
 
     width: 100%;
 
-    height: 1000px;
+    height: 545px;
 
     background: transparent;
 

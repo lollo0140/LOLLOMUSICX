@@ -4,11 +4,17 @@
   import PlaylistMiniButton from './pagesElements/PlaylistMiniButton.svelte'
   let { pag } = $props()
 
+  import { callItemFunction, ChangePag } from './../App.svelte'
+
   const SEARCHimg = new URL('../assets/search.png', import.meta.url).href
   const HOMEimg = new URL('../assets/home.png', import.meta.url).href
   const LIBRARYimg = new URL('../assets/library.png', import.meta.url).href
   const FILESimg = new URL('../assets/files.png', import.meta.url).href
   const SETTINGSimg = new URL('../assets/settings.png', import.meta.url).href
+
+  let statoOnline = $state()
+
+
 
   const dispatch = createEventDispatcher()
   const dispatch2 = createEventDispatcher()
@@ -17,6 +23,9 @@
   let shared
 
   onMount(() => {
+    statoOnline = navigator.onLine
+
+    console.log('online status: ' + statoOnline)
     shared = shared = renderer.default.shared
 
     setInterval(async () => {
@@ -35,16 +44,16 @@
 </script>
 
 <div id="NavBar">
-  <button style="left:2.5px ; top:2.5px ;" class="navButton {pag === 2 ? 'ActivenavButton' : ''}" onclick={() => dispatch('changePage', 2)}> 
+  <button style="left:2.5px ; top:2.5px ;" class="navButton {pag === 2 ? 'ActivenavButton' : ''}" onclick={() => ChangePag(2)}> 
     <img class="buttonImg" src={SEARCHimg} alt="">
   </button>
-  <button style="left:2.5px ; top:57.5px ;" class="navButton {pag === 0 ? 'ActivenavButton' : ''}" onclick={() => dispatch('changePage', 0)}>  
+  <button style="left:2.5px ; top:57.5px ; {!statoOnline ? 'opacity:0.1; pointer-events:none;' : ''}" class="navButton {pag === 0 ? 'ActivenavButton' : ''}" onclick={() => ChangePag(0)}>  
     <img class="buttonImg" src={HOMEimg} alt="">
   </button>
-  <button style="left:2.5px ; top:113px ;" class="navButton {pag === 3 ? 'ActivenavButton' : ''}" onclick={() => dispatch('changePage', 3)}>  
+  <button style="left:2.5px ; top:113px ;" class="navButton {pag === 3 ? 'ActivenavButton' : ''}" onclick={() => ChangePag(3)}>  
     <img class="buttonImg" src={LIBRARYimg} alt="">
   </button>
-  <button style="left:2.5px ; top:168px ;" class="navButton {pag === 5 ? 'ActivenavButton' : ''}" onclick={() => dispatch('changePage', 5)}> 
+  <button style="left:2.5px ; top:168px ;" class="navButton {pag === 5 ? 'ActivenavButton' : ''}" onclick={() => ChangePag(5)}> 
     <img class="buttonImg" src={FILESimg} alt="">
   </button>
 
@@ -142,18 +151,5 @@
     width: 50px;
   }
 
-  #NavBar {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.27);
-    border-radius: 15px;
-    margin: 0px;
-    position: absolute;
-    left: 4px;
-    top: 4px;
-    bottom: 4px;
-    width: 55px;
-    border-radius: 10px;
-
-    z-index: 999;
-  }
+  
 </style>

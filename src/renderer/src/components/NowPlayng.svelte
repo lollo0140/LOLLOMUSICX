@@ -2,6 +2,7 @@
   import { createEventDispatcher } from 'svelte'
   import { onMount } from 'svelte'
   import * as renderer from '../main.js'
+  const DEFIMG = new URL('../assets/defaultSongCover.png', import.meta.url).href
   let { playerLocal, FullScreen } = $props()
 
   import { updateTrackLikeStatus } from '../../stores/trackLikesStore.js'
@@ -16,7 +17,7 @@
 
   let albumcover, CanvaContainer
 
-  import { fade, slide } from 'svelte/transition'
+  import { fade, fly, slide } from 'svelte/transition'
   import LyricPannel from './pagesElements/LyricPannel.svelte'
   import CanvaPLayer from './pagesElements/CanvaPLayer.svelte'
   import QueweButton from './pagesElements/QueweButton.svelte'
@@ -240,7 +241,8 @@
 
 </script>
 
-<dir class={FullScreen ? 'FSNowPlayng' : 'NowPlayng'} style="transition: all 600ms;">
+<dir transition:fly={{ x: 500, duration: 600 }} class={FullScreen ? 'FSNowPlayng' : 'NowPlayng'} style="transition: all 600ms;">
+
   <div
     class="NowPlayngCUrrentContainer contextMenu"
     id="NowPlayngCUrrentContainer"
@@ -271,6 +273,7 @@
       class="PLAYERimg contextMenuSong --IMGDATA"
       style="object-fit: cover; pointer-events: none;"
       src={immagine}
+      onerror={() => {immagine = DEFIMG}}
       alt="img"
     />
 
@@ -310,7 +313,7 @@
         <p class="dividerP">Next up</p>
 
         <div in:slide class="upNextDiv">
-          <img class="upNextImg" src={nextSong.img} alt="img" />
+          <img class="upNextImg" src={nextSong.img} alt="img" onerror={() => {nextSong.img = DEFIMG}}/>
           <p class="upNextTitle">{nextSong.title}</p>
           <p class="upNextArtist">{nextSong.artist}</p>
         </div>
@@ -381,31 +384,6 @@
 </dir>
 
 <style>
-  .NowPlayng {
-    color: white;
-    position: absolute;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.27);
-    border-radius: 15px;
-
-    overflow: hidden;
-    overflow-y: scroll;
-    scrollbar-width: none;
-
-    width: 300px;
-
-    bottom: 110px;
-    right: 25px;
-    top: 50px;
-
-    margin: 0px;
-    padding: 0px;
-
-    transition: all 600ms;
-
-    border-radius: 15px;
-  }
-
   .FSNowPlayng {
     position: absolute;
     background: transparent;

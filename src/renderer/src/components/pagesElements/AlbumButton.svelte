@@ -1,9 +1,13 @@
 <script>/* eslint-disable prettier/prettier */
   import { slide } from 'svelte/transition'
 
+  const DEFIMG = new URL('./../../assets/defaultAlbumCover.png', import.meta.url).href
+
     let { id, artist, name, img, OnClick, artID } = $props()
 
     import * as renderer from '../../main.js'
+
+    let currentIMG = $state(img)
 
 </script>
 
@@ -18,8 +22,10 @@
 >
   <img
     class="--IMGDATA albumimg"
-    src={img}
+    src={currentIMG}
     alt="copertina album"
+    onerror={currentIMG = DEFIMG}
+
   />
   <p class="--ALBUMDATA albumtitle">{name}</p>
   <p class="--ARTISTDATA albumartist">{artist || ''}</p>

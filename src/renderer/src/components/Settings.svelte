@@ -10,7 +10,7 @@
 
   const defBG = new URL('./assets/defaultSongCover.png', import.meta.url).href
 
-
+  import { SETTINGS, SetSettings } from './pagesElements/ElementsStores/Settings.js'
 
   const backgmenuitems = ['dynamic', 'static', 'custom']
 
@@ -163,11 +163,11 @@
   }
 
   async function SetBackground(keyword) {
+    let temp = $SETTINGS
+    temp.playerSettings.interface.Background = keyword
 
-    shared.settings.playerSettings.interface.Background = keyword
+    SetSettings(temp)
 
-    ApplyMod()
-    console.log(shared.settings.playerSettings.interface.Background)
   }
 
   async function SetCustomImg() {
@@ -191,24 +191,6 @@
       <p>System</p>
 
       <Togle
-        SettingName={'Start minimized'}
-        Value={settings.general.startMinimized}
-        Click={SetstartMinimized}
-      />
-
-      <Togle
-        SettingName={'Minimize to tray'}
-        Value={settings.general.minimizeToTray}
-        Click={SetminimizeToTray}
-      />
-
-      <Togle
-        SettingName={'Play on start'}
-        Value={settings.general.autoPlayOnStart}
-        Click={SetautoPlayOnStart}
-      />
-
-      <Togle
         SettingName={'Show miniplayer when closing the main app'}
         Value={settings.general.miniPlayerWhenClosed}
         Click={SetminiPlayerWhenClosed}
@@ -226,12 +208,6 @@
         SettingName={'Remember last quewe when opened'}
         Value={settings.audio.rememberListen}
         Click={SetrememberListen}
-      />
-
-      <Togle
-        SettingName={'Remember shuffle'}
-        Value={settings.audio.rememberShuffle}
-        Click={SetrememberShuffle}
       />
 
       <p>Appearence</p>

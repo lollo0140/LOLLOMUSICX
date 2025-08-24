@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import { mount } from 'svelte'
 
 import './assets/main.css'
@@ -9,11 +10,23 @@ import { getliked } from './components/Liked.svelte'
 import { ReloadLibrary } from './components/UserLibrary.svelte'
 import { ReloadPlaylist } from './components/Playlist.svelte'
 
+import { SetSettings } from './components/pagesElements/ElementsStores/Settings.js'
+
 const settings = {
   submenuClass: 'contextSubMenu',
   menuClass: 'contextMenu',
   buttonClass: 'contextMenuButton'
 }
+
+let statoOnline
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Questo codice viene eseguito solo quando il DOM è completamente caricato.
+    statoOnline = navigator.onLine
+
+    console.log('online status: ' + statoOnline)
+})
+
 
 const ContextMenu = new ContextMenuCreator(settings)
 
@@ -134,7 +147,7 @@ class shared {
 
   async LoadSettings() {
     this.settings = await ipcRenderer.invoke('readSettings')
-    console.log(this.settings)
+    SetSettings(this.settings, false)
   }
 
   async APPLYSETTINGS() {
@@ -226,9 +239,15 @@ class shared {
       if (response !== false) {
         return response
       } else {
-        const data = await ipcRenderer.invoke('GetYTlink', query, ID)
-        return data
+
+        if (statoOnline) {
+          const data = await ipcRenderer.invoke('GetYTlink', query, ID)
+          return data
+        } else {
+          return undefined
+        }
       }
+
     } catch (err) {
       console.log(err)
     }
@@ -261,7 +280,7 @@ class shared {
       // Mischia le canzoni rimanenti
       for (let i = remainingSongs.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1))
-        ;[remainingSongs[i], remainingSongs[j]] = [remainingSongs[j], remainingSongs[i]]
+          ;[remainingSongs[i], remainingSongs[j]] = [remainingSongs[j], remainingSongs[i]]
       }
 
       // Ricostruisci la coda con la canzone corrente all'inizio
@@ -801,13 +820,14 @@ class shared {
     getliked()
   }
 
-  async SaveAlbum(name, artist, img, id = undefined, artID) {
+  async SaveAlbum(name, artist, img, id = undefined, artID, tracks) {
     ipcRenderer.invoke('LikeAlbum', {
       album: name,
       artist: artist,
       img: img,
       id: id,
-      artistID: artID
+      artistID: artID,
+      tracks
     })
     ReloadLibrary()
   }
@@ -1174,23 +1194,23 @@ class shared {
           infoContainer,
           data.onclickEvent !== undefined
             ? {
-                text: 'Play shuffled',
-                action: async () => {
-                  await data.onclickEvent(data.songIndex)
+              text: 'Play shuffled',
+              action: async () => {
+                await data.onclickEvent(data.songIndex)
 
-                  setTimeout(() => {
-                    this.ShuffleQuewe()
-                  }, 10)
-                }
+                setTimeout(() => {
+                  this.ShuffleQuewe()
+                }, 10)
               }
+            }
             : {
-                text: 'Shuffle',
-                action: async () => {
-                  setTimeout(() => {
-                    this.ShuffleQuewe()
-                  }, 10)
-                }
-              },
+              text: 'Shuffle',
+              action: async () => {
+                setTimeout(() => {
+                  this.ShuffleQuewe()
+                }, 10)
+              }
+            },
           {
             text: 'Add to quewe',
             action: () => {
@@ -1292,10 +1312,10 @@ class shared {
                 song.artists[0].name,
                 song.album.name,
                 Albuminfo.img[0].url ||
-                  Albuminfo.img[1].url ||
-                  Albuminfo.img[2].url ||
-                  Albuminfo.img[3].url ||
-                  Albuminfo.img,
+                Albuminfo.img[1].url ||
+                Albuminfo.img[2].url ||
+                Albuminfo.img[3].url ||
+                Albuminfo.img,
                 song.id,
                 song.artists[0].id,
                 song.album.id
@@ -1317,10 +1337,10 @@ class shared {
                 song.artists[0].name,
                 song.album.name,
                 Albuminfo.img[0].url ||
-                  Albuminfo.img[1].url ||
-                  Albuminfo.img[2].url ||
-                  Albuminfo.img[3].url ||
-                  Albuminfo.img,
+                Albuminfo.img[1].url ||
+                Albuminfo.img[2].url ||
+                Albuminfo.img[3].url ||
+                Albuminfo.img,
                 song.id,
                 song.artists[0].id,
                 song.album.id
@@ -1423,21 +1443,22 @@ class shared {
         infoContainer,
         !pinned
           ? {
-              text: 'Pin',
-              action: () => {
-                this.Pin(data.index)
-              }
+            text: 'Pin',
+            action: () => {
+              this.Pin(data.index)
             }
+          }
           : {
-              text: 'Unpin',
-              action: () => {
-                this.UnPin(data.index)
-              }
-            },
+            text: 'Unpin',
+            action: () => {
+              this.UnPin(data.index)
+            }
+          },
         {
           text: 'Play shuffled',
           action: async () => {
-            await this.PlayPlaylistS(data.tracks, 0)
+            const random = Math.floor(Math.random() * data.tracks.length)
+            await this.PlayPlaylistS(data.tracks, random)
             this.ShuffleQuewe()
           }
         },

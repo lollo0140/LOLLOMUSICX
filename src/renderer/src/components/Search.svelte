@@ -311,19 +311,6 @@
     height: 35px;
   }
 
-  .SearchBar {
-    color: white;
-    position: absolute;
-    left: 0px;
-    right: 0px;
-    top: 0px;
-    bottom: 0px;
-    background: rgba(255, 255, 255, 0.1);
-    border: solid 1px rgba(255, 255, 255, 0.27);
-    border-radius: 10px;
-    outline: none;
-  }
-
   .home {
     padding: 0px;
     margin: 0px;
