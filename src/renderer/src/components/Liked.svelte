@@ -1,29 +1,24 @@
-<script module>/* eslint-disable prettier/prettier */
+<script module>
+  /* eslint-disable prettier/prettier */
 
   import { onMount } from 'svelte'
   import * as renderer from '../main.js'
-  
+
   import { fade } from 'svelte/transition'
   import SongButton from './pagesElements/SongButton.svelte'
+  const ipcRenderer = window.electron.ipcRenderer
+
+  let firstLoad = true
 
   let loading = $state(true)
   let shared
 
+  let LocalLikedSongs = $state([])
   let songs = $state([])
-  let numOfSongs = $state(0)
-
 
   export async function getliked() {
-    loading = true
-    shared = renderer.default.shared
-
-    songs = await shared.GetLiked()
-
-    numOfSongs = songs.length
-
-    loading = false
+    console.log('reload page')
   }
-
 </script>
 
 <script>
@@ -32,33 +27,59 @@
   import LikeButton from './pagesElements/LikeButton.svelte'
   import IsLocal from './pagesElements/IsLocal.svelte'
   import PlaylistsHeade from './pagesElements/PlaylistsHeade.svelte'
+  import LoadingScreen from './pagesElements/LoadingScreen.svelte'
+
+  
 
   onMount(async () => {
     loading = true
     shared = renderer.default.shared
 
-    songs = await shared.GetLiked()
+    
+    if (firstLoad) {
 
-    numOfSongs = songs.length
+      songs = await shared.GetLiked()
+
+      for (const element of songs) {
+        const item = {
+          id: element.id,
+          title: element.title,
+          album: {
+            name: element.album.name,
+            id: element.album.id,
+            thumbnail: element.album.thumbnail
+          },
+          artist: {
+            id: element.artist.id,
+            name: element.artist.name
+          }
+        }
+
+        await ipcRenderer.invoke('AddSongToLocal', item)
+      }
+
+      firstLoad = false
+    }
+    LocalLikedSongs = await ipcRenderer.invoke('getLocalLiked')
 
     loading = false
   })
 
   async function PlayTraks(index) {
     console.log(songs)
-    console.log(index);
-    
+    console.log(index)
+
     let tracce = []
 
-    for (const song of songs) {
+    for (const song of LocalLikedSongs) {
       tracce.push({
-        title: song.title,
-        artist: song.artist,
-        img: song.img,
-        album: song.album,
-        id: song.id,
-        albumid: song.albumID,
-        artistid: song.artistID
+        title: song.title || undefined,
+        artist: song.artist || undefined,
+        img: song.img || undefined,
+        album: song.album || undefined,
+        id: song.id || undefined,
+        albumid: song.albumID || undefined,
+        artistid: song.artistID || undefined
       })
     }
 
@@ -66,54 +87,67 @@
   }
 
   const playShuffled = async (index) => {
-    await PlayTraks(index)
-    
-    setTimeout(() => {
-      shared.ShuffleQuewe()
-    }, 500);
-    
-  }
+    let tracce = []
 
+    for (const song of LocalLikedSongs) {
+      tracce.push({
+        title: song.title,
+        artist: song.artist.name,
+        img: song.album.thumbnail,
+        album: song.album.name,
+        id: song.id,
+        albumid: song.album.id,
+        artistid: song.artist.id
+      })
+    }
+
+    shared.PlayPlaylistSshuffled(tracce, index)
+  }
 </script>
 
 <div>
   {#if !loading}
     <div transition:fade>
-
       <PlaylistsHeade
-          Type="liked"
-          Tracks={songs}
-          img={LIKE}
-          title='Liked music'
-          artist=""
-          playAction={PlayTraks}
-          playAction2={playShuffled}
-          dwnAction={undefined}
-        />
+        Type="liked"
+        Tracks={songs}
+        img={LIKE}
+        title="Liked music"
+        artist=""
+        playAction={PlayTraks}
+        playAction2={playShuffled}
+        dwnAction={undefined}
+      />
 
       <div id="likedListDiv">
-        {#each songs as song, i}
+        {#each LocalLikedSongs as song, i}
           <SongButton
-            artID={song.artistID}
-            albID={song.albumID}
-            songID={song.id}
+            artID={song.artistID || undefined}
+            albID={song.albumID || undefined}
+            songID={song.id || undefined}
             songIndex={i}
-            title={song.title}
-            album={song.album}
-            artist={song.artist}
-            img={song.img}
+            title={song.title || undefined}
+            album={song.album || undefined}
+            artist={song.artist || undefined}
+            img={song.img || undefined}
             onclickEvent={PlayTraks}
           />
         {/each}
       </div>
     </div>
   {:else}
-    <p>loading...</p>
+    <LoadingScreen />
   {/if}
 </div>
 
-<style> 
+<style>
   #likedListDiv {
-    margin-top: 440px;  
+    margin-top: 440px;
+  }
+
+  @media only screen and (max-width: 1300px) {
+    #likedListDiv {
+      margin-top: 30.77vw;
+    }
   }
 </style>

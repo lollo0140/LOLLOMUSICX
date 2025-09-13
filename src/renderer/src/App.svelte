@@ -1,4 +1,5 @@
 <script module>
+  /* eslint-disable prettier/prettier */
   //setMiniplayer()
   var MINIPLAYER = $state(false)
 
@@ -29,6 +30,8 @@
   let url = $state('')
   let pagindex = $state(0)
 
+  let shuffling = false
+
   let downloadPannel = $state(false)
   let trackToDownload = $state()
 
@@ -38,7 +41,13 @@
 
   let STARTUP = 0
 
+  let logging = $state()
+
   const ipcRenderer = window.electron.ipcRenderer
+
+  export function shuffleonNext(condition) {
+    shuffling = condition
+  }
 
   export function ChangePag(index) {
     console.log('pagina chiamata: ' + index)
@@ -47,6 +56,8 @@
   }
 
   export function callItemFunction(obj) {
+    console.log(obj)
+
     if (obj.type !== 'download') {
       pagindex = -1
     }
@@ -75,8 +86,15 @@
         } else {
           downloadPannel = false
         }
+      } else if (obj.type === 'ONplaylist') {
+        if (obj.query === 'LM') {
+          pagindex = 7
+        } else {
+          pagindex = 10
+          AlbumQuery = obj.query
+        }
       }
-    }, 500)
+    }, 100)
   }
 
   export async function setMiniplayer() {
@@ -96,7 +114,7 @@
 <script>
   //imports
 
-  import { onMount, onDestroy, createEventDispatcher } from 'svelte'
+  import { onMount, onDestroy } from 'svelte'
   import Controls from './components/Controls.svelte'
   import NowPlayng from './components/NowPlayng.svelte'
   import NavBar from './components/NavBar.svelte'
@@ -114,14 +132,17 @@
   import DownloadPage from './components/DownloadPage.svelte'
   import Background from './components/Background.svelte'
   import { fade, fly } from 'svelte/transition'
-  import { online } from 'svelte/reactivity/window'
-  import { SetSong, CURRENTSONG } from './components/pagesElements/ElementsStores/CurrentPlayng.js'
+  import {
+    SetSong /*CURRENTSONG*/
+  } from './components/pagesElements/ElementsStores/CurrentPlayng.js'
   import { SETTINGS } from './components/pagesElements/ElementsStores/Settings.js'
   import ChangeLog from './components/ChangeLog.svelte'
+  import OnlinePlaylist from './components/OnlinePlaylist.svelte'
+  import LoadingScreen from './components/pagesElements/LoadingScreen.svelte'
+  import Logger from './Logger.svelte'
+  import { logger } from './stores/loggerStore.js'
 
   //imports
-
-  var LASTFMsessionOn = $state(false)
 
   const PLAYimg = new URL('./assets/play.png', import.meta.url).href
   const PAUSEimg = new URL('./assets/pause.png', import.meta.url).href
@@ -162,22 +183,25 @@
   })
 
   onMount(async () => {
+    logging = true
+    await ipcRenderer.invoke('initlollomusicApi')
+
+    setTimeout(() => {
+      logging = false
+    }, 1000)
+
+    Pageloading = true
+
+    logger.show('Welcome to LollomusicX!')
+
+    console.log('loading library');
+    
+    
+
     shared = renderer.default.shared
     playerLocal = renderer.default.shared.Player
 
     shared.Createmenu()
-
-    try {
-      if (localStorage.getItem('lastfm_session_key') !== '') {
-        LASTFMsessionOn = true
-      } else {
-        LASTFMsessionOn = false
-      }
-    } catch {
-      localStorage.setItem('lastfm_session_key', '')
-      localStorage.setItem('lastfm_username', '')
-      LASTFMsessionOn = false
-    }
 
     try {
       await shared.LoadSettings()
@@ -209,52 +233,27 @@
   })
 
   function CallItem(obj) {
-    if (obj.type !== 'download') {
-      pagindex = -1
-    }
-
-    setTimeout(() => {
-      if (obj.type === 'album') {
-        pagindex = 1
-        AlbumQuery = obj.query
-        //console.log('album chiamato: ' + obj.query)
-      } else if (obj.type === 'artist') {
-        pagindex = 4
-        ArtistQuery = obj.query
-        //console.log('artista chiamato: ' + obj.query)
-      } else if (obj.type === 'liked') {
-        pagindex = 7
-      } else if (obj.type === 'playlist') {
-        Pindex = obj.query
-        pagindex = 6
-      } else if (obj.type === 'localAlbum') {
-        Pindex = obj.query
-        pagindex = 9
-      } else if (obj.type === 'download') {
-        if (!downloadPannel) {
-          trackToDownload = obj.query
-          downloadPannel = true
-        } else {
-          downloadPannel = false
-        }
-      }
-    }, 500)
+    callItemFunction(obj)
   }
 
   let oldtitle, oldartist, oldalbum
 
-  let initialQuewe = $state(false)
+  //let initialQuewe = $state(false)
   $effect(async () => {
-    const mainContent = document.getElementById('mainContent')
+    try {
+      const mainContent = document.getElementById('mainContent')
 
-    if (playerLocal.title) {
-      CanShowCurrentSong = true
-      mainContent.style.right = '349px'
-      mainContent.style.bottom = '110px'
-    } else {
-      CanShowCurrentSong = false
-      mainContent.style.bottom = '25px'
-      mainContent.style.right = '25px'
+      if (playerLocal.title) {
+        CanShowCurrentSong = true
+        mainContent.style.right = '349px'
+        mainContent.style.bottom = '110px'
+      } else {
+        CanShowCurrentSong = false
+        mainContent.style.bottom = '25px'
+        mainContent.style.right = '25px'
+      }
+    } catch {
+      //initial quewe
     }
 
     let changed =
@@ -303,6 +302,7 @@
       if (local || statoOnline) {
         initializePlayer()
         SetSong(playerLocal)
+        //logger.show(`Now playing: ${playerLocal.title}`)
       } else {
         shared.next()
       }
@@ -409,6 +409,10 @@
 
       if (STARTUP === 0) {
         await mediaElement.play()
+        if (shuffling) {
+          shared.ShuffleQuewe()
+          shuffling = false
+        }
       }
 
       shared.WriteLastListened()
@@ -418,7 +422,7 @@
         shared.LoadPreviousUrl()
         LoadNext()
       } catch (error) {
-        console.log()
+        console.log(error)
       }
 
       loading = false
@@ -462,6 +466,10 @@
       if (videoElement.paused) {
         if (STARTUP === 0) {
           await videoElement.play()
+          if (shuffling) {
+            shared.ShuffleQuewe()
+            shuffling = false
+          }
         }
 
         shared.LoadPreviousUrl()
@@ -506,100 +514,105 @@
 </div>
 
 {#if !MINIPLAYER}
-  {#if !Pageloading}
-    <Background img={playerLocal.img || ''} />
+  {#if logging}
+    <p>Log in the browser window</p>
+  {:else}
+    <Background img={playerLocal?.img || ''} />
 
-    {#if !ChangelogShowing}
-      {#if !FullScreen}
-        <div transition:fade={{ duration: 200 }}>
-          <div id="mainContent">
-            <NavBar
-              {LoadingImg}
-              pag={pagindex}
-              on:changePage={(e) => (pagindex = e.detail)}
-              on:cambia-variabile={(e) => CallItem(e.detail)}
-            />
-
-            <div id="content">
-              <Search
+    {#if !Pageloading}
+      {#if !ChangelogShowing}
+        {#if !FullScreen}
+          <div transition:fade={{ duration: 200 }}>
+            <div id="mainContent">
+              <NavBar
+                {LoadingImg}
+                pag={pagindex}
                 on:changePage={(e) => (pagindex = e.detail)}
                 on:cambia-variabile={(e) => CallItem(e.detail)}
-                {pagindex}
               />
 
-              <div id="toBlur" style="transition: all 200ms;">
-                {#if pagindex === 0}
-                  <Homepage on:cambia-variabile={(e) => CallItem(e.detail)} />
-                {:else if pagindex === 1}
-                  <Album {AlbumQuery} on:cambia-variabile={(e) => CallItem(e.detail)} />
-                {:else if pagindex === 2}
-                  <p class="hidden">search</p>
-                {:else if pagindex === 3}
-                  <UserLibrary on:cambia-variabile={(e) => CallItem(e.detail)} />
-                {:else if pagindex === 4}
-                  <Artists {ArtistQuery} on:cambia-variabile={(e) => CallItem(e.detail)} />
-                {:else if pagindex === 5}
-                  <Local />
-                {:else if pagindex === 6}
-                  <Playlist {Pindex} />
-                {:else if pagindex === 7}
-                  <Liked on:cambia-variabile={(e) => CallItem(e.detail)} />
-                {:else if pagindex === 9}
-                  <LocalAlbum {Pindex} />
-                {:else if pagindex === -1}
-                  <p class="hidden">changing page</p>
-                {:else}
-                  <Settings />
-                {/if}
+              <div id="content">
+                <Search
+                  on:changePage={(e) => (pagindex = e.detail)}
+                  on:cambia-variabile={(e) => CallItem(e.detail)}
+                  {pagindex}
+                />
+
+                <div id="toBlur" style="transition: all 200ms;">
+                  {#if pagindex === 0}
+                    <Homepage on:cambia-variabile={(e) => CallItem(e.detail)} />
+                  {:else if pagindex === 1}
+                    <Album {AlbumQuery} on:cambia-variabile={(e) => CallItem(e.detail)} />
+                  {:else if pagindex === 2}
+                    <p class="hidden">search</p>
+                  {:else if pagindex === 3}
+                    <UserLibrary on:cambia-variabile={(e) => CallItem(e.detail)} />
+                  {:else if pagindex === 4}
+                    <Artists {ArtistQuery} on:cambia-variabile={(e) => CallItem(e.detail)} />
+                  {:else if pagindex === 5}
+                    <Local />
+                  {:else if pagindex === 6}
+                    <Playlist {Pindex} />
+                  {:else if pagindex === 7}
+                    <Liked on:cambia-variabile={(e) => CallItem(e.detail)} />
+                  {:else if pagindex === 9}
+                    <LocalAlbum {Pindex} />
+                  {:else if pagindex === -1}
+                    <p class="hidden">changing page</p>
+                  {:else if pagindex === 10}
+                    <OnlinePlaylist quary={AlbumQuery} />
+                  {:else}
+                    <Settings />
+                  {/if}
+                </div>
               </div>
+
+              {#if downloadPannel}
+                <DownloadPage {trackToDownload} on:cambia-variabile={(e) => CallItem(e.detail)} />
+              {/if}
             </div>
 
-            {#if downloadPannel}
-              <DownloadPage {trackToDownload} on:cambia-variabile={(e) => CallItem(e.detail)} />
+            {#if CanShowCurrentSong}
+              <NowPlayng
+                {FullScreen}
+                {loading}
+                {playerLocal}
+                on:cambia-variabile={(e) => CallItem(e.detail)}
+              />
+            {/if}
+
+            {#if CanShowCurrentSong}
+              <Controls
+                max={dur}
+                {sec}
+                {FullScreen}
+                {paused}
+                shuffled={shuffle}
+                {repeat}
+                {nextLoaded}
+              />
             {/if}
           </div>
+        {:else}
+          <div class="FScontainerout" transition:fly={{ y: 200 }}>
+            <div class="FScontainer">
+              <img class="FSimg" src={playerLocal.img} alt="salsa" />
+              <p class="FStitle">{playerLocal.title}</p>
+              <p class="FSartist">{playerLocal.artist}</p>
 
-          {#if CanShowCurrentSong}
-            <NowPlayng
-              {FullScreen}
-              {loading}
-              {playerLocal}
-              {LASTFMsessionOn}
-              on:cambia-variabile={(e) => CallItem(e.detail)}
-            />
-          {/if}
-
-          {#if CanShowCurrentSong}
-            <Controls
-              max={dur}
-              {sec}
-              {FullScreen}
-              {paused}
-              shuffled={shuffle}
-              {repeat}
-              {nextLoaded}
-            />
-          {/if}
-        </div>
+              {#if !playerLocal.title === playerLocal.album}
+                <p class="FSalbum">{playerLocal.album}</p>
+              {/if}
+            </div>
+            <Controls max={dur} {sec} {FullScreen} {paused} shuffled={shuffle} {repeat} />
+          </div>
+        {/if}
       {:else}
-        <div class="FScontainerout" transition:fly={{ y: 200 }}>
-          <div class="FScontainer">
-            <img class="FSimg" src={playerLocal.img} alt="salsa" />
-            <p class="FStitle">{playerLocal.title}</p>
-            <p class="FSartist">{playerLocal.artist}</p>
-
-            {#if !playerLocal.title === playerLocal.album}
-              <p class="FSalbum">{playerLocal.album}</p>
-            {/if}
-          </div>
-          <Controls max={dur} {sec} {FullScreen} {paused} shuffled={shuffle} {repeat} />
-        </div>
+        <ChangeLog />
       {/if}
     {:else}
-      <ChangeLog />
+      <LoadingScreen />
     {/if}
-  {:else}
-    <p>loading...</p>
   {/if}
 
   <dir style="-webkit-app-region: drag;" class="DragRegion">
@@ -609,30 +622,24 @@
         ChangelogShowing = !ChangelogShowing
       }}
     >
-      LOLLOMUSICX <span style="font-size: 11px;">BETA 0.9.502 </span>
+      LOLLOMUSICX <span style="font-size: 11px;">BETA 0.9.7</span>
       {!statoOnline ? 'OFFLINE' : ''}
     </button>
 
     <button
       onclick={() => {
-
-        console.log($SETTINGS);
+        console.log($SETTINGS)
 
         if ($SETTINGS.playerSettings.general.killLollomusicOnClose === true) {
           //killLollomusicOnClose
           //miniPlayerWhenClosed
 
           ipcRenderer.invoke('closeApp')
-
         } else {
           if ($SETTINGS.playerSettings.general.miniPlayerWhenClosed === true) {
-
             setMiniplayer()
-
           } else {
-          
             ipcRenderer.invoke('closeWin')
-          
           }
         }
       }}
@@ -667,6 +674,9 @@
       <img class="img" src={EXPAND} alt="palle" />
     </button>
   </dir>
+
+  <Logger />
+
 {:else}
   <div class="MiniPlayerContainer">
     <p class="MiniPlayerTitle">{playerLocal.title}</p>

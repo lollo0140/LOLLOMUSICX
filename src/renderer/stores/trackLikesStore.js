@@ -14,9 +14,7 @@ export async function updateTrackLikeStatus(title, artist, album) {
     const key = `${title}-${artist}-${album}`; // Crea una chiave univoca per la traccia
     const shared = renderer.default.shared;
 
-    console.log(`[Store] Controllando stato like per: ${key}`);
     const isLiked = await shared.CheckIfLiked(title, artist, album);
-    console.log(`[Store] Stato per ${key}: ${isLiked}`);
 
     // Aggiorna il valore dello store.
     // 'trackLikes.update' riceve il valore corrente dello store e restituisce il nuovo valore.
@@ -38,17 +36,15 @@ export async function updateTrackLikeStatus(title, artist, album) {
 export async function likeTrack(trackData) {
     const { title, artist, album, img, video, id, artID, albID } = trackData;
     const shared = renderer.default.shared;
-    console.log(`[Store] Eseguendo LIKE per: ${title}`);
     await shared.SaveTrackExt(title, artist, album, img, video, id, artID, albID);
     // Dopo l'azione sul backend, aggiorna lo store per riflettere il nuovo stato
     await updateTrackLikeStatus(title, artist, album);
 }
 
 export async function dislikeTrack(trackData) {
-    const { title, artist, album, img } = trackData;
+    const { title, artist, album, img, id } = trackData;
     const shared = renderer.default.shared;
-    console.log(`[Store] Eseguendo DISLIKE per: ${title}`);
-    await shared.dislikeTrackExt(title, artist, album, img);
+    await shared.dislikeTrackExt(title, artist, album, img, id);
     // Dopo l'azione sul backend, aggiorna lo store per riflettere il nuovo stato
     await updateTrackLikeStatus(title, artist, album);
 }

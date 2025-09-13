@@ -7,10 +7,12 @@ import App from './App.svelte'
 
 import { ContextMenuCreator } from './CMcreator.js'
 import { getliked } from './components/Liked.svelte'
-import { ReloadLibrary } from './components/UserLibrary.svelte'
+import { ReloadLibrary, GetLib } from './components/UserLibrary.svelte'
 import { ReloadPlaylist } from './components/Playlist.svelte'
 
 import { SetSettings } from './components/pagesElements/ElementsStores/Settings.js'
+
+import { logger } from './stores/loggerStore.js'
 
 const settings = {
   submenuClass: 'contextSubMenu',
@@ -21,10 +23,10 @@ const settings = {
 let statoOnline
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Questo codice viene eseguito solo quando il DOM è completamente caricato.
-    statoOnline = navigator.onLine
+  // Questo codice viene eseguito solo quando il DOM è completamente caricato.
+  statoOnline = navigator.onLine
 
-    console.log('online status: ' + statoOnline)
+  console.log('online status: ' + statoOnline)
 })
 
 
@@ -36,7 +38,9 @@ const app = mount(App, {
 
 const ipcRenderer = window.electron.ipcRenderer
 
-import { callItemFunction, setMiniplayer } from './App.svelte'
+import { callItemFunction, setMiniplayer, shuffleonNext } from './App.svelte'
+
+import { LoadPlaylist } from './components/OnlinePlaylist.svelte'
 
 class shared {
   loading = false
@@ -72,10 +76,12 @@ class shared {
 
   async Pin(index) {
     await ipcRenderer.invoke('PinPlaylists', index)
+    logger.show('Playlist pinned')
   }
 
   async UnPin(index) {
     await ipcRenderer.invoke('UnpinPlaylists', index)
+    logger.show('Playlist unpinned')
   }
 
   async checkpin(index) {
@@ -153,6 +159,7 @@ class shared {
   async APPLYSETTINGS() {
     try {
       await ipcRenderer.invoke('APPLYSettings', this.settings)
+      //logger.show('Settings applied')
     } catch (error) {
       console.log(error)
     }
@@ -192,24 +199,76 @@ class shared {
     return data
   }
 
-  async Search(query) {
-    const canzoni = await this.SearchSongs(query)
-    const album = await this.SearchAlbums(query)
-    const artisti = await this.SearchArtists(query)
-    const canzoniYT = await this.SearchYT(query)
+  async SearchPlaylists(searchkey) {
+    const data = await ipcRenderer.invoke('searchplaylists', searchkey)
+    console.log(data);
 
-    console.log({
-      Songs: canzoni,
-      albums: album,
-      artists: artisti,
-      canzoniYT
+    return data
+  }
+
+  async Search(query) {
+
+    const getcanzoni = new Promise((resolve) => {
+
+      try {
+        resolve(this.SearchSongs(query))
+      } catch {
+        resolve([])
+      }
+
     })
+
+    const getalbum = new Promise((resolve) => {
+
+      try {
+        resolve(this.SearchAlbums(query))
+      } catch {
+        resolve([])
+      }
+
+    })
+
+    const getartisti = new Promise((resolve) => {
+
+      try {
+        resolve(this.SearchArtists(query))
+      } catch {
+        resolve([])
+      }
+
+    })
+
+    const getvideo = new Promise((resolve) => {
+
+      try {
+        resolve(this.SearchYT(query))
+      } catch {
+        resolve([])
+      }
+
+    })
+
+    const getplaylist = new Promise((resolve) => {
+
+      try {
+        resolve(this.SearchPlaylists(query))
+      } catch {
+        resolve([])
+      }
+
+    })
+
+
+
+
+    const [canzoni, album, artisti, canzoniYT, Playlists] = await Promise.all([getcanzoni, getalbum, getartisti, getvideo, getplaylist])
 
     return {
       Songs: canzoni,
       albums: album,
       artists: artisti,
-      canzoniYT
+      canzoniYT,
+      Playlists
     }
   }
 
@@ -232,16 +291,30 @@ class shared {
       //console.log(info)
 
       this.LastCalled.quary = query
-      const response = await ipcRenderer.invoke('SearchLocalSong', info[0], info[1], info[2], ID)
+
+      let response
+
+      try {
+        response = {
+          url: await ipcRenderer.invoke('SearchLocalSong', info[0], info[1], info[2], ID)
+        }
+
+      } catch (error) {
+        console.log(error);
+      }
+
 
       //console.log(response)
 
-      if (response !== false) {
+      if (response.url !== false) {
+        console.log(response);
         return response
       } else {
 
         if (statoOnline) {
           const data = await ipcRenderer.invoke('GetYTlink', query, ID)
+          console.log(data);
+          
           return data
         } else {
           return undefined
@@ -288,7 +361,7 @@ class shared {
       this.PlayngIndex = 0
 
       this.Shuffled = true
-      console.log('Miscelazione attivata')
+      logger.show('Quewe shuffled')
     } else {
       let index = 0
       for (const song of this.nonShufledSongQuewe) {
@@ -300,7 +373,7 @@ class shared {
 
       this.SongsQuewe = this.nonShufledSongQuewe
       this.Shuffled = false
-      console.log('Miscelazione disattivata')
+      logger.show('Quewe unshuffled')
     }
 
     this.LoadNextUrl()
@@ -310,10 +383,13 @@ class shared {
   async setrepeat() {
     if (this.repeat === 0) {
       this.repeat = 1
+      logger.show('Repeat one enabled')
     } else if (this.repeat === 1) {
       this.repeat = 2
+      logger.show('Repeat disabled')
     } else {
       this.repeat = 0
+      logger.show('Repeat enabled')
     }
   }
 
@@ -392,6 +468,61 @@ class shared {
     }
   }
 
+  async PlayPlaylistSshuffled(Tracks, index) {
+    console.log(Tracks, index)
+
+    try {
+      // Attendi che la Promise di Tracks si risolva
+      const resolvedTracks = await Tracks
+      //console.log(resolvedTracks)
+
+      this.SongsQuewe = []
+
+      // Usa i tracks risolti
+      for (const item of resolvedTracks) {
+        try {
+          console.log(item)
+
+          if (item.artists[0].name !== undefined) {
+            this.SongsQuewe.push({
+              title: item.title,
+              album: item.album.name,
+              artist: item.artists[0].name,
+              img: item.album.thumbnail,
+              YTurl: item.YTurl || '',
+              id: item.id,
+              albumID: item.album.id || '',
+              artistID: item.artists[0].id || ''
+            })
+          } else {
+            throw new Error('palle')
+          }
+        } catch {
+          this.SongsQuewe.push({
+            title: item.title || '',
+            album: item.album || '',
+            artist: item.artist || '',
+            img: item.img || '',
+            id: item.id,
+            albumID: item.albumid || '',
+            artistID: item.artistid || ''
+          })
+        }
+      }
+
+      console.log(this.SongsQuewe)
+
+      this.Shuffled = false
+
+      this.PlayngIndex = index
+      await this.preloadAndUpdatePlayer(this.PlayngIndex, true)
+
+    } catch (error) {
+      console.error('Errore nel caricamento della playlist:', error)
+    }
+  }
+
+
   async PlaySongYT(id) {
     try {
       let data = await this.getInfoYT(id)
@@ -428,6 +559,7 @@ class shared {
 
       const currentSong = this.SongsQuewe[this.PlayngIndex]
       //console.log('video?   ' + currentSong.video)
+      logger.show(`Loading: ${currentSong}`)
 
       // Se YTurl è già presente, non fare nulla
       if (currentSong.YTurl && currentSong.YTurl !== '') {
@@ -472,11 +604,7 @@ class shared {
 
         const data = await this.GetYTlink(Query, currentSong.id)
 
-        if (data.url) {
-          currentSong.YTurl = data.url
-        } else {
-          currentSong.YTurl = data
-        }
+        currentSong.YTurl = data.url
 
         this.LOADING = false
       }
@@ -529,12 +657,9 @@ class shared {
 
         const data = await this.GetYTlink(Query, nextSong.id)
 
-        if (data.url) {
-          nextSong.YTurl = data.url
-        } else {
-          nextSong.YTurl = data
-        }
+        nextSong.YTurl = data.url
       }
+      logger.show(`Next url loaded: ${nextSong.title}`)
     } catch (error) {
       console.error('Errore in LoadNextUrl:', error)
     }
@@ -574,24 +699,22 @@ class shared {
 
         const data = await this.GetYTlink(Query, nextSong.id)
 
-        if (data.url) {
-          nextSong.YTurl = data.url
-        } else {
-          nextSong.YTurl = data
-        }
+        nextSong.YTurl = data.url
+
       }
     } catch (error) {
       console.error('Errore in LoadNextUrl:', error)
     }
   }
 
-  async preloadAndUpdatePlayer(index) {
+  async preloadAndUpdatePlayer(index, shuffle = false) {
     if (!this.SongsQuewe[index]) {
       console.error("Nessuna canzone all'indice:", index)
       return
     }
 
     const currentSong = this.SongsQuewe[index]
+    logger.show(`Loading: ${currentSong.title}`)
 
     // Verifica se l'URL è già caricato
     if (!currentSong.YTurl || currentSong.YTurl === '' || currentSong.YTurl === false) {
@@ -622,11 +745,7 @@ class shared {
         const data = await this.GetYTlink(Query, currentSong.id)
 
         if (Query === this.LastCalled.quary) {
-          if (data.url) {
-            currentSong.YTurl = data.url
-          } else {
-            currentSong.YTurl = data
-          }
+          currentSong.YTurl = data.url
           this.LastCalled.playng = true
         }
         this.LOADING = false
@@ -645,6 +764,12 @@ class shared {
 
     // Aggiorna il Player solo dopo che l'URL è stato caricato
     this.Player = this.SongsQuewe[index]
+
+    if (shuffle) {
+      shuffleonNext(true)
+    } else {
+      shuffleonNext(false)
+    }
 
     // Notifica gli osservatori del cambio
     if (this.onUpdate) this.onUpdate()
@@ -769,6 +894,25 @@ class shared {
 
   // user
 
+  async savePlaylist(data) {
+    await ipcRenderer.invoke('LikePlaylist', data)
+  }
+
+  async removePlaylist(data) {
+    await ipcRenderer.invoke('disikePlaylist', data)
+  }
+
+  async checkPlaylist(data) {
+
+    const info = await ipcRenderer.invoke('CheckLikePlaylist', data)
+
+    if (info) {
+      return info
+    } else {
+      return false
+    }
+  }
+
   async SaveTrack() {
     const Song = this.SongsQuewe[this.PlayngIndex]
 
@@ -815,8 +959,8 @@ class shared {
     getliked()
   }
 
-  async dislikeTrackExt(title, artist, album, img) {
-    await ipcRenderer.invoke('DisLikeSong', { title, artist, album, img })
+  async dislikeTrackExt(title, artist, album, img, id) {
+    await ipcRenderer.invoke('DisLikeSong', { title, artist, album, img, id })
     getliked()
   }
 
@@ -943,11 +1087,15 @@ class shared {
     await ipcRenderer.invoke('AddToPlist', Playlistindex, metadata)
     ReloadLibrary()
     ReloadPlaylist()
+
+    logger.show(`Added to playlist: ${title}`)
   }
 
   async removeFromPlaylist(itemindex, PlaylistIndex) {
     await ipcRenderer.invoke('RemFromPlist', itemindex, PlaylistIndex)
     ReloadPlaylist()
+
+    logger.show(`Item removed from playlist`)
   }
 
   async addToQuewe(title, artist, album, img, songID, artID, albID) {
@@ -986,724 +1134,914 @@ class shared {
 
   //menu
 
-  async SpawmMenu(data) {
-    console.log(data)
-
-    if (data.type === 'song') {
-      if (data.artist === data.artID && data.album === undefined && data.albID === undefined) {
-        const CmenuImg = document.createElement('img')
-        CmenuImg.src = data.img
-        const infoContainer = document.createElement('div')
-        const LikeButtonConteiner = document.createElement('div')
-
-        infoContainer.appendChild(CmenuImg)
-        infoContainer.appendChild(LikeButtonConteiner)
-
-        const LikeButton = document.createElement('button')
-        LikeButton.id = 'LikeButton'
-
-        const downloadButton = document.createElement('button')
-        downloadButton.id = 'downloadButton'
-
-        CmenuImg.id = 'CmenuImg'
-        infoContainer.id = 'infoContainer'
-
-        let liked = await this.CheckIfLiked(data.title, data.artist, data.album)
-
-        let local = false
-        if (await ipcRenderer.invoke('SearchLocalSong', data.title, data.artist, data.album)) {
-          local = true
-        }
-
-        if (local) {
-          const LOCALimg = new URL('./assets/local.png', import.meta.url).href
-          downloadButton.style.backgroundImage = `url('${LOCALimg}')`
-        } else {
-          const LOCALimg = new URL('./assets/download.png', import.meta.url).href
-          downloadButton.style.backgroundImage = `url('${LOCALimg}')`
-        }
-
-        if (!liked) {
-          LikeButton.addEventListener('click', () => {
-            this.SaveTrackExt(
-              data.title,
-              data.artist,
-              data.album,
-              data.img,
-              false,
-              data.songID,
-              data.artID,
-              data.albID
-            )
-          })
-
-          LikeButton.style.opacity = '0.4'
-        } else {
-          LikeButton.addEventListener('click', () => {
-            this.dislikeTrackExt(data.title, data.artist, data.album, data.img)
-          })
-          LikeButton.style.opacity = '1'
-        }
-
-        LikeButtonConteiner.appendChild(LikeButton)
-        LikeButtonConteiner.appendChild(downloadButton)
-
-        const playlists = await this.ReadPlaylist()
-
-        let index = 0
-        let submenuButtons = []
-        for (const playlist of playlists) {
-          const pind = index
-
-          submenuButtons.push({
-            text: playlist.name,
-            icon: playlist.img,
-            action: () => {
-              this.addtoPlaylist(
-                pind,
-                data.title,
-                data.artist,
-                data.album,
-                data.img,
-                data.songID,
-                data.artID,
-                data.albID
-              )
-            }
-          })
-          index++
-        }
-
-        const menu = [
-          infoContainer,
-          {
-            text: 'Add to quewe',
-            action: () => {
-              this.addToQuewe(
-                data.title,
-                data.artist,
-                data.album,
-                data.img,
-                data.songID,
-                data.artID,
-                data.albID
-              )
-            }
-          },
-          {
-            text: 'Add to playlist',
-            content: submenuButtons
-          }
-        ]
-
-        if (data.removable === true) {
-          menu.push({
-            text: 'Remove from playlist',
-            action: () => {
-              this.removeFromPlaylist(data.songIndex, data.PlaylistIndex)
-            }
-          })
-        }
-
-        ContextMenu.genMenu(menu)
-      } else {
-        const CmenuImg = document.createElement('img')
-        CmenuImg.src = data.img
-        const infoContainer = document.createElement('div')
-        const LikeButtonConteiner = document.createElement('div')
-
-        infoContainer.appendChild(CmenuImg)
-        infoContainer.appendChild(LikeButtonConteiner)
-
-        const LikeButton = document.createElement('button')
-        LikeButton.id = 'LikeButton'
-
-        const downloadButton = document.createElement('button')
-        downloadButton.id = 'downloadButton'
-
-        CmenuImg.id = 'CmenuImg'
-        infoContainer.id = 'infoContainer'
-
-        let liked = await this.CheckIfLiked(data.title, data.artist, data.album)
-
-        let local = false
-        if (await ipcRenderer.invoke('SearchLocalSong', data.title, data.artist, data.album)) {
-          local = true
-        }
-
-        if (local) {
-          const LOCALimg = new URL('./assets/local.png', import.meta.url).href
-          downloadButton.style.backgroundImage = `url('${LOCALimg}')`
-        } else {
-          const LOCALimg = new URL('./assets/download.png', import.meta.url).href
-          downloadButton.style.backgroundImage = `url('${LOCALimg}')`
-        }
-
-        if (!liked) {
-          LikeButton.addEventListener('click', () => {
-            this.SaveTrackExt(
-              data.title,
-              data.artist,
-              data.album,
-              data.img,
-              false,
-              data.songID,
-              data.artID,
-              data.albID
-            )
-          })
-
-          LikeButton.style.opacity = '0.4'
-        } else {
-          LikeButton.addEventListener('click', () => {
-            this.dislikeTrackExt(data.title, data.artist, data.album, data.img)
-          })
-          LikeButton.style.opacity = '1'
-        }
-
-        LikeButtonConteiner.appendChild(LikeButton)
-        LikeButtonConteiner.appendChild(downloadButton)
-
-        const playlists = await this.ReadPlaylist()
-
-        let index = 0
-        let submenuButtons = []
-        for (const playlist of playlists) {
-          const pind = index
-
-          submenuButtons.push({
-            text: playlist.name,
-            icon: playlist.img,
-            action: () => {
-              this.addtoPlaylist(
-                pind,
-                data.title,
-                data.artist,
-                data.album,
-                data.img,
-                data.songID,
-                data.artID,
-                data.albID
-              )
-            }
-          })
-          index++
-        }
-
-        const menu = [
-          infoContainer,
-          data.onclickEvent !== undefined
-            ? {
-              text: 'Play shuffled',
-              action: async () => {
-                await data.onclickEvent(data.songIndex)
-
-                setTimeout(() => {
-                  this.ShuffleQuewe()
-                }, 10)
-              }
-            }
-            : {
-              text: 'Shuffle',
-              action: async () => {
-                setTimeout(() => {
-                  this.ShuffleQuewe()
-                }, 10)
-              }
-            },
-          {
-            text: 'Add to quewe',
-            action: () => {
-              this.addToQuewe(
-                data.title,
-                data.artist,
-                data.album,
-                data.img,
-                data.songID,
-                data.artID,
-                data.albID
-              )
-            }
-          },
-          {
-            text: 'Go to album',
-            action: () => {
-              callItemFunction({
-                query: data.albID + ' - ' + data.artist + ' - ' + data.album,
-                type: 'album'
-              })
-            }
-          },
-          {
-            text: 'Go to artist',
-            action: () => {
-              callItemFunction({
-                query: data.artist + '||' + data.artID,
-                type: 'artist'
-              })
-            }
-          },
-          {
-            text: 'Add to playlist',
-            content: submenuButtons
-          }
-        ]
-
-        if (data.removable === true) {
-          menu.push({
-            text: 'Remove from playlist',
-            action: () => {
-              this.removeFromPlaylist(data.songIndex, data.PlaylistIndex)
-            }
-          })
-        }
-
-        ContextMenu.genMenu(menu)
-      }
-    } else if (data.type === 'album') {
-      const Albuminfo = await this.getAlbumInfo(data.name, data.artist, data.id)
-
-      const CmenuImg = document.createElement('img')
-      CmenuImg.src = data.img
-      const infoContainer = document.createElement('div')
-      const LikeButtonConteiner = document.createElement('div')
-
-      infoContainer.appendChild(CmenuImg)
-      infoContainer.appendChild(LikeButtonConteiner)
-
-      const LikeButton = document.createElement('button')
-      LikeButton.id = 'LikeButton'
-
-      CmenuImg.id = 'CmenuImg'
-      infoContainer.id = 'infoContainer'
-
-      let liked = await this.CheckIfLikedAlbum(data.name, data.artist)
-
-      if (!liked) {
-        LikeButton.addEventListener('click', () => {
-          this.SaveAlbum(data.name, data.artist, data.img, data.id, data.artID)
-        })
-
-        LikeButton.style.opacity = '0.4'
-      } else {
-        LikeButton.addEventListener('click', () => {
-          this.dislikeAlbum(data.name, data.artist, data.img)
-        })
-        LikeButton.style.opacity = '1'
-      }
-
-      LikeButtonConteiner.appendChild(LikeButton)
-
-      const playlists = await this.ReadPlaylist()
-
-      let index = 0
-      let submenuButtons = []
-      for (const playlist of playlists) {
-        const pind = index
-
-        submenuButtons.push({
-          text: playlist.name,
-          icon: playlist.img,
-          action: async () => {
-            for (const song of await Albuminfo.songs.songs) {
-              await this.addtoPlaylist(
-                pind,
-                song.title,
-                song.artists[0].name,
-                song.album.name,
-                Albuminfo.img[0].url ||
-                Albuminfo.img[1].url ||
-                Albuminfo.img[2].url ||
-                Albuminfo.img[3].url ||
-                Albuminfo.img,
-                song.id,
-                song.artists[0].id,
-                song.album.id
-              )
-            }
-          }
-        })
-        index++
-      }
-
-      const menu = [
-        infoContainer,
-        {
-          text: 'Add to quewe',
-          action: async () => {
-            for (const song of await Albuminfo.songs.songs) {
-              this.addToQuewe(
-                song.title,
-                song.artists[0].name,
-                song.album.name,
-                Albuminfo.img[0].url ||
-                Albuminfo.img[1].url ||
-                Albuminfo.img[2].url ||
-                Albuminfo.img[3].url ||
-                Albuminfo.img,
-                song.id,
-                song.artists[0].id,
-                song.album.id
-              )
-            }
-          }
-        },
-        {
-          text: 'Add to playlist',
-          content: submenuButtons
-        },
-        {
-          text: 'Go to artist',
-          action: () => {
-            callItemFunction({
-              query: data.artist + '||' + data.artID,
-              type: 'artist'
-            })
-          }
-        }
-      ]
-
-      ContextMenu.genMenu(menu)
-    } else if (data.type === 'artist') {
-      const CmenuImg = document.createElement('img')
-      CmenuImg.src = data.img
-      const infoContainer = document.createElement('div')
-      const LikeButtonConteiner = document.createElement('div')
-
-      infoContainer.appendChild(CmenuImg)
-      infoContainer.appendChild(LikeButtonConteiner)
-
-      const LikeButton = document.createElement('button')
-      LikeButton.id = 'LikeButton'
-
-      CmenuImg.id = 'CmenuImg'
-      infoContainer.id = 'infoContainer'
-
-      let liked = await this.CheckIfLikedArtist(data.name)
-
-      if (!liked) {
-        LikeButton.addEventListener('click', () => {
-          this.SaveArtist(data.name, data.img, data.id)
-        })
-
-        LikeButton.style.opacity = '0.4'
-      } else {
-        LikeButton.addEventListener('click', () => {
-          this.dislikeArtist(data.name)
-        })
-        LikeButton.style.opacity = '1'
-      }
-
-      LikeButtonConteiner.appendChild(LikeButton)
-
-      const menu = [infoContainer]
-
-      ContextMenu.genMenu(menu)
-    } else if (data.type === 'playlist') {
-      const CmenuImg = document.createElement('img')
-      CmenuImg.src = data.img
-      const infoContainer = document.createElement('div')
-
-      infoContainer.appendChild(CmenuImg)
-
-      CmenuImg.id = 'CmenuImg'
-      infoContainer.id = 'infoContainer'
-
-      const pinned = await this.checkpin(data.index)
-
-      const playlists = await this.ReadPlaylist()
-
-      let index = 0
-      let submenuButtons = []
-      for (const playlist of playlists) {
-        const pind = index
-
-        submenuButtons.push({
-          text: playlist.name,
-          icon: playlist.img,
-          action: async () => {
-            for (const song of await data.tracks) {
-              await this.addtoPlaylist(
-                pind,
-                song.title || '',
-                song.artist || '',
-                song.album || '',
-                song.img || '',
-                song.id || '',
-                song.artID || '',
-                song.albID || ''
-              )
-            }
-          }
-        })
-        index++
-      }
-
-      const menu = [
-        infoContainer,
-        !pinned
-          ? {
-            text: 'Pin',
-            action: () => {
-              this.Pin(data.index)
-            }
-          }
-          : {
-            text: 'Unpin',
-            action: () => {
-              this.UnPin(data.index)
-            }
-          },
-        {
-          text: 'Play shuffled',
-          action: async () => {
-            const random = Math.floor(Math.random() * data.tracks.length)
-            await this.PlayPlaylistS(data.tracks, random)
-            this.ShuffleQuewe()
-          }
-        },
-        {
-          text: 'Add to quewe',
-          action: () => {
-            for (const song of data.tracks) {
-              this.addToQuewe(
-                song.title || '',
-                song.artist || '',
-                song.album || '',
-                song.img || '',
-                song.id || '',
-                song.artID || '',
-                song.albID || ''
-              )
-            }
-          }
-        },
-        {
-          text: 'Add to playlist',
-          content: submenuButtons
-        },
-        {
-          text: 'Delete playlist',
-          action: () => {
-            this.DeletePlaylist(data.index)
-          }
-        }
-      ]
-
-      ContextMenu.genMenu(menu)
-    } else if (data.type === 'liked') {
-      const CmenuImg = document.createElement('img')
-      CmenuImg.src = data.img
-      const infoContainer = document.createElement('div')
-
-      infoContainer.appendChild(CmenuImg)
-
-      CmenuImg.id = 'CmenuImg'
-      infoContainer.id = 'infoContainer'
-
-      const playlists = await this.ReadPlaylist()
-
-      const tracks = await this.GetLiked()
-
-      let index = 0
-      let submenuButtons = []
-      for (const playlist of playlists) {
-        const pind = index
-
-        submenuButtons.push({
-          text: playlist.name,
-          icon: playlist.img,
-          action: async () => {
-            for (const song of tracks) {
-              await this.addtoPlaylist(
-                pind,
-                song.title || '',
-                song.artist || '',
-                song.album || '',
-                song.img || '',
-                song.id || '',
-                song.artID || '',
-                song.albID || ''
-              )
-            }
-          }
-        })
-        index++
-      }
-
-      const menu = [
-        infoContainer,
-        {
-          text: 'Play shuffled',
-          action: async () => {
-            await this.PlayPlaylistS(tracks, 0)
-            this.ShuffleQuewe()
-          }
-        },
-        {
-          text: 'Add to quewe',
-          action: () => {
-            for (const song of tracks) {
-              this.addToQuewe(
-                song.title || '',
-                song.artist || '',
-                song.album || '',
-                song.img || '',
-                song.id || '',
-                song.artID || '',
-                song.albID || ''
-              )
-            }
-          }
-        },
-        {
-          text: 'Add to playlist',
-          content: submenuButtons
-        }
-      ]
-
-      ContextMenu.genMenu(menu)
-    } else if (data.type === 'close') {
-      const menu = [
-        {
-          text: 'Close to mini player',
-          action: async () => {
-            await setMiniplayer()
-          }
-        },
-        {
-          text: 'Close to tray',
-          action: () => {
-            ipcRenderer.invoke('closeWin')
-          }
-        },
-        {
-          text: 'Close app',
-          action: () => {
-            ipcRenderer.invoke('closeApp')
-          }
-        }
-      ]
-
-      ContextMenu.genMenu(menu)
-    } else if (data.type === 'quewe') {
-      const CmenuImg = document.createElement('img')
-      CmenuImg.src = data.img
-      const infoContainer = document.createElement('div')
-      const LikeButtonConteiner = document.createElement('div')
-
-      infoContainer.appendChild(CmenuImg)
-      infoContainer.appendChild(LikeButtonConteiner)
-
-      const LikeButton = document.createElement('button')
-      LikeButton.id = 'LikeButton'
-
-      const downloadButton = document.createElement('button')
-      downloadButton.id = 'downloadButton'
-
-      CmenuImg.id = 'CmenuImg'
-      infoContainer.id = 'infoContainer'
-
-      let liked = await this.CheckIfLiked(data.title, data.artist, data.album)
-
-      let local = false
-      if (await ipcRenderer.invoke('SearchLocalSong', data.title, data.artist, data.album)) {
-        local = true
-      }
-
-      if (local) {
-        const LOCALimg = new URL('./assets/local.png', import.meta.url).href
-        downloadButton.style.backgroundImage = `url('${LOCALimg}')`
-      } else {
-        const LOCALimg = new URL('./assets/download.png', import.meta.url).href
-        downloadButton.style.backgroundImage = `url('${LOCALimg}')`
-      }
-
-      if (!liked) {
-        LikeButton.addEventListener('click', () => {
-          this.SaveTrackExt(
+  async createSongMenu(data) {
+    const CmenuImg = document.createElement('img');
+    CmenuImg.src = data.img;
+    const infoContainer = document.createElement('div');
+    const LikeButtonConteiner = document.createElement('div');
+
+    infoContainer.appendChild(CmenuImg);
+    infoContainer.appendChild(LikeButtonConteiner);
+
+    const LikeButton = document.createElement('button');
+    LikeButton.id = 'LikeButton';
+
+    const downloadButton = document.createElement('button');
+    downloadButton.id = 'downloadButton';
+
+    CmenuImg.id = 'CmenuImg';
+    infoContainer.id = 'infoContainer';
+
+    let liked = await this.CheckIfLiked(data.title, data.artist, data.album);
+
+    let local = false;
+    if (await ipcRenderer.invoke('SearchLocalSong', data.title, data.artist, data.album)) {
+      local = true;
+    }
+
+    if (local) {
+      const LOCALimg = new URL('./assets/local.png', import.meta.url).href;
+      downloadButton.style.backgroundImage = `url('${LOCALimg}')`;
+    } else {
+      const LOCALimg = new URL('./assets/download.png', import.meta.url).href;
+      downloadButton.style.backgroundImage = `url('${LOCALimg}')`;
+    }
+
+    if (!liked) {
+      LikeButton.addEventListener('click', () => {
+        this.SaveTrackExt(
+          data.title,
+          data.artist,
+          data.album,
+          data.img,
+          false,
+          data.songID,
+          data.artID,
+          data.albID
+        );
+      });
+
+      LikeButton.style.opacity = '0.4';
+    } else {
+      LikeButton.addEventListener('click', () => {
+        this.dislikeTrackExt(data.title, data.artist, data.album, data.img, data.id);
+      });
+      LikeButton.style.opacity = '1';
+    }
+
+    LikeButtonConteiner.appendChild(LikeButton);
+    LikeButtonConteiner.appendChild(downloadButton);
+
+    const playlists = await this.ReadPlaylist();
+
+    let index = 0;
+    let submenuButtons = [];
+    for (const playlist of playlists) {
+      const pind = index;
+
+      submenuButtons.push({
+        text: playlist.name,
+        icon: playlist.img,
+        action: () => {
+          this.addtoPlaylist(
+            pind,
             data.title,
             data.artist,
             data.album,
             data.img,
-            false,
             data.songID,
             data.artID,
             data.albID
-          )
-        })
+          );
+        }
+      });
+      index++;
+    }
 
-        LikeButton.style.opacity = '0.4'
-      } else {
-        LikeButton.addEventListener('click', () => {
-          this.dislikeTrackExt(data.title, data.artist, data.album, data.img)
-        })
-        LikeButton.style.opacity = '1'
-      }
+    const YTplaylists = await GetLib();
 
-      LikeButtonConteiner.appendChild(LikeButton)
-      LikeButtonConteiner.appendChild(downloadButton)
+    let YTsubmenuButtons = [];
+    for (const playlist of YTplaylists.YTplaylists) {
 
-      const playlists = await this.ReadPlaylist()
+      if (playlist.id !== 'SE' && playlist.id !== 'LM') {
 
-      let index = 0
-      let submenuButtons = []
-      for (const playlist of playlists) {
-        const pind = index
-
-        submenuButtons.push({
+        YTsubmenuButtons.push({
           text: playlist.name,
           icon: playlist.img,
           action: () => {
-            this.addtoPlaylist(
-              pind,
-              data.title,
-              data.artist,
-              data.album,
-              data.img,
-              data.songID,
-              data.artID,
-              data.albID
-            )
+            ipcRenderer.invoke('AddToYTPlist', playlist.id, data.songID);
           }
-        })
-        index++
+        });
+
       }
 
-      const menu = [
-        infoContainer,
-        {
-          text: 'Remove from quewe',
-          action: () => {
-            this.SongsQuewe.splice(data.songIndex, 1)
-          }
-        },
-        {
-          text: 'Go to album',
-          action: () => {
-            callItemFunction({
-              query: data.albID + ' - ' + data.artist + ' - ' + data.album,
-              type: 'album'
-            })
-          }
-        },
-        {
-          text: 'Go to artist',
-          action: () => {
-            callItemFunction({
-              query: data.artist + '||' + data.artID,
-              type: 'artist'
-            })
-          }
-        },
-        {
-          text: 'Add to playlist',
-          content: submenuButtons
-        }
-      ]
-
-      ContextMenu.genMenu(menu)
     }
+
+    const menu = [
+      infoContainer,
+      {
+        text: 'Add to quewe',
+        action: () => {
+          this.addToQuewe(
+            data.title,
+            data.artist,
+            data.album,
+            data.img,
+            data.songID,
+            data.artID,
+            data.albID
+          );
+        }
+      },
+      {
+        text: 'Go to album',
+        action: () => {
+          callItemFunction({
+            query: data.albID + ' - ' + data.artist + ' - ' + data.album,
+            type: 'album'
+          });
+        }
+      },
+      {
+        text: 'Go to artist',
+        action: () => {
+          callItemFunction({
+            query: data.artist + '||' + data.artID,
+            type: 'artist'
+          });
+        }
+      },
+      {
+        text: 'Add to playlist',
+        content: submenuButtons
+      },
+      {
+        text: 'Add to YouTube playlist',
+        content: YTsubmenuButtons
+      }
+    ];
+
+    if (data.removable === true) {
+      menu.push({
+        text: 'Remove from playlist',
+        action: () => {
+          this.removeFromPlaylist(data.songIndex, data.PlaylistIndex, data.setvideoid);
+        }
+      });
+    }
+
+    if (data?.PlaylistID) {
+      menu.push({
+        text: 'remove from YouTube playlist',
+        action: async () => {
+
+          const Ids = {
+            playlistid: data.PlaylistID,
+            id: data.songID,
+            setvideoid: data.setvideoid
+          }
+
+          await ipcRenderer.invoke('RemFromYTPlist', Ids);
+          LoadPlaylist()
+        }
+      });
+    }
+
+    return menu;
+  }
+
+  async createAlbumMenu(data) {
+    const Albuminfo = await this.getAlbumInfo(data.name, data.artist, data.id);
+
+    const CmenuImg = document.createElement('img');
+    CmenuImg.src = data.img;
+    const infoContainer = document.createElement('div');
+    const LikeButtonConteiner = document.createElement('div');
+
+    infoContainer.appendChild(CmenuImg);
+    infoContainer.appendChild(LikeButtonConteiner);
+
+    const LikeButton = document.createElement('button');
+    LikeButton.id = 'LikeButton';
+
+    CmenuImg.id = 'CmenuImg';
+    infoContainer.id = 'infoContainer';
+
+    let liked = await this.CheckIfLikedAlbum(data.name, data.artist);
+
+    if (!liked) {
+      LikeButton.addEventListener('click', async () => {
+        const cleanAlbum = {
+          name: Albuminfo.name,
+          id: Albuminfo.id,
+          artist: {
+            name: Albuminfo.artist.name,
+            id: Albuminfo.artist.id
+          },
+          img: Albuminfo.img,
+          tracks: Albuminfo.tracks.map(track => ({
+            title: track.title,
+            id: track.id,
+            // Add other track properties if needed
+          }))
+        };
+        await ipcRenderer.invoke('LikeAlbum', cleanAlbum)
+        ReloadLibrary()
+      });
+
+      LikeButton.style.opacity = '0.4';
+    } else {
+      LikeButton.addEventListener('click', async () => {
+        const cleanAlbum = {
+          name: Albuminfo.name,
+          id: Albuminfo.id,
+          artist: {
+            name: Albuminfo.artist.name,
+            id: Albuminfo.artist.id
+          },
+          img: Albuminfo.img,
+          tracks: Albuminfo.tracks.map(track => ({
+            title: track.title,
+            id: track.id,
+            // Add other track properties if needed
+          }))
+        };
+        await ipcRenderer.invoke('DisLikeAlbum', cleanAlbum)
+        ReloadLibrary()
+      });
+      LikeButton.style.opacity = '1';
+    }
+
+    LikeButtonConteiner.appendChild(LikeButton);
+
+    const YTplaylists = await GetLib();
+
+    let YTsubmenuButtons = [];
+    for (const playlist of YTplaylists.YTplaylists) {
+
+      if (playlist.id !== 'SE' && playlist.id !== 'LM') {
+        YTsubmenuButtons.push({
+          text: playlist.name,
+          icon: playlist.img,
+          action: async () => {
+            console.log(Albuminfo);
+
+            for (const song of Albuminfo.tracks) {
+              console.log(playlist.id);
+              console.log(song);
+
+              await ipcRenderer.invoke('AddToYTPlist', playlist.id, song.id);
+            }
+          }
+        });
+
+      }
+
+    }
+
+    const playlists = await this.ReadPlaylist();
+
+    let index = 0;
+    let submenuButtons = [];
+    for (const playlist of playlists) {
+      const pind = index;
+
+      submenuButtons.push({
+        text: playlist.name,
+        icon: playlist.img,
+        action: async () => {
+          for (const song of await Albuminfo.tracks) {
+            await this.addtoPlaylist(
+              pind,
+              song.title,
+              song.artists[0].name,
+              song.album.name,
+              Albuminfo.img[0].url ||
+              Albuminfo.img[1].url ||
+              Albuminfo.img[2].url ||
+              Albuminfo.img[3].url ||
+              Albuminfo.img,
+              song.id,
+              song.artists[0].id,
+              song.album.id
+            );
+          }
+        }
+      });
+      index++;
+    }
+
+    return [
+      infoContainer,
+      {
+        text: 'Add to quewe',
+        action: async () => {
+          for (const song of await Albuminfo.songs.songs) {
+            this.addToQuewe(
+              song.title,
+              song.artists[0].name,
+              song.album.name,
+              Albuminfo.img[0].url ||
+              Albuminfo.img[1].url ||
+              Albuminfo.img[2].url ||
+              Albuminfo.img[3].url ||
+              Albuminfo.img,
+              song.id,
+              song.artists[0].id,
+              song.album.id
+            );
+          }
+        }
+      },
+      {
+        text: 'Add to playlist',
+        content: submenuButtons
+      },
+      {
+        text: 'Add to YouTube playlist',
+        content: YTsubmenuButtons
+      },
+      {
+        text: 'Go to artist',
+        action: () => {
+          callItemFunction({
+            query: data.artist + '||' + data.artID,
+            type: 'artist'
+          });
+        }
+      }
+    ];
+  }
+
+  async createArtistMenu(data) {
+    const CmenuImg = document.createElement('img');
+    CmenuImg.src = data.img;
+    const infoContainer = document.createElement('div');
+    const LikeButtonConteiner = document.createElement('div');
+
+    infoContainer.appendChild(CmenuImg);
+    infoContainer.appendChild(LikeButtonConteiner);
+
+    const LikeButton = document.createElement('button');
+    LikeButton.id = 'LikeButton';
+
+    CmenuImg.id = 'CmenuImg';
+    infoContainer.id = 'infoContainer';
+
+    let liked = await this.CheckIfLikedArtist(data.name);
+
+    if (!liked) {
+      LikeButton.addEventListener('click', () => {
+        this.SaveArtist(data.name, data.img, data.id);
+      });
+
+      LikeButton.style.opacity = '0.4';
+    } else {
+      LikeButton.addEventListener('click', () => {
+        this.dislikeArtist(data.name);
+      });
+      LikeButton.style.opacity = '1';
+    }
+
+    LikeButtonConteiner.appendChild(LikeButton);
+
+    return [infoContainer];
+  }
+
+  async createPlaylistMenu(data) {
+    const CmenuImg = document.createElement('img');
+    CmenuImg.src = data.img;
+    const infoContainer = document.createElement('div');
+
+    infoContainer.appendChild(CmenuImg);
+
+    CmenuImg.id = 'CmenuImg';
+    infoContainer.id = 'infoContainer';
+
+    const pinned = await this.checkpin(data.index);
+
+    const playlists = await this.ReadPlaylist();
+
+    let index = 0;
+    let submenuButtons = [];
+    for (const playlist of playlists) {
+      const pind = index;
+
+      submenuButtons.push({
+        text: playlist.name,
+        icon: playlist.img,
+        action: async () => {
+          for (const song of await data.tracks) {
+            await this.addtoPlaylist(
+              pind,
+              song.title || '',
+              song.artist || '',
+              song.album || '',
+              song.img || '',
+              song.id || '',
+              song.artID || '',
+              song.albID || ''
+            );
+          }
+        }
+      });
+      index++;
+    }
+
+    const YTplaylists = await GetLib();
+
+    let YTsubmenuButtons = [];
+    for (const playlist of YTplaylists.YTplaylists) {
+
+      if (playlist.id !== 'SE' && playlist.id !== 'LM') {
+
+        YTsubmenuButtons.push({
+          text: playlist.name,
+          icon: playlist.img,
+          action: async () => {
+            for (const song of data.tracks) {
+              await ipcRenderer.invoke('AddToYTPlist', playlist.id, song.id);
+            }
+          }
+        });
+
+      }
+
+    }
+
+    const menu = [
+      infoContainer,
+      !pinned
+        ? {
+          text: 'Pin',
+          action: () => {
+            this.Pin(data.index);
+          }
+        }
+        : {
+          text: 'Unpin',
+          action: () => {
+            this.UnPin(data.index);
+          }
+        },
+      {
+        text: 'Play shuffled',
+        action: async () => {
+          const random = Math.floor(Math.random() * data.tracks.length);
+          await this.PlayPlaylistSshuffled(data.tracks, random);
+        }
+      },
+      {
+        text: 'Add to quewe',
+        action: () => {
+          for (const song of data.tracks) {
+            this.addToQuewe(
+              song.title || '',
+              song.artist || '',
+              song.album || '',
+              song.img || '',
+              song.id || '',
+              song.artID || '',
+              song.albID || ''
+            );
+          }
+        }
+      },
+      {
+        text: 'Add to playlist',
+        content: submenuButtons
+      },
+      {
+        text: 'Add to YouTube playlist',
+        content: YTsubmenuButtons
+      },
+      {
+        text: 'Delete playlist',
+        action: () => {
+          this.DeletePlaylist(data.index);
+        }
+      }
+    ];
+
+    return menu;
+  }
+
+  async createLikedMenu(data) {
+    const CmenuImg = document.createElement('img');
+    CmenuImg.src = data.img;
+    const infoContainer = document.createElement('div');
+
+    infoContainer.appendChild(CmenuImg);
+
+    CmenuImg.id = 'CmenuImg';
+    infoContainer.id = 'infoContainer';
+
+    const playlists = await this.ReadPlaylist();
+
+    const tracks = await this.GetLiked();
+
+    let index = 0;
+    let submenuButtons = [];
+    for (const playlist of playlists) {
+      const pind = index;
+
+      submenuButtons.push({
+        text: playlist.name,
+        icon: playlist.img,
+        action: async () => {
+          for (const song of tracks) {
+            await this.addtoPlaylist(
+              pind,
+              song.title || '',
+              song.artist || '',
+              song.album || '',
+              song.img || '',
+              song.id || '',
+              song.artID || '',
+              song.albID || ''
+            );
+          }
+        }
+      });
+      index++;
+    }
+
+    const YTplaylists = await ipcRenderer.invoke('GetYTLybrary');
+
+    let YTsubmenuButtons = [];
+    for (const playlist of YTplaylists.playlists) {
+
+      if (playlist.id !== 'SE' && playlist.id !== 'LM') {
+
+        YTsubmenuButtons.push({
+          text: playlist.name,
+          icon: playlist.img,
+          action: () => {
+            for (const song of tracks) {
+              ipcRenderer.invoke('AddToYTPlist', playlist.id, song.id);
+            }
+          }
+        });
+
+      }
+
+    }
+
+    return [
+      infoContainer,
+      {
+        text: 'Play shuffled',
+        action: async () => {
+          const random = Math.floor(Math.random() * tracks.length);
+          await this.PlayPlaylistSshuffled(tracks, random);
+        }
+      },
+      {
+        text: 'Add to quewe',
+        action: () => {
+          for (const song of tracks) {
+            this.addToQuewe(
+              song.title || '',
+              song.artist || '',
+              song.album || '',
+              song.img || '',
+              song.id || '',
+              song.artID || '',
+              song.albID || ''
+            );
+          }
+        }
+      },
+      {
+        text: 'Add to playlist',
+        content: submenuButtons
+      },
+      {
+        text: 'Add to YouTube playlist',
+        content: YTsubmenuButtons
+      }
+    ];
+  }
+
+  createCloseMenu() {
+    return [
+      {
+        text: 'Close to mini player',
+        action: async () => {
+          await setMiniplayer();
+        }
+      },
+      {
+        text: 'Close to tray',
+        action: () => {
+          ipcRenderer.invoke('closeWin');
+        }
+      },
+      {
+        text: 'Close app',
+        action: () => {
+          ipcRenderer.invoke('closeApp');
+        }
+      }
+    ];
+  }
+
+  async createQueweMenu(data) {
+    const CmenuImg = document.createElement('img');
+    CmenuImg.src = data.img;
+    const infoContainer = document.createElement('div');
+    const LikeButtonConteiner = document.createElement('div');
+
+    infoContainer.appendChild(CmenuImg);
+    infoContainer.appendChild(LikeButtonConteiner);
+
+    const LikeButton = document.createElement('button');
+    LikeButton.id = 'LikeButton';
+
+    const downloadButton = document.createElement('button');
+    downloadButton.id = 'downloadButton';
+
+    CmenuImg.id = 'CmenuImg';
+    infoContainer.id = 'infoContainer';
+
+    let liked = await this.CheckIfLiked(data.title, data.artist, data.album);
+
+    let local = false;
+    if (await ipcRenderer.invoke('SearchLocalSong', data.title, data.artist, data.album)) {
+      local = true;
+    }
+
+    if (local) {
+      const LOCALimg = new URL('./assets/local.png', import.meta.url).href;
+      downloadButton.style.backgroundImage = `url('${LOCALimg}')`;
+    } else {
+      const LOCALimg = new URL('./assets/download.png', import.meta.url).href;
+      downloadButton.style.backgroundImage = `url('${LOCALimg}')`;
+    }
+
+    if (!liked) {
+      LikeButton.addEventListener('click', () => {
+        this.SaveTrackExt(
+          data.title,
+          data.artist,
+          data.album,
+          data.img,
+          false,
+          data.songID,
+          data.artID,
+          data.albID
+        );
+      });
+
+      LikeButton.style.opacity = '0.4';
+    } else {
+      LikeButton.addEventListener('click', () => {
+        this.dislikeTrackExt(data.title, data.artist, data.album, data.img);
+      });
+      LikeButton.style.opacity = '1';
+    }
+
+    LikeButtonConteiner.appendChild(LikeButton);
+    LikeButtonConteiner.appendChild(downloadButton);
+
+    const playlists = await this.ReadPlaylist();
+
+    let index = 0;
+    let submenuButtons = [];
+    for (const playlist of playlists) {
+      const pind = index;
+
+      submenuButtons.push({
+        text: playlist.name,
+        icon: playlist.img,
+        action: () => {
+          this.addtoPlaylist(
+            pind,
+            data.title,
+            data.artist,
+            data.album,
+            data.img,
+            data.songID,
+            data.artID,
+            data.albID
+          );
+        }
+      });
+      index++;
+    }
+
+    const YTplaylists = await GetLib();
+
+    let YTsubmenuButtons = [];
+    for (const playlist of YTplaylists.YTplaylists) {
+
+      if (playlist.id !== 'SE' && playlist.id !== 'LM') {
+
+        YTsubmenuButtons.push({
+          text: playlist.name,
+          icon: playlist.img,
+          action: () => {
+            ipcRenderer.invoke('AddToYTPlist', playlist.id, data.id);
+          }
+        });
+
+
+      }
+
+    }
+
+    return [
+      infoContainer,
+      {
+        text: 'Remove from quewe',
+        action: () => {
+          this.SongsQuewe.splice(data.songIndex, 1);
+        }
+      },
+      {
+        text: 'Go to album',
+        action: () => {
+          callItemFunction({
+            query: data.albID + ' - ' + data.artist + ' - ' + data.album,
+            type: 'album'
+          });
+        }
+      },
+      {
+        text: 'Go to artist',
+        action: () => {
+          callItemFunction({
+            query: data.artist + '||' + data.artID,
+            type: 'artist'
+          });
+        }
+      },
+      {
+        text: 'Add to playlist',
+        content: submenuButtons
+      },
+      {
+        text: 'Add to YouTube playlist',
+        content: YTsubmenuButtons
+      }
+    ];
+  }
+
+  async createOnlinePlaylistMenu(data) {
+    const CmenuImg = document.createElement('img');
+    CmenuImg.src = data.img;
+    const infoContainer = document.createElement('div');
+
+    const tracks = await ipcRenderer.invoke('GetPlaylist', data.id);
+
+    infoContainer.appendChild(CmenuImg);
+
+    CmenuImg.id = 'CmenuImg';
+    infoContainer.id = 'infoContainer';
+
+    const playlists = await this.ReadPlaylist();
+
+    let index = 0;
+    let submenuButtons = [];
+    for (const playlist of playlists) {
+      const pind = index;
+
+      submenuButtons.push({
+        text: playlist.name,
+        icon: playlist.img,
+        action: async () => {
+          for (const song of await tracks.songs) {
+            await this.addtoPlaylist(
+              pind,
+              song.title || '',
+              song.artist.name || '',
+              song.album.name || '',
+              song.album.thumbnail || '',
+              song.id || '',
+              song.artist.id || '',
+              song.album.id || ''
+            );
+          }
+        }
+      });
+      index++;
+    }
+
+    const YTplaylists = await GetLib();
+
+    let YTsubmenuButtons = [];
+    for (const playlist of YTplaylists.YTplaylists) {
+      if (playlist.id !== 'SE' && playlist.id !== 'LM') {
+        YTsubmenuButtons.push({
+          text: playlist.name,
+          icon: playlist.img,
+          action: async () => {
+            for (const song of tracks.songs) {
+              await ipcRenderer.invoke('AddToYTPlist', playlist.id, song.id);
+            }
+          }
+        });
+      }
+    }
+
+    let menu = [
+      infoContainer,
+      {
+        text: 'Play shuffled',
+        action: async () => {
+          const random = Math.floor(Math.random() * tracks.songs.length);
+          let tracce = [];
+
+          for (const song of tracks.songs) {
+            const item = {
+              title: song.title || '',
+              artist: song.artist.name || '',
+              album: song.album.name || '',
+              img: song.album.thumbnail || '',
+              id: song.id || '',
+              albumID: song.album.id || '',
+              artistID: song.artist.id || ''
+            };
+
+            tracce.push(item);
+          }
+
+          await this.PlayPlaylistSshuffled(tracce, random);
+        }
+      },
+      {
+        text: 'Add to quewe',
+        action: () => {
+          for (const song of tracks.songs) {
+            this.addToQuewe(
+              song.title || '',
+              song.artist.name || '',
+              song.album.name || '',
+              song.album.thumbnail || '',
+              song.id || '',
+              song.artist.id || '',
+              song.album.id || ''
+            );
+          }
+        }
+      },
+      {
+        text: 'Add to playlist',
+        content: submenuButtons
+      },
+      {
+        text: 'Add to YouTube playlist',
+        content: YTsubmenuButtons
+      }
+    ];
+
+    if (data.author === 'By you') {
+      menu.push({
+        text: 'Delete playlist',
+        action: async () => {
+          await ipcRenderer.invoke('DelYTPlaylist', data.id);
+          ReloadLibrary(true);
+        }
+      });
+    }
+
+    return menu;
+  }
+
+  async SpawmMenu(data) {
+    console.log(data);
+    let menu;
+
+    switch (data.type) {
+      case 'song':
+        menu = await this.createSongMenu(data);
+        break;
+      case 'album':
+        menu = await this.createAlbumMenu(data);
+        break;
+      case 'artist':
+        menu = await this.createArtistMenu(data);
+        break;
+      case 'playlist':
+        menu = await this.createPlaylistMenu(data);
+        break;
+      case 'liked':
+        menu = await this.createLikedMenu(data);
+        break;
+      case 'close':
+        menu = this.createCloseMenu();
+        break;
+      case 'quewe':
+        menu = await this.createQueweMenu(data);
+        break;
+      case 'OnlinePlaylist':
+        menu = await this.createOnlinePlaylistMenu(data);
+        break;
+      default:
+        return;
+    }
+
+    ContextMenu.genMenu(menu);
   }
 
   async Createmenu() {

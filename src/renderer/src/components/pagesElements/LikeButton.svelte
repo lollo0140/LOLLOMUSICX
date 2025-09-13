@@ -43,7 +43,7 @@
     event.stopPropagation()
     // Chiamiamo la funzione 'dislikeTrack' dallo store.
     // Questa funzione aggiornerà lo store, e di conseguenza 'isThisTrackLiked' si aggiornerà.
-    await dislikeTrack({ title, artist, album, img })
+    await dislikeTrack({ title, artist, album, img, id })
   }
 </script>
 

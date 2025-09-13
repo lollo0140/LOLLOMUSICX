@@ -1,13 +1,11 @@
-<script>
-  /* eslint-disable prettier/prettier */
+<script>/* eslint-disable prettier/prettier */
   import { slide } from 'svelte/transition'
 
+  let { onclick, id, author, img, name } = $props()
+
   const DEFIMG = new URL('./../../assets/defaultPlaylistCover.png', import.meta.url).href
-
-  let { onclick, index, tracks, name, img } = $props()
-
-  import { onMount } from 'svelte'
   import * as renderer from '../../main.js'
+  import { onMount } from 'svelte'
 
   let Image = $state()
 
@@ -20,22 +18,21 @@
   transition:slide
   oncontextmenu={() =>
     (renderer.default.shared.MenuContent = {
-      type: 'playlist',
-      index,
-      tracks,
-      name,
-      img
+      type: 'OnlinePlaylist',
+      id,
+      img,
+      author: author || 'YouTube'
     })}
   class="albumbutton contextMenu"
-  onclick={() => onclick({ query: index, type: 'playlist' })}
+  onclick={() => onclick({ query: id, type: 'ONplaylist' })}
 >
   <img
+    onerror={() => (Image = DEFIMG)}
     style="object-fit: cover;"
     class="--IMGDATA albumimg"
-    onerror={() => (Image = DEFIMG)}
     src={Image}
     alt=""
   />
   <p class="--PLAYLISTNAMEDATA albumtitle">{name}</p>
-  <p class="albumartist">{tracks.length} tracks</p>
+  <p class="--ARTISTDATA albumartist">{author || ''}</p>
 </button>

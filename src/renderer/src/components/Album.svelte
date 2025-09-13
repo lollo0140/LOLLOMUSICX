@@ -2,136 +2,114 @@
   /* eslint-disable prettier/prettier */
   import { onMount } from 'svelte'
   import * as renderer from '../main.js'
-  import { createEventDispatcher } from 'svelte'
-  const DOWNLOAD = new URL('./../assets/download.png', import.meta.url).href
 
   const ipcRenderer = window.electron.ipcRenderer
 
   import { fade } from 'svelte/transition'
   import SongButton from './pagesElements/SongButton.svelte'
-  import AlbumButton from './pagesElements/AlbumButton.svelte'
   import PlaylistsHeade from './pagesElements/PlaylistsHeade.svelte'
+  import LoadingScreen from './pagesElements/LoadingScreen.svelte'
 
   let { AlbumQuery } = $props()
 
-  const LIKEimg = new URL('../assets/like.png', import.meta.url).href
+  let Alldata = $state()
 
-  // Verifica che AlbumQuery contenga il separatore prima di fare lo split
   let artista = ''
   let nome = ''
   let albumID = $state()
   let Saved = $state(false)
 
-  if (AlbumQuery && AlbumQuery.includes('-')) {
-    try {
-      albumID = AlbumQuery.split('-')[0].trim()
-      artista = AlbumQuery.split('-')[1].trim()
-      nome = AlbumQuery.split('-')[2].trim()
-    } catch {
+  if (AlbumQuery) {
+    const parts = AlbumQuery.split('-')
+    if (parts.length >= 3) {
+      // Assumes format "ID-Artist-Album Name"
+      // Handles hyphens in album name
+      albumID = parts[0].trim()
+      artista = parts[1].trim()
+      nome = parts.slice(2).join('-').trim()
+    } else if (parts.length === 2) {
+      // Assumes format "Artist-Album Name"
       albumID = undefined
-      artista = AlbumQuery.split('-')[0].trim()
-      nome = AlbumQuery.split('-')[1].trim()
+      artista = parts[0].trim()
+      nome = parts[1].trim()
+    } else {
+      // Fallback for single part or empty string
+      albumID = undefined
+      artista = AlbumQuery.trim()
+      nome = ''
     }
   }
 
   let isLoading = $state(true)
-
-  let otherAlbums = $state([])
-  let albumtitle = $state('')
-  let albumimg = $state('')
-  let albumartist = $state('')
-  let AlbumTracks = $state(null)
+  let error = $state(null) // Add error state
 
   let shared = $state()
 
-  let ID = $state()
-
-  let downloadedCounter = $state(0)
 
   onMount(async () => {
+    console.log(albumID)
     shared = renderer.default.shared
 
-    // Carichiamo i dati dell'album
+    // Carichiamo i dati dell'album con logica di retry
     await updateData()
-    await checklike()
-
-    let totalDownload = 0
-
-    for (const item of AlbumTracks) {
-      const data = await ipcRenderer.invoke('SearchLocalSong', item.title, item.artist, item.album)
-      console.log(data)
-      if (data) {
-        totalDownload++
-      }
-    }
-
-    downloadedCounter = totalDownload + '/' + AlbumTracks.length + ' Downloaded'
-
-    // Carichiamo gli altri album dell'artista
-    if (artista) {
-      try {
-        console.log(ID)
-        otherAlbums = await shared.GetTopArtistAlbum(await ID)
-        console.log(otherAlbums)
-      } catch (error) {
-        console.error('Errore nel caricamento degli altri album:', error)
-      }
+    if (!error) {
+      // Only check like if data loaded successfully
+      await checklike()
     }
   })
 
-  async function updateData() {
+  // Helper for delay
+  function delay(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms))
+  }
+
+  async function updateData(maxRetries = 3, retryCount = 0) {
     if (!nome || !artista) {
       isLoading = false
       return
     }
 
-    const localData = await ipcRenderer.invoke('searchLocalAlbum', nome, artista, albumID)
+    error = null // Reset error on new attempt
+    isLoading = true
 
-    console.log(localData)
+    try {
+      const res = await ipcRenderer.invoke('getAlbumDetails', nome, artista, albumID)
 
-    if (localData) {
-      albumimg = localData.img
-      albumtitle = localData.album
-      albumartist = localData.artist
-      ID = localData.artistID
-      AlbumTracks = localData.tracks || []
+      console.log(res);
+      
 
-      console.log('using local data')
-
-      isLoading = false
-    } else {
-      try {
-        const result = await ipcRenderer.invoke('getAlbumDetails', nome, artista, albumID)
-
-        console.log(result)
-        albumimg =
-          result.img[0].url ||
-          result.img[1].url ||
-          result.img[2].url ||
-          result.img[3].url ||
-          result.img
-        albumtitle = result.name
-        albumartist = result.artists[0].name
-        ID = result.artists[0].id
-        AlbumTracks = result.songs.songs
-
-        console.log(AlbumTracks)
-      } catch (error) {
-        console.error("Errore durante il recupero delle informazioni dell'album:", error)
-      } finally {
+      if (res?.id) {
+        Alldata = {
+          name: res.name,
+          id: res.id,
+          artist: {
+            name: res.artist.name,
+            id: res.artist.id
+          },
+          img: res.img,
+          tracks: res.tracks
+        }
+        isLoading = false
+        return // Success, exit function
+      } else {
+        throw new Error('Invalid data received') // Force into catch block for retry
+      }
+    } catch (e) {
+      console.error(`Attempt ${'${retryCount + 1}'} failed:`, e)
+      if (retryCount < maxRetries) {
+        console.log(`Retrying in 3 seconds... (${'${retryCount + 1}'}/${'${maxRetries}'})`)
+        await delay(1000) // Wait 3 seconds
+        await updateData(maxRetries, retryCount + 1) // Retry
+      } else {
+        console.error('All retries failed.')
+        error = "Impossibile caricare i dati dell'album. Riprova più tardi."
         isLoading = false
       }
     }
   }
 
-  const dispatch = createEventDispatcher()
-
-  function CallItem(object) {
-    dispatch('cambia-variabile', object)
-  }
-
   async function checklike() {
-    if (await shared.CheckIfLikedAlbum(albumtitle, albumartist)) {
+    if (await ipcRenderer.invoke('checkIfLikedAlbum', Alldata.artist.name, Alldata.name)) {
       Saved = true
     } else {
       Saved = false
@@ -139,26 +117,40 @@
   }
 
   async function likealbum() {
-    const tracce = []
-
-    for (const song of AlbumTracks) {
-      tracce.push({
-        title: song.title,
-        artist: albumartist,
-        img: albumimg,
-        album: albumtitle,
-        id: song.id,
-        albumid: albumID,
-        artistid: ID
-      })
-    }
-
-    await shared.SaveAlbum(albumtitle, albumartist, albumimg, albumID, ID, tracce)
+    const cleanAlbum = {
+      name: Alldata.name,
+      id: Alldata.id,
+      artist: {
+        name: Alldata.artist.name,
+        id: Alldata.artist.id
+      },
+      img: Alldata.img,
+      tracks: Alldata.tracks.map(track => ({
+        title: track.title,
+        id: track.id,
+        // Add other track properties if needed
+      }))
+    };
+    await ipcRenderer.invoke('LikeAlbum', cleanAlbum)
     checklike()
   }
 
   async function dislikealbum() {
-    await shared.dislikeAlbum(albumtitle, albumartist, albumimg)
+    const cleanAlbum = {
+      name: Alldata.name,
+      id: Alldata.id,
+      artist: {
+        name: Alldata.artist.name,
+        id: Alldata.artist.id
+      },
+      img: Alldata.img,
+      tracks: Alldata.tracks.map(track => ({
+        title: track.title,
+        id: track.id,
+        // Add other track properties if needed
+      }))
+    };
+    await ipcRenderer.invoke('DisLikeAlbum', cleanAlbum)
     checklike()
   }
 
@@ -173,15 +165,15 @@
   async function Play(i) {
     const tracce = []
 
-    for (const song of AlbumTracks) {
+    for (const song of Alldata.tracks) {
       tracce.push({
         title: song.title,
-        artist: albumartist,
-        img: albumimg,
-        album: albumtitle,
+        artist: Alldata.artist.name,
+        img: Alldata.img,
+        album: Alldata.name,
         id: song.id,
-        albumid: albumID,
-        artistid: ID
+        albumid: Alldata.id,
+        artistid: Alldata.artist.id
       })
     }
 
@@ -189,259 +181,75 @@
   }
 
   async function PlayShuffle(i) {
-    await Play(i)
-    shared.ShuffleQuewe()
-  } 
-  
+    const tracce = []
 
+    for (const song of Alldata.tracks) {
+      tracce.push({
+        title: song.title,
+        artist: Alldata.artist.name,
+        img: Alldata.img,
+        album: Alldata.name,
+        id: song.id,
+        albumid: Alldata.id,
+        artistid: Alldata.artist.id
+      })
+    }
 
+    shared.PlayPlaylistSshuffled(tracce, i)
+  }
 </script>
 
 <div style="overflow-x: hidden;">
   {#if isLoading}
-    <p>Loading</p>
+    <LoadingScreen />
   {:else}
     <div transition:fade>
       <PlaylistsHeade
-        Type='album'
-        Tracks={AlbumTracks}
-        img={albumimg}
-        title={albumtitle}
-        artist={albumartist}
+        Type="album"
+        Tracks={Alldata.tracks}
+        img={Alldata.img}
+        title={Alldata.name}
+        artist={Alldata.artist.name}
         playAction={Play}
         playAction2={PlayShuffle}
         dwnAction={undefined}
         likeAction={LikeAction}
         LikeOrPin={Saved}
+        artistId={Alldata.artist.id}
       />
 
       <div id="AlbumSongs">
-        {#if AlbumTracks}
-          {#each AlbumTracks as song, i}
+        {#if Alldata.tracks && Alldata.tracks.length > 0}
+          {#each Alldata.tracks as song, i}
             <SongButton
               songIndex={i}
               title={song.title}
-              album={albumtitle}
-              artist={albumartist}
-              img={albumimg}
+              album={Alldata.name}
+              artist={Alldata.artist.name}
+              img={Alldata.img}
               onclickEvent={Play}
               songID={song.id}
-              artID={ID}
-              albID={albumID}
+              artID={Alldata.artist.id}
+              albID={Alldata.id}
             />
           {/each}
         {:else}
-          <p>Error</p>
+          <p style="text-align: center; color: white;">Nessuna traccia trovata per questo album.</p>
         {/if}
-      </div>
-
-      <div id="Other">
-        <p style="position: absolute; transform:translateY(-50px);">Others by {albumartist}</p>
-
-        <div class="otherAlbums">
-          {#await otherAlbums then result}
-            {#each result.albums as album}
-              <AlbumButton
-                id={album.id}
-                artist={album.artists?.[0]?.name || ''}
-                name={album.name}
-                img={album.img?.[0]?.url ||
-                  album.img?.[1]?.url ||
-                  album.img?.[2]?.url ||
-                  album.img?.[3]?.url ||
-                  album.img?.[4]?.url}
-                OnClick={CallItem}
-                artID={album.artists?.[0]?.id || ''}
-              />
-            {/each}
-          {/await}
-        </div>
       </div>
     </div>
   {/if}
 </div>
 
 <style>
-  .downloadButton {
-    position: absolute;
-    top: 282px;
-    left: 200px;
-
-    width: 50px;
-    height: 50px;
-
-    background: none;
-    border: none;
-    padding: 0px;
-
-    cursor: pointer;
-
-    transition: all 200ms;
-  }
-
-  .downloadButton:hover {
-    transform: scale(1.1);
-  }
-
-  .downloadButton img {
-    width: 50px;
-    height: 50px;
-  }
-
-  .PlistLenght {
-    position: absolute;
-    top: 225px;
-    left: 290px;
-
-    font-size: 40px;
-    font-weight: 800;
-
-    width: 200px;
-
-    text-wrap: none;
-  }
-
-  .PlistDownloadCounter {
-    position: absolute;
-    top: 285px;
-    left: 290px;
-
-    font-size: 25px;
-    font-weight: 800;
-
-    overflow: visible;
-    width: 400px;
-
-    opacity: 0.4;
-  }
-
-  .likeimg {
-    position: relative;
-    margin: 0px;
-
-    width: 50px;
-    height: 50px;
-  }
-
-  #likeAlbum {
-    padding: 0px;
-    border: none;
-    background: none;
-
-    cursor: pointer;
-
-    overflow: hidden;
-
-    width: 50px;
-    height: 50px;
-
-    transition: all 200ms;
-
-    position: absolute;
-
-    left: 60px;
-    top: 285px;
-  }
-
-  #likeAlbum:hover {
-    transform: scale(1.1);
-  }
-
-  .infoContainer {
-    position: absolute;
-
-    width: 100%;
-    height: 100%;
-
-    top: 0px;
-    left: 0px;
-  }
-
-  #albumimg {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-
-    left: 0px;
-    top: 0px;
-
-    object-fit: cover;
-    opacity: 0.4;
-
-    pointer-events: none;
-  }
-
-  #albumtitle {
-    text-wrap: none;
-    text-align: left;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-
-    width: 100%;
-
-    position: absolute;
-    left: 51px;
-    top: -30px;
-
-    font-size: 72px;
-    font-weight: 800;
-    display: block;
-  }
-
-  #albumartist {
-    position: absolute;
-
-    left: 49px;
-    top: 160px;
-
-    z-index: 1;
-
-    font-size: 55px;
-    font-weight: 800;
-
-    opacity: 0.7;
-
-    display: block;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-
-    line-height: 0px;
-  }
-
-  #albumartist:hover {
-    text-decoration: underline;
-  }
-
-  #Other {
-    margin-top: 80px;
-    overflow: hidden;
-  }
-
   #AlbumSongs {
     margin-top: 440px;
     width: 100%;
   }
 
-  header {
-    mask-image: linear-gradient(to bottom, black, transparent);
-    mask-position: center;
-    mask-size: cover;
-
-    overflow-y: hidden;
-
-    position: absolute;
-
-    top: 40px;
-    left: 0px;
-
-    width: 100%;
-
-    height: 545px;
-
-    background: transparent;
-
-    border-radius: 10px;
+  @media only screen and (max-width: 1300px) {
+    #AlbumSongs {
+      margin-top: 30.77vw;
+    }
   }
 </style>

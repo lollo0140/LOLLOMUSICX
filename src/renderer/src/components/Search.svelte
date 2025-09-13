@@ -1,4 +1,5 @@
-<script module>/* eslint-disable prettier/prettier */
+<script module>
+  /* eslint-disable prettier/prettier */
 
   import { ObscureContent } from './../App.svelte'
 
@@ -29,6 +30,8 @@
   import ArtistButton from './pagesElements/ArtistButton.svelte'
   import RecentSearch from './pagesElements/RecentSearch.svelte'
   import SuggestionNutton from './pagesElements/SuggestionNutton.svelte'
+  import OnlinePlaylistButton from './pagesElements/OnlinePlaylistButton.svelte'
+  import LoadingScreen from './pagesElements/LoadingScreen.svelte'
 
   const dispatch = createEventDispatcher()
   let { pagindex } = $props()
@@ -95,7 +98,21 @@
   }
 
   async function Play(index) {
-    shared.PlayPlaylistS(songs, index)
+    const tracce = []
+
+    for (const song of songs) {
+      tracce.push({
+        title: song.title,
+        artist: song.artist.name,
+        img: song.album.thumbnail,
+        album: song.album.name,
+        id: song.id,
+        albumid: song.album.id,
+        artistid: song.artist.id
+      })
+    }
+
+    shared.PlayPlaylistS(tracce, index)
   }
 
   async function PlayYT(index) {
@@ -173,22 +190,22 @@
           {#if !loading}
             <div transition:fade id="searchResult">
               {#await searchResoult}
-                <p>loading...</p>
+                <LoadingScreen />
               {:then result}
                 <button class="closeButton" onclick={closeSearch}>close search</button>
 
-                <h1>Brani</h1>
+                <h1>Tracks</h1>
                 {#if songs && songs.length > 0}
                   {#each songs as item, i}
                     <SongButton
                       albID={item.album.id}
-                      artID={item.artists?.[0]?.id || ''}
+                      artID={item.artist?.id || ''}
                       songID={item.id}
                       songIndex={i}
                       title={item.title}
                       album={item.album.name}
-                      artist={item.artists?.[0]?.name || ''}
-                      img={item.thumbnails?.high ? item.thumbnails.album : defSongPng}
+                      artist={item.artist?.name || ''}
+                      img={item.album.thumbnail}
                       onclickEvent={Play}
                     />
                   {/each}
@@ -196,7 +213,7 @@
                   <p>Nessun brano trovato</p>
                 {/if}
 
-                <h1>video</h1>
+                <h1>Videos</h1>
                 {#if result.canzoniYT && result.canzoniYT.length > 0}
                   {#each result.canzoniYT as item, i}
                     {#if item.title}
@@ -222,34 +239,44 @@
                   {#each albums as item}
                     <AlbumButton
                       id={item.id}
-                      artist={item.artists?.[0]?.name || ''}
+                      artist={item.artist?.name || ''}
                       name={item.name}
-                      img={item.img?.[0]?.url ||
-                        item.img?.[1]?.url ||
-                        item.img?.[2]?.url ||
-                        item.img?.[3]?.url ||
-                        item.img?.[4]?.url ||
-                        defSongPng}
+                      img={item.img}
                       OnClick={CallItem}
-                      artID={item.artists?.[0]?.id || ''}
+                      artID={item.artist?.id || ''}
                     />
                   {/each}
                 {:else}
-                  <p>Nessun album trovato</p>
+                  <p></p>
                 {/if}
 
-                <h1>Artisti</h1>
+                <h1>Artists</h1>
                 {#if result.artists && result.artists.length > 0}
                   {#each result.artists as item}
                     <ArtistButton
                       id={item.id}
                       name={item.name}
-                      img={item.image || defSongPng}
+                      img={item.img || defSongPng}
                       OnClick={CallItem}
                     />
                   {/each}
                 {:else}
-                  <p>Nessun artista trovato</p>
+                  <p></p>
+                {/if}
+
+                <h1>Playlists by the comunity</h1>
+                {#if result.Playlists.playlists && result.Playlists.playlists.length > 0}
+                  {#each result.Playlists.playlists as item}
+                    <OnlinePlaylistButton
+                      onclick={CallItem}
+                      id={item.id}
+                      author={item.author}
+                      img={item.img}
+                      name={item.name}
+                    />
+                  {/each}
+                {:else}
+                  <p></p>
                 {/if}
               {/await}
             </div>
@@ -283,7 +310,6 @@
   }
 
   .searchDiv {
-
     z-index: 99;
 
     position: fixed;

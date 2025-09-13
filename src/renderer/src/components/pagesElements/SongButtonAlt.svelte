@@ -1,10 +1,8 @@
-<script>
-  /* eslint-disable prettier/prettier */
+<script>/* eslint-disable prettier/prettier */
 
   const ipcRenderer = window.electron.ipcRenderer
 
-  import IsLocal from './IsLocal.svelte'
-  import LikeButton from './LikeButton.svelte'
+
 
   import * as renderer from '../../main.js'
   import { slide } from 'svelte/transition'
@@ -16,7 +14,6 @@
   import { CURRENTSONG } from './ElementsStores/CurrentPlayng.js'
 
   let local = $state(false)
-
 
   let {
     songIndex,
@@ -30,9 +27,7 @@
     songID,
     albID,
     artID,
-    YTremovable = false,
-    PlaylistID,
-    setvideoid
+    YTremovable
   } = $props()
 
   let currentIMG = $state(img)
@@ -77,11 +72,11 @@
   id="pulsante"
   onclick={() => onclickEvent(songIndex)}
   style="width: 100%; {matching
-    ? 'transform: translateX(50px); mask-image: url(' + gradient + ');'
-    : 'transform: translateX(0px);'} {local === false && navigator.onLine === false
+    ? 'transform: translateY(-10px); mask-image: url(' + gradient + ');'
+    : 'transform: translateY(0px);'} {local === false && navigator.onLine === false
     ? 'opacity:0.3; pointer-events:none;'
     : ''}"
-  class="bottone contextMenu"
+  class="albumbutton contextMenu"
   oncontextmenu={() =>
     (renderer.default.shared.MenuContent = {
       type: 'song',
@@ -96,47 +91,16 @@
       songID,
       albID,
       artID,
-      YTremovable,
-      PlaylistID,
-      setvideoid
+      YTremovable
     })}
 >
-  <div class="ButContentContainer">
-    <img
-      src={currentIMG}
-      onerror={(currentIMG = DEFIMG)}
-      class=" imgCanzone"
-      alt={title || 'Copertina brano'}
-    />
-    <p class="titolo">{title}</p>
-    <p class="artista">{artist}</p>
-    <p class=" songalbum">{album || title}</p>
-
-    <p class="SongIndex">{songIndex + 1}</p>
-  </div>
-  <div class="albButtonContainer">
-    <LikeButton {title} {artist} {album} {img} video={false} id={songID} {albID} {artID} />
-    <IsLocal {local} />
-  </div>
+  <img
+    src={currentIMG}
+    onerror={(currentIMG = DEFIMG)}
+    class="albumimg"
+    alt={title || 'Copertina brano'}
+  />
+  <p class="albumtitle">{title}</p>
+  <p class="albumartist">{artist}</p>
 </button>
 
-<style>
-  .ButContentContainer {
-    pointer-events: none;
-
-    position: relative;
-
-    left: 0px;
-
-    top: -12px;
-
-    width: 100%;
-    height: 100%;
-  }
-
-  .bottone {
-    mask-position: center;
-    mask-repeat: no-repeat;
-    mask-size: cover;
-  }
-</style>

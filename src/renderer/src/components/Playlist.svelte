@@ -3,13 +3,10 @@
   import { onMount } from 'svelte'
   import * as renderer from '../main.js'
 
-  import SongButton from './pagesElements/SongButton.svelte'
+  let editablename = $state()
+  let editableimg = $state()
 
-  const DOWNLOAD = new URL('./../assets/download.png', import.meta.url).href
-  const PIN = new URL('./../assets/pin.png', import.meta.url).href
-  const PLAY = new URL('./../assets/play.png', import.meta.url).href
-  const PLAYSHUFFLED = new URL('./../assets/shuffle.png', import.meta.url).href
-  const EDIT = new URL('./../assets/edit.png', import.meta.url).href
+  import SongButton from './pagesElements/SongButton.svelte'
 
   let PlaylistIndex
 
@@ -17,16 +14,18 @@
 
   let loading = $state(true)
 
-  let imgurl = $state()
-
   let Playlist = $state()
 
   export async function ReloadPlaylist() {
+    loading = true
     const data = await shared.ReadPlaylist()
 
     Playlist = data[PlaylistIndex]
 
-    imgurl = Playlist.img
+    editablename = Playlist.name
+    editableimg = Playlist.img
+
+    loading = false
   }
 
   const ipcRenderer = window.electron.ipcRenderer
@@ -35,14 +34,9 @@
 <script>
   import { fade } from 'svelte/transition'
   import PlaylistsHeade from './pagesElements/PlaylistsHeade.svelte'
+  import LoadingScreen from './pagesElements/LoadingScreen.svelte'
+  import PlaylistEditPannel from './pagesElements/PlaylistEditPannel.svelte'
   let { Pindex } = $props()
-
-  let editablename = $state()
-  let editableimg = $state()
-
-  let downloadedCounter = $state(0)
-
-  let EditorShowing = $state(false)
 
   let mainContainer = $state()
   //import { createEventDispatcher } from 'svelte'
@@ -61,21 +55,8 @@
 
     Pinned = Playlist.pinned
 
-    imgurl = Playlist.img
     editablename = Playlist.name
     editableimg = Playlist.img
-
-    let totalDownload = 0
-
-    for (const item of Playlist.tracks) {
-      const data = await ipcRenderer.invoke('SearchLocalSong', item.title, item.artist, item.album)
-      console.log(data)
-      if (data) {
-        totalDownload++
-      }
-    }
-
-    downloadedCounter = totalDownload + '/' + Playlist.tracks.length + ' Downloaded'
 
     loading = false
   })
@@ -98,24 +79,25 @@
     shared.PlayPlaylistS(tracce, index)
   }
 
-  async function editname() {
-    ipcRenderer.invoke('editPlaylist', editablename, undefined, PlaylistIndex)
-  }
-
-  async function editimg() {
-    const path = await ipcRenderer.invoke('immageSelector')
-
-    editableimg = 'local:///' + path
-
-    ipcRenderer.invoke('editPlaylist', undefined, editableimg, PlaylistIndex)
-  }
-
   async function PlayTraksShuffled(i) {
-    await PlayTraks(i)
-    shared.ShuffleQuewe()
+    let tracce = []
+
+    for (const song of Playlist.tracks) {
+      tracce.push({
+        title: song.title,
+        artist: song.artist,
+        img: song.img,
+        album: song.album,
+        id: song.id,
+        albumid: song.albID,
+        artistid: song.artID
+      })
+    }
+
+    shared.PlayPlaylistSshuffled(tracce, i)
   }
 
-  const PIN = async (params) => {
+  const PIN = async () => {
     if (Pinned) {
       ipcRenderer.invoke('UnpinPlaylists', PlaylistIndex)
     } else {
@@ -142,6 +124,14 @@
           LikeOrPin={Pinned}
         />
 
+        <PlaylistEditPannel
+          type="local"
+          name={editablename}
+          playlistIndex={Pindex}
+          img={editableimg}
+          reloadFunc={ReloadPlaylist}
+        />
+
         <div class="Ptracksdiv">
           {#if Playlist.tracks.length > 0}
             {#each Playlist.tracks as song, i}
@@ -160,158 +150,43 @@
               />
             {/each}
           {:else}
-            <p>This playlist is empty</p>
+            <p class="emptyText">This playlist is empty</p>
           {/if}
         </div>
-
-        <button
-          class="editButton"
-          onclick={() => {
-            EditorShowing = true
-            mainContainer.style.opacity = '0.6'
-          }}
-        >
-          <img src={EDIT} alt="Edit" />
-        </button>
       </div>
-
-      {#if EditorShowing}
-        <div transition:fade={{duration: 200}} class="Editor">
-          <div class="EditorInner">
-            <input class="editName" oninput={ () => editname()} type="text" bind:value={editablename} />
-            <button onclick={() => editimg()} class="editIMG">
-              <img src={editableimg} alt="">
-            </button>
-
-            <button class="clsButto"
-              onclick={() => {
-                EditorShowing = false
-                mainContainer.style.opacity = '1'
-              }}>X</button
-            >
-          </div>
-        </div>
-      {/if}
     </div>
   {:else}
-    <p>loading...</p>
+    <LoadingScreen />
   {/if}
 </div>
 
 <style>
 
-  .clsButto {
-    background-color: transparent;
-    border: none;
-
-    font-size: 20px;
+  .emptyText{
     font-weight: 900;
-
-    cursor: pointer;
+    font-size: 24px;
 
     position: absolute;
 
+    opacity: 0.4;
+
+    left: 0px;
     right: 0px;
 
-    opacity: 0.5;
-
-    transition: all 200ms;
-  }
-
-  .clsButto:hover {
-    transform: scale(1.1);
-    opacity: 1;
-  }
-
-  .editName {
-    position: absolute;
-
-    top: 30px;
-
-    left: 21px;
-    right: 21px;
-
-    outline: none;
-
-    border: 1px solid rgba(255, 255, 255, 0.356);
-    background-color: transparent;
-
-    border-radius: 7px;
-
     text-align: center;
-    font-weight: 800;
-
-    font-size: 30px;
-  }
-
-  .editIMG {
-
-    cursor: pointer;
-
-    border-radius: 7px;
-    border: 1px solid rgba(255, 255, 255, 0.356);
-
-    background: transparent;
-
-    overflow: hidden;
-
-    top: 80px;
-
-    left: 21px;
-    right: 21px;
-
-    position: absolute;
-
-    padding: 0px;
-  }
-
-  .editIMG img {
-    width: 100%;
-    height: 100%;
-
-    object-fit: cover;
   }
 
   div {
     transition: all 200ms;
   }
 
-  .Editor {
-    position: absolute;
-    top: 40px;
-    left: 0px;
-    right: 0px;
-    bottom: 0px;
-
-    backdrop-filter: blur(10px);
-  }
-
   .Ptracksdiv {
     margin-top: 440px;
   }
 
-  .editButton {
-    position: absolute;
-
-    top: 100px;
-    right: 51px;
-
-    width: 60px;
-    height: 60px;
-
-    padding: 0px;
-
-    border: none;
-    background: none;
-
-    transition: all 200ms;
-
-    cursor: pointer;
-
-    opacity: 0.5;
-  }
-
-  .editButton img {
-    height: 100%;
+  @media only screen and (max-width: 1300px) {
+    .Ptracksdiv {
+      margin-top: 30.77vw;
+    }
   }
 </style>

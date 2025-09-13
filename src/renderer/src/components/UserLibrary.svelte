@@ -1,4 +1,5 @@
-<script module>/* eslint-disable prettier/prettier */
+<script module>
+  /* eslint-disable prettier/prettier */
   import { onMount } from 'svelte'
   import * as renderer from '../main.js'
   import { createEventDispatcher } from 'svelte'
@@ -6,66 +7,141 @@
   import AlbumButton from './pagesElements/AlbumButton.svelte'
   import ArtistButton from './pagesElements/ArtistButton.svelte'
   import PlaylistButton from './pagesElements/PlaylistButton.svelte'
+  import LoadingScreen from './pagesElements/LoadingScreen.svelte'
+  import OnlinePlaylistButton from './pagesElements/OnlinePlaylistButton.svelte'
+  import NewPlaylistPannel from './pagesElements/NewPlaylistPannel.svelte'
+  const ipcRenderer = window.electron.ipcRenderer
+
+  const NEW = new URL('../assets/new.png', import.meta.url).href
 
   let shared
 
+  let playlists = $state()
+  let Savedplaylists = $state()
   let albums = $state()
   let artists = $state()
 
-  let playlists = $state()
-
   let loading = $state(true)
 
-  let creatingPlist = $state(false)
+  let YTdata = $state()
+
+  let library = $state()
+
+  let pannelType = $state('local')
+
+  let SelectorButton1 = $state()
+  let SelectorButton2 = $state()
+  let SelectorButton3 = $state()
+
+  let NewMiniMenu = $state(false)
+  let NewMenu = $state(false)
+
+  let NewMenuobj = $state()
+  let MiniNewMenuobj = $state()
+
+  let currentShowing = $state('all')
 
   //let playlists = []
 
+  export async function ReloadLibrary(yt = false) {
+    try {
+      loading = true
 
+      shared = renderer.default.shared
 
-  export async function ReloadLibrary() {
-    albums = await shared.GetLikedAlbums()
-    artists = await shared.GetLikedArtists()
+      //albums = await shared.GetLikedAlbums()
+      //artists = await shared.GetLikedArtists()
 
-    playlists = await shared.ReadPlaylist()
+      playlists = await shared.ReadPlaylist()
+      Savedplaylists = await ipcRenderer.invoke('GetSavedPlaylist')
+      console.log(Savedplaylists)
+
+      albums = await ipcRenderer.invoke('getLikedAlbums')
+      artists = await ipcRenderer.invoke('getLikedArtists')
+
+      if (yt) {
+        YTdata = await ipcRenderer.invoke('GetYTLybrary')
+      }
+
+      //console.log(albums);
+      //console.log(artists);
+
+      NewMiniMenu = false
+      NewMenu = false
+
+      loading = false
+    } catch {
+      if (playlists && playlists) {
+        loading = false
+      }
+    }
   }
 
+  export function OpenNewMenu(type = undefined) {
+    pannelType = type
+    NewMenu = !NewMenu
+    //NewMiniMenu = false
+
+    if (NewMenu) {
+      library.style.opacity = '0.4'
+
+      NewMenuobj.style.position = 'fixed'
+      NewMenuobj.style.transform = 'translate(-50%, -50%)'
+      NewMenuobj.style.width = '424px'
+      NewMenuobj.style.height = '481px'
+
+      NewMenuobj.style.left = '50%'
+      NewMenuobj.style.top = '50%'
+
+      MiniNewMenuobj.style.opacity = '0'
+      MiniNewMenuobj.style.pointerEvents = 'none'
+    } else {
+      library.style.opacity = '1'
+
+      NewMenuobj.style.position = 'absolute'
+      NewMenuobj.style.transform = 'translate(0px, 0px)'
+      NewMenuobj.style.width = '222px'
+      NewMenuobj.style.height = '40px'
+
+      NewMenuobj.style.left = '217px'
+      NewMenuobj.style.top = '40px'
+
+      MiniNewMenuobj.style.opacity = '1'
+      MiniNewMenuobj.style.pointerEvents = 'all'
+    }
+  }
+
+  export async function GetLib() {
+    if (YTdata?.playlists && playlists) {
+      return {
+        YTplaylists: YTdata.playlists,
+        albums: albums,
+        artists: YTdata.artists
+      }
+    } else {
+      await ReloadLibrary(true)
+
+      return {
+        YTplaylists: YTdata.playlists,
+        albums: albums,
+        artists: YTdata.artists
+      }
+    }
+  }
 </script>
 
 <script>
-  const LIKE = new URL('../assets/LikePlaylistCover.png', import.meta.url).href
-  const DEFIMG = new URL('../assets/defaultSongCover.png', import.meta.url).href
-  const closeX = new URL('../assets/other/exit.png', import.meta.url).href
-
-  let imageSrc = $state(DEFIMG)
-
   onMount(async () => {
-    loading = true
-    shared = renderer.default.shared
+    for (let index = 0; index < 3; index++) {
+      try {
+        await ReloadLibrary(true)
+        break
+      } catch (err) {
+        console.log(err)
+      }
 
-    albums = await shared.GetLikedAlbums()
-    artists = await shared.GetLikedArtists()
-
-    playlists = await shared.ReadPlaylist()
-
-    //console.log(albums);
-    //console.log(artists);
-
-    loading = false
-  })
-
-  $effect(async () => {
-    loading = true
-    shared = renderer.default.shared
-
-    albums = await shared.GetLikedAlbums()
-    artists = await shared.GetLikedArtists()
-
-    playlists = await shared.ReadPlaylist()
-
-    //console.log(albums);
-    //console.log(artists);
-
-    loading = false
+      ShowOnly()
+    }
   })
 
   const dispatch = createEventDispatcher()
@@ -74,97 +150,285 @@
     dispatch('cambia-variabile', object)
   }
 
-  async function CreatePlaylist() {
-    const NewPlaylistimg = document.getElementById('NewPlaylistimg')
-    const NewPlaylistTitle = document.getElementById('NewPlaylistTitle')
+  function ShowOnly(type) {
+    const elements = document.querySelectorAll('.playlist, .album, .artist')
+    const typeToShow = document.querySelectorAll(`.${type}`)
 
-    shared.CreatePlaylist(NewPlaylistTitle.value, NewPlaylistimg.src)
+    const Hide = (element) => {
+      element.style.position = 'absolute'
+      element.style.opacity = '0'
+      element.style.pointerEvents = 'none'
+    }
 
-    playlists = await shared.ReadPlaylist()
+    const Show = (element) => {
+      element.style.position = 'static'
+      element.style.opacity = '1'
+      element.style.pointerEvents = 'all'
+    }
 
-    creatingPlist = false
+    if (currentShowing === type) {
+      // Se il tipo è già attivo, mostra tutto
+      for (const element of elements) {
+        Show(element)
+      }
+      currentShowing = 'all'
+    } else {
+      // Altrimenti, nascondi tutti e mostra solo il tipo specificato
+      for (const element of elements) {
+        Hide(element)
+      }
+      for (const element of typeToShow) {
+        Show(element)
+      }
+      currentShowing = type
+    }
   }
 
-  async function ChoseImg() {
-    const imgpath = await shared.SelectFile()
-    imageSrc = `local:///` + imgpath
+  function CloseButton() {
+    if (!NewMenu) {
+      NewMiniMenu = !NewMiniMenu
+    } else {
+      OpenNewMenu()
+      NewMiniMenu = false
+    }
   }
 </script>
 
 <div>
   {#if !loading}
     <div in:fade>
-      <p>Playlists</p>
+      <div>
+        <div style="display: flex;">
+          <button
+            onclick={() => ShowOnly('playlist')}
+            bind:this={SelectorButton1}
+            class="CtypeSelector">Playlists</button
+          >
 
-      <div class="playlists">
-        <button
-          type="button"
-          class="albumbutton contextMenu"
-          onclick={() => CallItem({ query: '', type: 'liked' })}
-          oncontextmenu={() => (renderer.default.shared.MenuContent = { type: 'liked', img: LIKE })}
-        >
-          <img style="object-fit: cover;" class="--IMGDATA albumimg" src={LIKE} alt="img" />
-          <p class="--PLAYLISTNAMEDATA albumtitle">Liked</p>
-          <p class="--PLAYLISTINDEXDATA">0</p>
-        </button>
+          <button
+            onclick={() => ShowOnly('album')}
+            bind:this={SelectorButton2}
+            class="CtypeSelector">Album</button
+          >
 
-        {#each playlists as item, i}
-          <PlaylistButton
-            onclick={CallItem}
-            index={i}
-            tracks={item.tracks}
-            name={item.name}
-            img={item.img}
-          />
-        {/each}
+          <button
+            onclick={() => ShowOnly('artist')}
+            bind:this={SelectorButton3}
+            class="CtypeSelector">Artists</button
+          >
 
-        <div class="NewPlaylistButton">
-          {#if creatingPlist}
-            <div in:fade class="PlaylistCreator">
-              <img id="NewPlaylistimg" src={imageSrc} alt="" />
-              <button class="NewPlaylistChangeimage" type="button" onclick={() => ChoseImg()}>
-                change image
-              </button>
-              <input id="NewPlaylistTitle" type="text" />
+          <div
+            bind:this={NewMenuobj}
+            class="New"
+            style={NewMiniMenu ? 'width:222px;' : 'width:40px;'}
+          >
+            <button class="newButton" onclick={() => CloseButton()}>
+              <img style={NewMiniMenu ? 'transform: rotateZ(45deg);' : ''} src={NEW} alt="" />
+            </button>
 
-              <button class="NewPlaylistclose" onclick={() => (creatingPlist = false)}>
-                <img class="dwpCloseImg" src={closeX} alt="asdqas" />
-              </button>
-              <button class="NewPlaylistDone" onclick={() => CreatePlaylist()}>Done</button>
+            <div
+              bind:this={MiniNewMenuobj}
+              style={!NewMiniMenu ? 'opacity:0; pointer-events: none;' : ''}
+              class="newMiniMenu"
+            >
+              <button onclick={() => OpenNewMenu('local')} class="MiniMenuButtons">Local</button>
+              <button onclick={() => OpenNewMenu('youtube')} class="MiniMenuButtons">Youtube</button
+              >
+              <button onclick={() => OpenNewMenu('import')} class="MiniMenuButtons">Import</button>
             </div>
-          {:else}
-            <button in:fade onclick={() => (creatingPlist = true)} class="albumbutton">+</button>
-          {/if}
+
+            {#if NewMenu}
+              <NewPlaylistPannel type={pannelType} />
+            {/if}
+          </div>
         </div>
       </div>
 
-      <p>Albums</p>
+      <div bind:this={library} class="container">
+        {#if playlists}
+          {#each playlists as item, i}
+            <div class="playlist">
+              <PlaylistButton
+                onclick={CallItem}
+                index={i}
+                tracks={item.tracks}
+                name={item.name}
+                img={item.img}
+              />
+            </div>
+          {/each}
+        {/if}
 
-      <div class="likedAlbums">
-        {#each albums as album}
-          <AlbumButton
-            id={album.id}
-            artist={album.artist}
-            name={album.album}
-            img={album.img}
-            OnClick={CallItem}
-            artID={album.artistID}
-          />
+        {#if Savedplaylists}
+          {#each Savedplaylists as item}
+            <div class="playlist">
+              <OnlinePlaylistButton
+                onclick={CallItem}
+                id={item.info.id}
+                author={item.info.author || ''}
+                img={item.info.img}
+                name={item.info.title}
+              />
+            </div>
+          {/each}
+        {/if}
+
+        {#if YTdata}
+          {#each YTdata.playlists as item}
+            {#if item.id !== 'SE'}
+              <div class="playlist">
+                <OnlinePlaylistButton
+                  onclick={CallItem}
+                  id={item.id}
+                  author={item.author}
+                  img={item.img}
+                  name={item.name}
+                />
+              </div>
+            {/if}
+          {/each}
+        {/if}
+
+        {#each albums as item}
+          <div class="album">
+            <AlbumButton
+              id={item.id}
+              artist={item.artist?.name || ''}
+              name={item.name}
+              img={item.img}
+              OnClick={CallItem}
+              artID={item.artist?.id || ''}
+            />
+          </div>
         {/each}
-      </div>
 
-      <p>Artists</p>
-
-      <div class="likedArtists">
-        {#each artists as artist}
-          <ArtistButton id={artist.id} name={artist.artist} img={artist.img} OnClick={CallItem} />
+        {#each artists as item}
+          <div class="artist">
+            <ArtistButton id={item.id} name={item.artist} img={item.img} OnClick={CallItem} />
+          </div>
         {/each}
       </div>
     </div>
   {:else}
-    <p>Loading</p>
+    <LoadingScreen />
   {/if}
 </div>
 
 <style>
+  .MiniMenuButtons {
+    background: var(--main-bg);
+    border: var(--main-border);
+    border-radius: 9px;
+
+    padding: 4px;
+    margin-top: 5px;
+    margin-bottom: 5px;
+    margin-right: 5px;
+
+    cursor: pointer;
+    transition: all 200ms;
+  }
+
+  .MiniMenuButtons:hover {
+    background: rgba(255, 255, 255, 0.3);
+  }
+
+  .CtypeSelector {
+    border-radius: 9px;
+    height: 42px;
+
+    padding-left: 10px;
+    padding-right: 10px;
+    margin-top: 3px;
+    margin-bottom: 5px;
+
+    background: var(--main-bg);
+    border: var(--main-border);
+    cursor: pointer;
+
+    transition: all 200ms;
+
+    margin-right: 5px;
+  }
+
+  .CtypeSelector:hover {
+    background: rgba(255, 255, 255, 0.3);
+  }
+
+  .container {
+    width: 100%;
+
+    overflow-x: hidden;
+
+    flex-wrap: wrap;
+    display: flex;
+  }
+
+  .newButton {
+    background: transparent;
+    border: none;
+
+    position: absolute;
+
+    border-radius: 8px;
+
+    height: 40px;
+    width: 40px;
+
+    cursor: pointer;
+
+    transition: all 200ms;
+  }
+
+  .newButton:hover {
+    background: rgba(255, 255, 255, 0.3);
+  }
+
+  .newButton img {
+    position: relative;
+
+    width: 100%;
+
+    padding: 0px;
+
+    top: 2px;
+
+    transition: all 200ms;
+  }
+
+  .New {
+    margin-bottom: 5px;
+
+    position: absolute;
+
+    left: 217px;
+    top: 40px;
+
+    background: var(--main-bg);
+    border: var(--main-border);
+
+    height: 40px;
+
+    transition: all 600ms;
+
+    border-radius: 9px;
+
+    width: 222px;
+
+    z-index: 9999;
+
+    display: flex;
+
+    backdrop-filter: blur(20px);
+
+    overflow: hidden;
+  }
+
+  .newMiniMenu {
+    display: flex;
+    flex-wrap: nowrap;
+    margin-left: 41px;
+
+    transition: all 200ms;
+  }
 </style>

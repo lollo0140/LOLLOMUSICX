@@ -1,16 +1,20 @@
-<script>/* eslint-disable prettier/prettier */
-  import { createEventDispatcher } from 'svelte'
+<script>
+  /* eslint-disable prettier/prettier */
   import { onMount } from 'svelte'
   import * as renderer from '../main.js'
 
   import { fade } from 'svelte/transition'
-  import ArtistShowcase from './pagesElements/ArtistShowcase.svelte'
+  import HomeStrip from './pagesElements/HomeStrip.svelte'
+  import LoadingScreen from './pagesElements/LoadingScreen.svelte'
+
+  const ipcRenderer = window.electron.ipcRenderer
 
   let loading = $state(true)
   let shared
   let welcome = $state()
 
   let data = $state()
+  let accountinfo = $state()
 
   onMount(async () => {
     shared = renderer.default.shared
@@ -28,50 +32,66 @@
     }
 
     data = await shared.loadHomePage()
+    accountinfo = await ipcRenderer.invoke('GetAccountInfo')
 
     console.log(data)
 
     loading = false
   })
-
-  const dispatch = createEventDispatcher()
-
-  function CallItem(object) {
-    dispatch('cambia-variabile', object)
-  }
 </script>
 
 <div>
   {#if loading === false}
     <div transition:fade>
-      <p id="welcome">{welcome}</p>
-
-      <p class="homelabel">Rapid picks</p>
-
-      <div id="recentlyPlayed">
-        {#each data.albums as album}
-          <button
-            class="recentElement contextMenuHomeCards"
-            onclick={() => CallItem({ query: album.artist + ' - ' + album.album, type: 'album' })}
-          >
-            <img class="--IMGDATA recentIMG" src={album.img} alt="img" />
-            <p class="--ALBUMDATA recentTitle">{album.album}</p>
-            <br />
-            <p class="--ARTISTDATA recentART">{album.artist}</p>
-          </button>
-        {/each}
+      <div>
+        <p id="welcome">{welcome}</p>
+        <p id="username">{accountinfo?.accountName}</p>
+        <img id="profile" src={accountinfo?.accountPhotoUrl} alt="" />
       </div>
 
-      <p class="homelabel" style="transform:translateY(60px);">Content you might like</p>
-
-      {#each data.similarArtist as artist}
-
-        <ArtistShowcase {artist} onclick={CallItem}/>
-
-       
+      {#each data as strip}
+        <HomeStrip data={strip} />
       {/each}
     </div>
   {:else}
-    <p>caricamento...</p>
+    <LoadingScreen />
   {/if}
 </div>
+
+<style>
+  #username {
+    margin-top: -60px;
+    margin-left: 103px;
+
+    margin-bottom: 300px;
+
+    font-size: 45px;
+    font-weight: 700;
+
+    opacity: 0.5;
+  }
+
+  #profile {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+
+    position: absolute;
+
+    top: 205px;
+    left: 37px;
+    background: var(--main-bg);
+    border: var(--main-border);
+    opacity: 0.5;
+  }
+
+  #welcome {
+    font-size: 78px;
+    font-weight: 900;
+    color: #fff;
+
+    line-height: 70px;
+
+    margin-left: 35px;
+  }
+</style>

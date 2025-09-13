@@ -9,13 +9,19 @@ import { Innertube } from 'youtubei.js'
 const sharp = require('sharp')
 import fetch from 'node-fetch'
 import { ytUrls } from './yt-urls.js'
-import { lollomusicapi } from './lollomusicapi.js'
+import { lollomusicxapi } from './lollomusicxapi.js'
 const ytmusicApi = require('ytmusic-api')
 const ytm = new ytmusicApi()
 import { WindowManager } from './WindowManager.js'
 const WinTransitions = new WindowManager()
-const LolloMusicApi = new lollomusicapi()
+const LolloMusicApi = new lollomusicxapi()
 import RPC from 'discord-rpc'
+import { chromium } from 'playwright'
+
+import { LMAPI } from 'lollomusic-api';
+
+
+
 
 app.setAppUserModelId('com.lorenzo.lollomusicx')
 
@@ -61,10 +67,9 @@ if (!fs.existsSync(dataFolder)) {
   fs.mkdirSync(dataFolder, { recursive: true })
 }
 
-let HomeScreen
-
 // Definisci i percorsi dei file
 let LikedsongsPath = path.join(dataFolder, 'liked.json')
+let YoutubeLikedList = path.join(dataFolder, 'likedYT.json')
 let LikedalbumsPath = path.join(dataFolder, 'likedalbums.json')
 let LikedartistsPath = path.join(dataFolder, 'likedartists.json')
 let recentListens = path.join(dataFolder, 'recent.json')
@@ -74,8 +79,105 @@ let SettingsPath = path.join(dataFolder, 'Settings.json')
 let localDataDir = path.join(dataFolder, 'LocalData')
 let LastListened = path.join(dataFolder, 'LastListened.json')
 let SavedHomeScreen = path.join(dataFolder, 'SavedHomeScreen.json')
+let SavedPlaylist = path.join(dataFolder, 'SavedPlaylist.json')
 
 console.log(SettingsPath)
+
+
+var LMapi
+
+ipcMain.handle('initlollomusicApi', async () => {
+
+
+
+  const OpenBrowser = async () => {
+
+    const browser = await chromium.launch({
+      headless: false,
+      args: ['--disable-blink-features=AutomationControlled']
+    })
+
+    const context = await browser.newContext({
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+    })
+
+    const page = await context.newPage()
+    const interceptedData = []
+    let found = false
+
+    page.route('**/*', async (route, request) => {
+      if (request.url().includes('log_event?alt=json')) {
+
+        const headers = await request.allHeaders()
+        const data = {
+          url: request.url(),
+          method: request.method(),
+          headers: headers,
+          cookie: headers['cookie'], // Aggiunto il cookie
+          timestamp: Date.now()
+        }
+
+        interceptedData.push(data)
+        console.log('🎯 INTERCEPTED LOG_EVENT REQUEST:', request.url())
+
+        // Salva immediatamente
+        require('fs').writeFileSync('playwright-headers.json', JSON.stringify(interceptedData, null, 2))
+
+        found = true
+      }
+
+      await route.continue()
+    })
+
+    await page.goto('https://music.youtube.com')
+    await page.waitForURL('**/music.youtube.com/**', { timeout: 300000 })
+
+    while (!found) {
+      await new Promise(resolve => setTimeout(resolve, 100))
+    }
+
+    await browser.close()
+    return interceptedData
+
+  }
+
+  const ConsolidateHeaders = async (headers) => {
+    return Object.entries(headers)
+      .map(([key, value]) => `${key}: ${value}`)
+      .join('\n');
+  }
+
+  const fullPath = join(dataFolder, 'LMAPIDATA')
+  console.log('Percorso completo:', fullPath);
+  console.log('Esiste?', fs.existsSync(fullPath));
+
+  if (fs.existsSync(fullPath)) {
+
+    LMapi = await new LMAPI({
+      workspace: dataFolder,
+    })
+    LMapi.inizialize()
+
+  } else {
+
+    const response = await OpenBrowser()
+    const header = response[0].headers
+    const Raw = await ConsolidateHeaders(header)
+
+    LMapi = await new LMAPI({
+      workspace: dataFolder,
+      header: Raw
+    })
+    LMapi.inizialize()
+
+  }
+
+  setTimeout(() => {
+    return true
+  }, 1000);
+
+})
+
 
 // Assicurati che la directory LocalData esista
 if (!fs.existsSync(localDataDir)) {
@@ -131,7 +233,8 @@ function initializeConfigFiles() {
     { path: recentSearchs, defaultValue: {} },
     { path: LastListened, defaultValue: {} },
     { path: SavedHomeScreen, defaultValue: '' },
-    { path: SettingsPath, defaultValue: defSettingsValue }
+    { path: SettingsPath, defaultValue: defSettingsValue },
+    { path: SavedPlaylist, defaultValue: {} }
   ]
 
   // Crea i file se non esistono
@@ -155,10 +258,10 @@ var mainWindow
 function createWindow() {
   // Create the browser window.
   mainWindow = new BrowserWindow({
-    width: 900,
-    height: 670,
-    minWidth: 378,
-    minHeight: 585,
+    width: 1215,
+    height: 850,
+    minWidth: 1215,
+    minHeight: 700,
     title: 'LOLLOMUSIC X',
     show: false,
     frame: false,
@@ -166,7 +269,7 @@ function createWindow() {
     //...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
+      sandbox: false,
     }
   })
 
@@ -305,12 +408,6 @@ async function initializeyt() {
 
 app.whenReady().then(async () => {
   // Set app user model id for windows
-
-  try {
-    HomeScreen = JSON.parse(fs.readFileSync(SavedHomeScreen))
-  } catch (error) {
-    console.log(error)
-  }
 
   try {
     let imagePath
@@ -598,7 +695,8 @@ async function SearchYtVideos(query) {
 }
 
 ipcMain.handle('searchsong', async (event, keyword) => {
-  return await LolloMusicApi.searchSong(keyword)
+  await LolloMusicApi.initialize()
+  return await LolloMusicApi.SearchSong(keyword)
 })
 
 ipcMain.handle('searchYT', async (event, keyword) => {
@@ -607,11 +705,17 @@ ipcMain.handle('searchYT', async (event, keyword) => {
 })
 
 ipcMain.handle('searchalbums', async (event, keyword) => {
-  return await LolloMusicApi.searchAlbum(keyword, false)
+  await LolloMusicApi.initialize()
+  return await LolloMusicApi.SearchAlbum(keyword)
 })
 
 ipcMain.handle('searchartists', async (event, keyword) => {
-  return await LolloMusicApi.searchArtist(keyword)
+  await LolloMusicApi.initialize()
+  return await LolloMusicApi.SearchArtist(keyword)
+})
+
+ipcMain.handle('searchplaylists', async (event, keyword) => {
+  return await LMapi.SearchPlaylist(keyword)
 })
 
 ipcMain.handle('getSongDetails', async (event, title, artist) => {
@@ -627,157 +731,70 @@ ipcMain.handle('getSongDetails', async (event, title, artist) => {
 ipcMain.handle('getAlbumDetails', async (event, name, artist, ID = undefined) => {
   console.log('id fornito: ', ID)
   try {
-    const result = await LolloMusicApi.getAlbum(ID)
-    console.log(result)
 
-    let songs = []
+    if (ID === undefined) {
+      const albums = await LMapi.SearchAlbum(`${name} ${artist}`)
 
-    if (result.contents && result.contents.length > 0) {
-      // Ottieni le canzoni dell'album in batch
-      const detailedSongs = await LolloMusicApi.batchProcess(
-        result.contents,
-        async (song) => {
-          try {
-            // Estrai correttamente i dati dell'artista dalla struttura di Innertube
-            const songArtists = song.authors || []
-            const artistName =
-              songArtists.length > 0
-                ? songArtists[0]?.name || result.header.strapline_text_one.text
-                : result.header.strapline_text_one.text
+      let match
 
-            // Costruisci una query più precisa includendo artista e album
-            const songQuery = `${song.title} ${artistName} ${result.header.title.text}`
-            const searchedsong = await LolloMusicApi.searchSong(songQuery)
-
-            if (!searchedsong || !Array.isArray(searchedsong) || searchedsong.length === 0) {
-              console.log('Nessun risultato per:', songQuery)
-              return null
-            }
-
-            // Funzione per verificare la corrispondenza del titolo
-            const isTitleMatch = (foundSong, originalTitle) => {
-              const normalize = (text) =>
-                text
-                  .toLowerCase()
-                  .replace(/[^\w\s]/g, '') // Rimuovi punteggiatura
-                  .replace(/\s+/g, ' ') // Normalizza spazi
-                  .trim()
-
-              const normalizedOriginal = normalize(originalTitle)
-              const normalizedFound = normalize(foundSong.title)
-
-              // Verifica la corrispondenza con diverse strategie
-              return (
-                normalizedFound.includes(normalizedOriginal) ||
-                normalizedOriginal.includes(normalizedFound) ||
-                // Verifica se almeno il 70% del titolo originale è contenuto
-                (normalizedOriginal.length > 3 &&
-                  normalizedFound.includes(
-                    normalizedOriginal.substring(0, Math.floor(normalizedOriginal.length * 0.7))
-                  ))
-              )
-            }
-
-            // Verifica anche la corrispondenza dell'artista
-            const isArtistMatch = (foundSong, artistName) => {
-              if (!artistName || !foundSong.artists || foundSong.artists.length === 0) return true
-
-              const normalize = (text) => text?.toLowerCase().trim() || ''
-              const normalizedArtist = normalize(artistName)
-
-              return foundSong.artists.some(
-                (artist) =>
-                  normalize(artist.name).includes(normalizedArtist) ||
-                  normalizedArtist.includes(normalize(artist.name))
-              )
-            }
-
-            // Filtra per titolo e artista
-            let matchingSongs = searchedsong.filter(
-              (s) => isTitleMatch(s, song.title) && isArtistMatch(s, artistName)
-            )
-
-            // Se non ci sono corrispondenze esatte, prova solo con il titolo
-            if (matchingSongs.length === 0) {
-              matchingSongs = searchedsong.filter((s) => isTitleMatch(s, song.title))
-            }
-
-            if (matchingSongs.length > 0) {
-              // Verifica se l'album ha badge "explicit"
-              const hasExplicitBadge =
-                song.badges?.some((badge) => badge.label?.toLowerCase().includes('explicit')) ||
-                false
-
-              // Se l'album è esplicito, cerca preferibilmente una versione esplicita
-              if (hasExplicitBadge) {
-                const explicitSong = matchingSongs.find((s) => s.esplicit === true)
-                if (explicitSong) {
-                  return explicitSong
-                }
-              }
-
-              return matchingSongs[0]
-            } else {
-              // Se non ci sono corrispondenze, usa il primo risultato con un avviso
-              return searchedsong[0]
-            }
-          } catch (err) {
-            console.log(err)
-            return null
-          }
-        },
-        100 // Batch size più piccolo per le canzoni
-      )
-
-      // Aggiorna l'oggetto songsInfo con le canzoni dettagliate
-      songs = detailedSongs.filter((song) => song !== null)
-    }
-
-    // Estrai l'ID dell'artista dal percorso corretto
-    const artistId = result.header.strapline_text_one.endpoint.payload.browseId
-
-    return {
-      name: result.header.title.text,
-      artists: [
-        {
-          name: result.header.strapline_text_one.text,
-          id: artistId
+      for (const element of albums) {
+        if (element.name === name && element.artist.name === artist && element.esplicit) {
+          match = element
+          break
         }
-      ],
-      img: result.background?.contents?.[0]?.url || result.thumbnail?.thumbnails?.[0]?.url,
-      songs: {
-        songs: songs
       }
+
+      return await LMapi.GetAlbumInfos(match.id)
+
+    } else {
+      const result = await LMapi.GetAlbumInfos(ID)
+      console.log(result);
+
+      return result
     }
+
   } catch (error) {
-    console.log(error, '  tryng again with manual search')
+    console.log(error);
 
-    const albums = await LolloMusicApi.searchAlbum(`${name} ${artist}`, true, 2)
-
-    for (const album of albums) {
-      if (album.esplicit === true) {
-        return album
-      }
-    }
-
-    // Se non ci sono album espliciti, ritorna il primo
-    return albums.length > 0 ? albums[0] : null
   }
+
 })
 
-ipcMain.handle('GetArtistTopAlbum', async (event, name) => {
-  return await LolloMusicApi.getArtistReleases(name)
+ipcMain.handle('GetPlaylist', async (event, id) => {
+  return await LMapi.GetPlaylist(id)
 })
+
 
 ipcMain.handle('GetArtPage', async (event, name, id) => {
   console.log('info artista fornite :', name, id)
-  if (id) {
-    return LolloMusicApi.getArtistPage(id)
-  } else {
-    const artist = await LolloMusicApi.searchArtist(name)
-    console.log(artist[0].id)
-    return LolloMusicApi.getArtistPage(artist[0].id)
+
+  let result = undefined
+
+  let error = true
+
+  while (error) {
+    try {
+      if (id) {
+        result = await LMapi.GetArtistPage(id)
+      } else {
+        const artist = await LMapi.SearchArtist(name)
+        console.log(artist[0].id)
+        result = await LMapi.GetArtistPage(artist[0].id)
+      }
+      error = false
+    } catch (err) {
+      console.log(err);
+
+      setTimeout(() => {
+        error = false
+      }, 500);
+
+    }
+
   }
+
+  return result
+
 })
 
 const ytLinkCache = {}
@@ -1315,19 +1332,47 @@ ipcMain.handle('ReadLastListened', () => {
 //
 //like system
 //canzoni
-ipcMain.handle('LikeSong', async (event, data) => {
-  // Creiamo l'oggetto canzone con valori predefiniti per campi mancanti
 
+ipcMain.handle('GetYTLybrary', async () => {
+
+  let playlists, albums, artists
+
+  let error = true
+
+
+
+  while (error) {
+    try {
+      [playlists, albums, artists] = await Promise.all([LMapi.getAllPlaylists(), LMapi.getLibraryAlbums(), LMapi.getLibraryArtists()])
+      error = false
+    } catch {
+
+      setTimeout(() => {
+        console.log('error while getting the user library retryng');
+      }, 500);
+      error = true
+    }
+  }
+
+
+  return {
+    playlists, albums, artists
+  }
+
+})
+
+
+const addToLocalLikde = async (data) => {
   let Song
 
   Song = {
-    title: data.title || '',
-    album: data.album || '',
-    artist: data.artist || '',
-    img: data.img || '',
-    id: data.id || '',
-    artistID: data.artID,
-    albumID: data.albID
+    title: data?.title || '',
+    album: data?.album?.name || data?.album || '',
+    artist: data?.artist?.name || data?.artist || '',
+    img: data?.album?.thumbnail || data?.img || '',
+    id: data?.id || undefined,
+    artistID: data?.artID || data?.artist?.id,
+    albumID: data?.albID || data?.album?.id
   }
 
   try {
@@ -1382,32 +1427,71 @@ ipcMain.handle('LikeSong', async (event, data) => {
       return { success: false, message: 'Impossibile aggiungere la canzone ai preferiti' }
     }
   }
-})
+}
 
-ipcMain.handle('DisLikeSong', async (event, song) => {
+ipcMain.handle('LikeSong', async (event, data) => {
   // Creiamo l'oggetto canzone con valori predefiniti per campi mancanti
 
-  const fileContent = fs.readFileSync(LikedsongsPath, 'utf8')
+
 
   try {
-    let result = []
-
-    let liked = await separateObj(JSON.parse(fileContent))
-
-    for (const item of liked) {
-      let match =
-        song.title === item.title && song.album === item.album && song.artist === item.artist
-
-      if (!match) {
-        result.push(item)
-      }
+    if (data.id) {
+      await LMapi.Rate_Song(data.id, true)
+      await addToLocalLikde(data)
+    } else {
+      await addToLocalLikde(data)
     }
-
-    const data = JSON.stringify(joinObj(result, 'song'))
-    fs.writeFileSync(LikedsongsPath, data, 'utf8')
-  } catch (error) {
-    console.log(error)
+  } catch {
+    await addToLocalLikde(data)
   }
+
+
+
+
+})
+
+ipcMain.handle('AddSongToLocal', async (event, data) => {
+  await addToLocalLikde(data)
+})
+
+ipcMain.handle('DisLikeSong', async (event, data) => {
+  // Creiamo l'oggetto canzone con valori predefiniti per campi mancanti
+
+  const RemoveFromLocalLiked = async (song) => {
+    const fileContent = fs.readFileSync(LikedsongsPath, 'utf8')
+
+    try {
+      let result = []
+
+      let liked = await separateObj(JSON.parse(fileContent))
+
+      for (const item of liked) {
+        let match =
+          song.title === item.title && song.album === item.album && song.artist === item.artist
+
+        if (!match) {
+          result.push(item)
+        }
+      }
+
+      const data = JSON.stringify(joinObj(result, 'song'))
+      fs.writeFileSync(LikedsongsPath, data, 'utf8')
+    } catch (error) {
+      console.log(error)
+    }
+  }
+
+  try {
+    if (data.id) {
+      await LMapi.Rate_Song(data.id, false)
+      await RemoveFromLocalLiked(data)
+    } else {
+      await RemoveFromLocalLiked(data)
+    }
+  } catch {
+    await RemoveFromLocalLiked(data)
+  }
+
 })
 
 ipcMain.handle('checkIfLiked', async (event, title, artist, album) => {
@@ -1429,14 +1513,7 @@ ipcMain.handle('checkIfLiked', async (event, title, artist, album) => {
 //album
 ipcMain.handle('LikeAlbum', async (event, data) => {
   // Creiamo l'oggetto canzone con valori predefiniti per campi mancanti
-  const Album = {
-    album: data.album || '',
-    artist: data.artist || '',
-    img: data.img || '',
-    id: data.id,
-    artistID: data.artistID,
-    tracks: data.tracks
-  }
+  const Album = data
 
   try {
     let likedAlbums = []
@@ -1461,7 +1538,7 @@ ipcMain.handle('LikeAlbum', async (event, data) => {
 
     // Verifichiamo se la canzone è già presente
     const isDuplicate = likedAlbums.some(
-      (album) => album.album === Album.album && album.album === Album.album
+      (album) => album.name === Album.name && album.artist.name === Album.artist.name
     )
 
     if (!isDuplicate) {
@@ -1493,11 +1570,11 @@ ipcMain.handle('LikeAlbum', async (event, data) => {
 })
 
 ipcMain.handle('searchLocalAlbum', async (event, album, artist, id) => {
-  
+
   const LikedAlbums = await separateObj(JSON.parse(fs.readFileSync(LikedalbumsPath)))
 
   for (const item of LikedAlbums) {
-    
+
     if (album === item.album && artist === item.artist && id === item.id) {
       return item
     }
@@ -1519,7 +1596,7 @@ ipcMain.handle('DisLikeAlbum', async (event, album) => {
     let liked = await separateObj(JSON.parse(fileContent))
 
     for (const item of liked) {
-      let match = album.album === item.album && album.artist === item.artist
+      let match = album.name === item.name && album.artist.name === item.artist.name
 
       if (!match) {
         result.push(item)
@@ -1541,7 +1618,7 @@ ipcMain.handle('checkIfLikedAlbum', async (event, artist, album) => {
     //console.log(album)
     //console.log(item.album)
 
-    if (artist === item.artist && album === item.album) {
+    if (artist === item.artist.name && album === item.name) {
       return true
     }
   }
@@ -1647,6 +1724,69 @@ ipcMain.handle('checkIfLikedArtist', async (event, artist) => {
 
   return false
 })
+
+//playlists
+ipcMain.handle('LikePlaylist', async (event, data) => {
+  const saved = await separateObj(JSON.parse(fs.readFileSync(SavedPlaylist)))
+
+  console.log(data);
+
+
+  saved.push(data)
+
+  const toSave = await joinObj(saved, 'playlist')
+
+  fs.writeFileSync(SavedPlaylist, JSON.stringify(toSave), 'utf-8')
+
+})
+
+ipcMain.handle('disikePlaylist', async (event, data) => {
+  const saved = await separateObj(JSON.parse(fs.readFileSync(SavedPlaylist)))
+
+
+
+  let index = 0
+  for (const plst of saved) {
+
+    const match = data.info.id === plst.info.id
+
+    if (match) {
+      break
+    }
+
+    index++
+  }
+
+  saved.splice(index, 1)
+
+  const toSave = await joinObj(saved, 'playlist')
+
+  fs.writeFileSync(SavedPlaylist, JSON.stringify(toSave), 'utf-8')
+
+})
+
+ipcMain.handle('CheckLikePlaylist', async (event, data) => {
+  const saved = await separateObj(JSON.parse(fs.readFileSync(SavedPlaylist)))
+
+  for (const plst of saved) {
+
+    const match = data.info.id === plst.info.id
+
+    if (match) {
+      return plst
+    }
+
+  }
+
+  return false
+})
+
+ipcMain.handle('GetSavedPlaylist', async () => {
+  const saved = await separateObj(JSON.parse(fs.readFileSync(SavedPlaylist)))
+
+  return saved
+})
+
 //like system
 
 ipcMain.handle('writeRecent', async (event, data) => {
@@ -1694,150 +1834,38 @@ ipcMain.handle('writeRecent', async (event, data) => {
   }
 })
 
-ChomePage()
-async function ChomePage() {
-  try {
-    const recent = await separateObj(JSON.parse(fs.readFileSync(recentListens)))
 
-    // Esegui le funzioni in parallelo
-    const [homegrid, similarArtist] = await Promise.all([
-      GenerateGrid(recent),
-      SearchSimilarArtist(recent)
-    ])
-
-    // Ottieni gli album raccomandati solo dopo aver ottenuto gli artisti simili
-
-    HomeScreen = {
-      albums: homegrid.albums,
-      playlists: homegrid.playlists,
-      similarArtist
-    }
-
-    fs.writeFileSync(SavedHomeScreen, JSON.stringify(HomeScreen), 'utf8')
-
-    return HomeScreen
-  } catch {
-    console.error('errore nella creazione della homepage')
-    return {
-      albums: [],
-      playlists: [],
-      similarArtist: [],
-      raccomandedAlbums: []
-    }
-  }
-}
 
 ipcMain.handle('CreateHomePage', async () => {
-  return await HomeScreen
+  return await LMapi.getHomePage()
 })
 
-async function GenerateGrid(recent) {
-  try {
-    // Mappa per album unici
-    const albumMap = new Map()
-
-    // Popola la mappa con album unici
-    for (const item of recent) {
-      const key = `${item.album}-${item.artist}`
-      if (!albumMap.has(key)) {
-        albumMap.set(key, {
-          album: item.album,
-          artist: item.artist,
-          img: item.img
-        })
-      }
-    }
-
-    // Converti la mappa in array e mischia gli album
-    const allAlbums = Array.from(albumMap.values())
-    const shuffledAlbums = allAlbums.sort(() => Math.random() - 0.5)
-
-    // Gestione playlist
-    let selectedPlaylists = []
-    try {
-      const userPlaylistContent = fs.readFileSync(userPlaylists, 'utf8')
-      const playlists = await separateObj(JSON.parse(userPlaylistContent))
-
-      if (playlists.length > 0) {
-        // Seleziona due playlist casuali diverse
-        const maxIndex = Math.min(playlists.length, 50)
-        const randomIndices = new Set()
-
-        while (randomIndices.size < Math.min(2, maxIndex)) {
-          randomIndices.add(Math.floor(Math.random() * maxIndex))
-        }
-
-        selectedPlaylists = Array.from(randomIndices).map((index) => playlists[index])
-      }
-    } catch (error) {
-      console.error('Errore nel caricamento delle playlist:', error)
-    }
-
-    // Calcola il numero di album necessari
-    const maxTotalItems = 8
-    const numAlbumsNeeded = maxTotalItems - selectedPlaylists.length
-
-    // Seleziona gli album necessari
-    const selectedAlbums = shuffledAlbums.slice(0, numAlbumsNeeded)
-
-    return {
-      albums: selectedAlbums,
-      playlists: selectedPlaylists
-    }
-  } catch (error) {
-    console.error('Errore in GenerateGrid:', error)
-    return {
-      albums: [],
-      playlists: []
-    }
-  }
-}
-
-async function SearchSimilarArtist(recent) {
-  const artistScores = new Map()
-
-  for (const { artist } of recent) {
-    artistScores.set(artist, (artistScores.get(artist) || 0) + 1)
-  }
-
-  let highest = [...artistScores.entries()].reduce(
-    (max, [artist, score]) => (!max || score > max.score ? { artist, score } : max),
-    null
-  )
-
-  if (!highest) {
-    highest = artistScores[0]
-  }
-
-  console.log('Artista più ascoltato:', highest)
-
-  try {
-    const artInfo = await LolloMusicApi.searchArtist(highest.artist)
-
-    const similarData = await LolloMusicApi.getArtistSimilar(artInfo[0].id)
-
-    let Export = []
-
-    for (const art of similarData) {
-      const artreleases = await LolloMusicApi.getArtistReleases(art.id)
-
-      Export.push({ art, artreleases })
-    }
-
-    return Export
-  } catch (error) {
-    console.error('Errore in SearchSimilarArtist:', error)
-    return []
-  }
-}
 
 ipcMain.handle('getLiked', async () => {
+  try {
+    //return await separateObj(JSON.parse(fs.readFileSync(LikedsongsPath)))
+    return await LMapi.getLikedSongs()
+  } catch {
+    console.log('nessuna canzone nei preferiti')
+    return []
+  }
+})
+
+ipcMain.handle('getLocalLiked', async () => {
   try {
     return await separateObj(JSON.parse(fs.readFileSync(LikedsongsPath)))
   } catch {
     console.log('nessuna canzone nei preferiti')
     return []
   }
+})
+
+ipcMain.handle('WriteLiked', async (event, data) => {
+  fs.writeFileSync(YoutubeLikedList, JSON.stringify(data), 'utf-8')
+})
+
+ipcMain.handle('ReadLiked', async () => {
+  return JSON.parse(fs.readFileSync(YoutubeLikedList))
 })
 
 ipcMain.handle('getLikedArtists', async () => {
@@ -1894,33 +1922,14 @@ ipcMain.handle('CreatePlaylist', async (event, data) => {
   }
 })
 
-ipcMain.handle('editPlaylist', async (event, newName, newImg, i) => {
-
-  if (newName !== undefined) {
-    await ChangePlaylistName(newName, i)
-  }
-
-  if (newImg !== undefined) {
-    await ChangePlaylistImmage(newImg, i)
-  }
-
+ipcMain.handle('CreateYTPlaylist', async (event, title, desc, privacy) => {
+  return await LMapi.createPlaylist(title, desc, privacy)
 })
 
-
-async function ChangePlaylistName(name, i) {
+async function ChangePlaylist(name, img, i) {
   let Playlist = await ReadPlaylists()
 
   Playlist[i].name = name
-
-  const data = joinObj(Playlist, 'playlist')
-
-  fs.writeFileSync(userPlaylists, JSON.stringify(data), 'utf8')
-
-}
-
-async function ChangePlaylistImmage(img, i) {
-  let Playlist = await ReadPlaylists()
-
   Playlist[i].img = img
 
   const data = joinObj(Playlist, 'playlist')
@@ -1929,12 +1938,31 @@ async function ChangePlaylistImmage(img, i) {
 
 }
 
+ipcMain.handle('editPlaylist', async (event, newName, newImg, i) => {
+
+  console.log(newName);
+  console.log(newImg);
+  console.log(i);
+
+  await ChangePlaylist(newName, newImg, i)
+
+})
+
+ipcMain.handle('editYTPlaylist', async (event, id, newName, newDesc, newPriv) => {
+
+  await LMapi.editPlaylist(id, newName, newDesc, newPriv)
+
+})
 
 ipcMain.handle('DelPlaylist', async (event, index) => {
   let playlists = await ReadPlaylists()
   playlists.splice(index, 1)
 
   fs.writeFileSync(userPlaylists, JSON.stringify(joinObj(playlists, 'playlist')), 'utf8')
+})
+
+ipcMain.handle('DelYTPlaylist', async (event, id) => {
+  return await LMapi.deletePlaylist(id)
 })
 
 ipcMain.handle('immageSelector', async () => {
@@ -1987,12 +2015,24 @@ ipcMain.handle('AddToPlist', async (event, PlaylistIndex, data) => {
   }
 })
 
+ipcMain.handle('AddToYTPlist', async (event, playlistId, songId) => {
+  console.log(playlistId, songId);
+
+  await LMapi.addToPlaylist(playlistId, songId)
+})
+
 ipcMain.handle('RemFromPlist', async (event, itemindex, Pindex) => {
   const data = await ReadPlaylists()
 
   data[Pindex].tracks.splice(itemindex, 1)
 
   fs.writeFileSync(userPlaylists, JSON.stringify(data), 'utf8')
+})
+
+ipcMain.handle('RemFromYTPlist', async (event, data) => {
+  console.log(data);
+
+  await LMapi.removeFromPlaylist(data.playlistid, data.id, data.setvideoid)
 })
 
 async function READRECENTSEARCHS() {
@@ -2036,9 +2076,9 @@ ipcMain.handle('readSettings', async () => {
   console.log(canDeleteQuewe);
   console.log('-------------------------------------------------------------------');
 
-  
 
-  
+
+
 
 
   return Sett
@@ -2505,7 +2545,7 @@ ipcMain.handle('togleMiniPLayer', async (event, condition) => {
         mainWindow.setAlwaysOnTop(false)
         mainWindow.setSkipTaskbar(false)
 
-        mainWindow.setMinimumSize(378, 585)
+        mainWindow.setMinimumSize(1215, 700)
 
         // Ripristina posizione
         if (!windowState.beforePosition) {
@@ -2517,67 +2557,6 @@ ipcMain.handle('togleMiniPLayer', async (event, condition) => {
     }
   }, 50)
 })
-
-let rpc
-let clientid
-try {
-  rpc = new RPC.Client({ transport: 'ipc' })
-  clientid = '1242579109930864721'
-} catch {
-  console.log('impossibile connettersi a discord');
-
-}
-
-
-ipcMain.handle('updateDiscordRPC', async (event, data) => {
-  setActivity(data)
-})
-
-async function setActivity(data) {
-  console.log(data)
-
-  const videolink = `https://www.youtube.com/watch?v=${data.id}`
-
-  console.log(videolink)
-
-  if (data.id) {
-    rpc.setActivity({
-      details: data.title,
-      state: data.artist,
-      largeImageKey: 'applabeldiscord',
-      buttons: [{ label: 'Listen', url: videolink }],
-      type: 'LISTENING',
-      instance: false
-    })
-  } else {
-    rpc.setActivity({
-      details: data.title,
-      state: data.artist,
-      largeImageKey: 'applabeldiscord',
-      type: 'LISTENING',
-      instance: false
-    })
-  }
-}
-
-rpc.on('ready', () => {
-
-  try {
-    rpc.setActivity({
-      details: 'loading',
-      state: '',
-      largeImageKey: 'applabeldiscord',
-      startTimestamp: new Date(),
-      type: 'LISTENING',
-      instance: false
-    })
-  } catch {
-    console.log('impossibile collegarsi a discord');
-
-  }
-})
-
-rpc.login({ clientid }).catch(console.error)
 
 ipcMain.handle('GetSearchSuggestion', async (event, key) => {
   try {
@@ -2621,4 +2600,57 @@ ipcMain.handle('GetSearchSuggestion', async (event, key) => {
     console.error('Errore nel recupero dei suggerimenti:', error)
     return []
   }
+})
+
+
+const rpc = new RPC.Client({ transport: 'ipc' })
+const clientId = '1242579109930864721'
+
+ipcMain.handle('updateDiscordRPC', async (event, data) => {
+  setActivity(data)
+})
+
+async function setActivity(data) {
+  console.log(data)
+
+  const videolink = `https://www.youtube.com/watch?v=${data.id}`
+
+  console.log(videolink)
+
+  if (data.id) {
+    rpc.setActivity({
+      details: data.title,
+      state: data.artist,
+      largeImageKey: 'applabeldiscord',
+      buttons: [{ label: 'Listen on YouTube', url: videolink }],
+      type: 'LISTENING',
+      instance: false
+    })
+  } else {
+    rpc.setActivity({
+      details: data.title,
+      state: data.artist,
+      largeImageKey: 'applabeldiscord',
+      type: 'LISTENING',
+      instance: false
+    })
+  }
+}
+
+rpc.on('ready', () => {
+  rpc.setActivity({
+    details: 'loading',
+    state: '...',
+    largeImageKey: 'applabeldiscord',
+    startTimestamp: new Date(),
+    type: 'LISTENING',
+    instance: false
+  })
+})
+
+rpc.login({ clientId }).catch(console.error)
+
+
+ipcMain.handle('GetAccountInfo', async () => {
+  return await LMapi.getAccountInfo()
 })

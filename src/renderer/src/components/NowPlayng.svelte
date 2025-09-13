@@ -12,14 +12,10 @@
   let loading = $state()
   let LoadingImg = $state()
 
-  let canva = $state()
   let canShowCanva = $state()
-
-  let albumcover, CanvaContainer
 
   import { fade, fly, slide } from 'svelte/transition'
   import LyricPannel from './pagesElements/LyricPannel.svelte'
-  import CanvaPLayer from './pagesElements/CanvaPLayer.svelte'
   import QueweButton from './pagesElements/QueweButton.svelte'
 
   const QUEWEimg = new URL('../assets/quewe.png', import.meta.url).href
@@ -67,7 +63,6 @@
 
     if (isSongChanged(playerLocal.title, playerLocal.artist, playerLocal.album)) {
       LyricPannelVisible = false
-      ShowVideo(false)
 
       Lyric = await GetLyric()
 
@@ -111,15 +106,19 @@
       if (Lyric.lyric !== undefined) {
         LyricPannelVisible = true
       }
-
-      if (shared.settings.playerSettings.interface.showVideo) {
-        canva = await ipcRenderer.invoke('GetCanvas', playerLocal.title, playerLocal.artist)
-      }
     }
   })
 
   async function GetLyric() {
-    return await shared.GetLyrics(playerLocal.title, playerLocal.artist, playerLocal.album)
+    try {
+      
+      return await shared.GetLyrics(playerLocal.title, playerLocal.artist, playerLocal.album)
+    } catch {
+    
+      console.log('no lyrics found');
+      
+    }
+      
   }
 
   function isSongChanged(title, artist, album) {
@@ -149,8 +148,6 @@
   }
 
   onMount(async () => {
-    albumcover = document.getElementById('Img')
-    CanvaContainer = document.getElementById('CanvaContainer')
 
     shared = renderer.default.shared
 
@@ -158,7 +155,7 @@
 
     setInterval(async () => {
       quewe = await shared.GetQuewe()
-      
+
       playngIndex = await shared.GetPIndex()
       loading = shared.LOADING
       LoadingImg = shared.LoadingImg
@@ -202,7 +199,6 @@
       pannello.style.height = 'calc(100% - 190px)'
 
       NowPlayngCUrrentContainer.style.opacity = '0.5'
-
     } else {
       pannello.style.margin = '0px'
       pannello.style.opacity = '0'
@@ -225,24 +221,16 @@
     checkSaved()
   }
 
-  async function ShowVideo(condition) {
-    if (condition) {
-      albumcover.style.opacity = '0'
-      CanvaContainer.style.opacity = '1'
-    } else {
-      albumcover.style.opacity = '1'
-      CanvaContainer.style.opacity = '0'
-    }
-  }
-
   async function ChangeQueweIndexname(i) {
     shared.ChangeQueweIndex(i)
-  } 
-
+  }
 </script>
 
-<dir transition:fly={{ x: 500, duration: 600 }} class={FullScreen ? 'FSNowPlayng' : 'NowPlayng'} style="transition: all 600ms;">
-
+<dir
+  transition:fly={{ x: 500, duration: 600 }}
+  class={FullScreen ? 'FSNowPlayng' : 'NowPlayng'}
+  style="transition: all 600ms;"
+>
   <div
     class="NowPlayngCUrrentContainer contextMenu"
     id="NowPlayngCUrrentContainer"
@@ -273,16 +261,16 @@
       class="PLAYERimg contextMenuSong --IMGDATA"
       style="object-fit: cover; pointer-events: none;"
       src={immagine}
-      onerror={() => {immagine = DEFIMG}}
+      onerror={() => {
+        immagine = DEFIMG
+      }}
       alt="img"
     />
 
     <div
       id="CanvaContainer"
       style="transition: all 200ms; display: {canShowCanva ? 'block' : 'none'};"
-    >
-      <CanvaPLayer showVid={ShowVideo} {canva} />
-    </div>
+    ></div>
 
     <p class="--TITLEDATA PLAYERtitle" style="pointer-events: none;">{playerLocal.title}</p>
     <button
@@ -309,11 +297,18 @@
     {/if}
 
     <div class="moreInfoDiv">
-      {#if nextSongLoad}
+      {#if nextSongLoad && nextSong}
         <p class="dividerP">Next up</p>
 
         <div in:slide class="upNextDiv">
-          <img class="upNextImg" src={nextSong.img} alt="img" onerror={() => {nextSong.img = DEFIMG}}/>
+          <img
+            class="upNextImg"
+            src={nextSong.img || ''}
+            alt="img"
+            onerror={() => {
+              nextSong.img = DEFIMG
+            }}
+          />
           <p class="upNextTitle">{nextSong.title}</p>
           <p class="upNextArtist">{nextSong.artist}</p>
         </div>
@@ -355,23 +350,52 @@
 
   <div id="quewePannel">
     <div style="position:absolute; width:100%;  top:21px;">
-
       {#await quewe}
         <p>Loading quewe...</p>
       {:then result}
         {#each result as item, i}
           {#if playngIndex === i}
-            
-            <QueweButton songIndex={i} title={item.title} album={item.album} artist={item.artist} img={item.img} onclickEvent={ChangeQueweIndexname} songID={item.id || ''} albID={item.albumID || ""} artID={item.artistID || ""} listening={true} listened={false}/>
-
+            <QueweButton
+              songIndex={i}
+              title={item.title}
+              album={item.album}
+              artist={item.artist}
+              img={item.img}
+              onclickEvent={ChangeQueweIndexname}
+              songID={item.id || ''}
+              albID={item.albumID || ''}
+              artID={item.artistID || ''}
+              listening={true}
+              listened={false}
+            />
           {:else if i < playngIndex}
-            
-            <QueweButton songIndex={i} title={item.title} album={item.album} artist={item.artist} img={item.img} onclickEvent={ChangeQueweIndexname} songID={item.id || ''} albID={item.albumID || ""} artID={item.artistID || ""} listening={false} listened={true}/>
-
+            <QueweButton
+              songIndex={i}
+              title={item.title}
+              album={item.album}
+              artist={item.artist}
+              img={item.img}
+              onclickEvent={ChangeQueweIndexname}
+              songID={item.id || ''}
+              albID={item.albumID || ''}
+              artID={item.artistID || ''}
+              listening={false}
+              listened={true}
+            />
           {:else}
-
-            <QueweButton songIndex={i} title={item.title} album={item.album} artist={item.artist} img={item.img} onclickEvent={ChangeQueweIndexname} songID={item.id || ''} albID={item.albumID || ""} artID={item.artistID || ""} listening={false} listened={false}/>
-
+            <QueweButton
+              songIndex={i}
+              title={item.title}
+              album={item.album}
+              artist={item.artist}
+              img={item.img}
+              onclickEvent={ChangeQueweIndexname}
+              songID={item.id || ''}
+              albID={item.albumID || ''}
+              artID={item.artistID || ''}
+              listening={false}
+              listened={false}
+            />
           {/if}
         {/each}
       {/await}
@@ -459,5 +483,4 @@
       width: 100%;
     }
   }
-
 </style>

@@ -1,4 +1,5 @@
 <script>
+  /* eslint-disable prettier/prettier */
   const DEFIMG = new URL('./../../assets/defaultSongCover.png', import.meta.url).href
   const DEFIMG2 = new URL('./../../assets/defaultAlbumCover.png', import.meta.url).href
   const DEFIMG3 = new URL('./../../assets/defaultArtistCover.png', import.meta.url).href
@@ -13,6 +14,8 @@
 
   const ipcRenderer = window.electron.ipcRenderer
 
+  import { callItemFunction } from '../../App.svelte'
+
   let {
     Type,
     Tracks,
@@ -23,7 +26,8 @@
     playAction2,
     dwnAction,
     likeAction,
-    LikeOrPin
+    LikeOrPin,
+    artistId
   } = $props()
 
   const imgErr = () => {
@@ -35,16 +39,28 @@
       img = DEFIMG
     }
   }
-  
-  let totalDownload = 0
+
+  let totalDownload = $state(0)
 
   const checkDownloaded = async () => {
-
+    
+    console.log(Tracks);
+    
+    
     for (const item of Tracks) {
-      const data = await ipcRenderer.invoke('SearchLocalSong', item.title, item.artist, item.album)
-      console.log(data)
-      if (data) {
-        totalDownload++
+      try {
+        const data = await ipcRenderer.invoke(
+          'SearchLocalSong',
+          item?.title ,
+          item?.artist?.name || item?.artist,
+          item?.album?.name || item?.album
+        )
+        console.log(data)
+        if (data) {
+          totalDownload++
+        }
+      } catch {
+        //catch
       }
     }
 
@@ -66,40 +82,104 @@
   <img id="albumimg" src={img} alt="" onerror={() => imgErr()} />
 
   <p id="albumtitle">{title}</p>
-  <p id="albumartist">{artist}</p>
+  <button onclick={ () => callItemFunction({ query: artist + '||' + artistId, type: 'artist' })} style="{!artistId ? 'pointer-events: none' : 'pointer-events: all:'}" id="albumartist">{artist}</button>
 
-  <p class="PlistLenght">
-    {Type === 'playlist' ? Tracks.length + ' Elements' : Tracks.length + ' Tracks'}
-  </p>
+  {#if Type !== 'artist'}
+    <p class="PlistLenght">
+      {Type === 'playlist' ? Tracks.length + ' Elements' : Tracks.length + ' Tracks'}
+    </p>
 
-  {#await downloads}
-    ...
-  {:then value}
-    <p class="PlistDownloadCounter">{value} of {Tracks.length} downloaded</p>
-  {/await}
+    {#await downloads}
+      ...
+    {:then value}
+      <p class="PlistDownloadCounter">{value} of {Tracks.length} downloaded</p>
+    {/await}
+  {/if}
 
-  <button style="{LikeOrPin ? 'opacity:1;' : 'opacity:0.3;'} {Type === 'liked' ? 'display:none;' : ''}" id="likeAlbum" onclick={() => likeAction()}>
-    <img src={Type === 'playlist' ? PIN : LIKEimg} alt="action1" />
-  </button>
+  {#if Type !== 'artist'}
+    <button
+      style="{LikeOrPin ? 'opacity:1;' : 'opacity:0.3;'} {Type === 'liked' ? 'display:none;' : ''}"
+      id="likeAlbum"
+      onclick={() => likeAction()}
+    >
+      <img src={Type === 'playlist' ? PIN : LIKEimg} alt="action1" />
+    </button>
+  {:else}
+    <button
+      style="{LikeOrPin ? 'opacity:1;' : 'opacity:0.3;'} {Type === 'liked' ? 'display:none;' : ''}"
+      id="likeAlbum2"
+      onclick={() => likeAction()}
+    >
+      <img src={Type === 'playlist' ? PIN : LIKEimg} alt="action1" />
+    </button>
+  {/if}
 
-  <button class="downloadButton" onclick={() => dwnAction()}>
-    <img src={totalDownload === Tracks.length ? DOWNLOADED : DOWNLOAD} alt="action" />
-  </button>
+  {#if Type !== 'artist'}
+    <button class="downloadButton" onclick={() => dwnAction()}>
+      <img src={totalDownload === Tracks.length ? DOWNLOADED : DOWNLOAD} alt="action" />
+    </button>
+  {/if}
 
-  <button class="play" onclick={() => playAction(0)}>
-    <img src={PLAY} alt="action" />
-  </button>
+  {#if Type !== 'artist'}
+    <button class="play" onclick={() => playAction(0)}>
+      <img src={PLAY} alt="action" />
+    </button>
+  {:else}
+    <button class="play2" onclick={() => playAction(0)}>
+      <img src={PLAY} alt="action" />
+    </button>
+  {/if}
 
-  <button class="shuffle" onclick={() => PlayShuffle()}>
-    <img src={PLAYSHUFFLED} alt="action" />
-  </button>
+  {#if Type !== 'artist'}
+    <button class="shuffle" onclick={() => PlayShuffle()}>
+      <img src={PLAYSHUFFLED} alt="action" />
+    </button>
+  {/if}
 </div>
 
 <style>
+  #likeAlbum2 {
+    padding: 0px;
+    border: none;
+    background: none;
+
+    cursor: pointer;
+
+    overflow: hidden;
+
+    width: 55px;
+    height: 55px;
+
+    transition: all 200ms;
+
+    position: absolute;
+
+    left: 55px;
+    top: 220px;
+  }
+
+  .play2 {
+    position: absolute;
+
+    width: 100px;
+    height: 100px;
+
+    background: none;
+
+    border: none;
+
+    cursor: pointer;
+
+    top: 194px;
+    left: 160px;
+
+    opacity: 0.3;
+  }
+
   .downloadButton {
     position: absolute;
     top: 286px;
-    left: 340px;
+    left: 400px;
 
     width: 40px;
     height: 40px;
@@ -118,8 +198,8 @@
   }
 
   .downloadButton img {
-    width: 40px;
-    height: 40px;
+    width: 100%;
+    height: 100%;
   }
 
   .PlistLenght {
@@ -147,14 +227,6 @@
     width: 700px;
 
     opacity: 0.4;
-  }
-
-  .likeimg {
-    position: relative;
-    margin: 0px;
-
-    width: 50px;
-    height: 50px;
   }
 
   #likeAlbum {
@@ -213,6 +285,8 @@
     left: 51px;
     top: -30px;
 
+    width: calc(100% - 200px);
+
     font-size: 72px;
     font-weight: 800;
     display: block;
@@ -221,8 +295,8 @@
   #albumartist {
     position: absolute;
 
-    left: 49px;
-    top: 110px;
+    left: 51px;
+    top: 160px;
 
     z-index: 1;
 
@@ -241,6 +315,7 @@
 
   #albumartist:hover {
     text-decoration: underline;
+    transform: scale(1);
   }
 
   button img {
@@ -307,5 +382,86 @@
     left: 760px;
 
     opacity: 0.3;
+  }
+
+  @media only screen and (max-width: 1300px) {
+    #albumtitle {
+      font-size: 4vw;
+      top: -2.31vw;
+      left: 3.92vw;
+
+    }
+
+    #albumartist {
+      font-size: 2.46vw;
+      top: 8.38vw;
+      left: 3.92vw;
+    }
+
+    .PlistLenght {
+      top: 12.69vw;
+      left: 4.15vw;
+      font-size: 2.31vw;
+    }
+
+    .PlistDownloadCounter {
+      top: 16.15vw;
+      left: 4.15vw;
+      font-size: 1.54vw;
+    }
+
+    .downloadButton {
+      top: 23.08vw;
+      left: 3.92vw;
+
+      width: 2.31vw;
+      height: 2.31vw;
+    }
+
+    #likeAlbum {
+      width: 2.31vw;
+      height: 2.31vw;
+
+      transition: all 200ms;
+
+      position: absolute;
+
+      left: 8.46vw;
+      top: 23.23vw;
+    }
+
+    .play {
+      width: 6.15vw;
+      height: 6.15vw;
+
+      top: 21.15vw;
+      left: 18.46vw;
+    }
+
+    .shuffle {
+      width: 4.62vw;
+      height: 4.62vw;
+
+      top: 21.92vw;
+      left: 25.38vw;
+    }
+
+    #likeAlbum2 {
+      left: 4.231vw;
+      top: 15.385vw;
+
+      height: 4.231vw;
+      width: 4.231vw;
+    }
+
+    .play2 {
+      width: 7.692vw;
+      height: 7.692vw;
+
+      top: 13.462vw;
+      left: 12.308vw;
+
+      opacity: 0.3;
+    }
   }
 </style>
