@@ -277,10 +277,11 @@
     width: 55px;
 
     top: 235px;
-    bottom: 62px;
+    bottom: 80px;
 
 
-    overflow: visible;
+    overflow-y: scroll;
+    scrollbar-width: none;
 
     padding: 0px;
     -webkit-mask-image: linear-gradient(to bottom, black 90%, transparent 100%);
@@ -301,7 +302,6 @@
     border: var(--main-border);
     border-radius: 9px;
 
-    height: min-content;
 
     -webkit-mask-image: linear-gradient(to right, black 70%, transparent 100%);
     mask-image: linear-gradient(to right, black 70%, transparent 100%);
