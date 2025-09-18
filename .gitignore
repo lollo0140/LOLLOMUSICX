@@ -6,4 +6,5 @@ out
 *.log*
 data
 dist_electron
-browsers.cache/ 
+browsers/
+.cache/

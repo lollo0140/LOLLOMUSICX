@@ -101,6 +101,36 @@
       ]}
       version="LOLLOMUSICX BETA 0.9.7"
     />
+
+    <VersionLog
+      changes={[
+        {
+          desc: 'new UI animation.',
+          state: 'ADDED'
+        },
+        {
+          desc: 'new download system.',
+          state: 'ADDED'
+        },
+        {
+          desc: 'new animation for loading traks.',
+          state: 'ADDED'
+        },
+        {
+          desc: 'new settings pannel.',
+          state: 'CHANGED'
+        },
+        {
+          desc: 'changed the navbar to show your library.',
+          state: 'CHANGED'
+        },
+        {
+          desc: 'bugfix.',
+          state: 'OTHER'
+        }
+      ]}
+      version="LOLLOMUSICX BETA 0.9.85"
+    />
   </div>
 </div>
 

@@ -630,7 +630,7 @@
         ChangelogShowing = !ChangelogShowing
       }}
     >
-      LOLLOMUSICX <span style="font-size: 11px;">BETA 0.9.7</span>
+      LOLLOMUSICX <span style="font-size: 11px;">BETA 0.9.85</span>
       {!statoOnline ? 'OFFLINE' : ''}
     </button>
 

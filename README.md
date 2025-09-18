@@ -1,3 +1,13 @@
+# Running a release
+
+this app require python 3.11 or higher and the YT music pip package
+
+```bash
+pip install ytmusicapi
+```
+
+---
+
 # LOLLOMUSICX
 
 ![Application Screenshot](assets/screenshot1.png)
@@ -30,7 +40,7 @@ LOLLOMUSICX desktop music player built with Electron and Svelte. It offers an in
 - **UI**: [Svelte](https://svelte.dev/)
 - **Build Tool**: [Vite](https://vitejs.dev/) (via `electron-vite`)
 - **Packaging**: [Electron Builder](https://www.electron.build/)
-- **YouTube API**: `youtubei.js`, `playwright` for authentication.
+- **YouTube API**: `playwright` for authentication.
 - **LOLLOMUSICX API**: authentic API made just for [lollomusic].
 - **Local Audio Management**: `music-metadata` for reading metadata and `fluent-ffmpeg` for processing.
 

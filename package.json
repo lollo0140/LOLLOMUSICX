@@ -1,11 +1,11 @@
 {
   "name": "lollomusicx",
   "productName": "LOLLOMUSICX",
-  "version": "0.9.7",
-  "description": "LOLLOMUSICX",
+  "version": "0.9.85",
+  "description": "LOLLOMUSICX is a music player that allows you to listen to your favorite songs, albums, and playlists from YouTube. It also supports local audio files and can be used to create playlists.",
   "main": "./out/main/index.js",
   "author": "Lorenzo Orlandini",
-  "homepage": "https://electron-vite.org",
+  "homepage": "https://github.com/lollo0140/LOLLOMUSICX",
   "extraResources": [
     {
       "from": "./browsers",
