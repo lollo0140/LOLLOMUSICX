@@ -2,6 +2,9 @@
   import { onMount } from 'svelte'
   // Importa lo store 'trackLikes' e le funzioni di azione dal tuo file store
   // Assicurati che il percorso sia corretto per il tuo progetto
+
+  import { logger } from '../../stores/loggerStore.js'
+
   import {
     trackLikes,
     updateTrackLikeStatus,
@@ -37,6 +40,7 @@
     // Chiamiamo la funzione 'likeTrack' dallo store.
     // Questa funzione aggiornerà lo store, e di conseguenza 'isThisTrackLiked' si aggiornerà.
     await likeTrack({ title, artist, album, img, video, id, artID, albID })
+    logger.show('Added to liked')
   }
 
   async function handleDislike(event) {
@@ -44,6 +48,7 @@
     // Chiamiamo la funzione 'dislikeTrack' dallo store.
     // Questa funzione aggiornerà lo store, e di conseguenza 'isThisTrackLiked' si aggiornerà.
     await dislikeTrack({ title, artist, album, img, id })
+    logger.show('Removed from liked')
   }
 </script>
 

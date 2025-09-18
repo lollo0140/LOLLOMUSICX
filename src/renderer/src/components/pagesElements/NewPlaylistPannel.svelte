@@ -1,6 +1,7 @@
 <script>/* eslint-disable prettier/prettier */
   import { fade } from "svelte/transition"
   import { ReloadLibrary, OpenNewMenu } from '../UserLibrary.svelte'
+  import { logger } from '../../stores/loggerStore.js'
 
   let PrivacyButton1 = $state()
   let PrivacyButton2 = $state()
@@ -42,6 +43,7 @@
 
     OpenNewMenu()
     ReloadLibrary(true)
+    logger.show('Playlist created')
   }
 
 </script>

@@ -10,18 +10,12 @@ const sharp = require('sharp')
 import fetch from 'node-fetch'
 import { ytUrls } from './yt-urls.js'
 import { lollomusicxapi } from './lollomusicxapi.js'
-const ytmusicApi = require('ytmusic-api')
-const ytm = new ytmusicApi()
 import { WindowManager } from './WindowManager.js'
 const WinTransitions = new WindowManager()
 const LolloMusicApi = new lollomusicxapi()
 import RPC from 'discord-rpc'
-import { chromium } from 'playwright'
-
 import { LMAPI } from 'lollomusic-api';
-
-
-
+import { chromium } from 'playwright'
 
 app.setAppUserModelId('com.lorenzo.lollomusicx')
 
@@ -86,20 +80,42 @@ console.log(SettingsPath)
 
 var LMapi
 
+
+
+
+
+
 ipcMain.handle('initlollomusicApi', async () => {
-
-
 
   const OpenBrowser = async () => {
 
+    let executablePath = ''
+
+    if (app.isPackaged) {
+      executablePath = path.join(__dirname, '..', '..', 'browsers', 'chromium-1187', 'chrome-win', 'chrome.exe')
+    } else {
+      executablePath = path.join(__dirname, '..', '..', 'browsers', 'chromium-1187', 'chrome-win', 'chrome.exe')
+    }
+
+    console.log('------------------------------------------------');
+    console.log(executablePath);
+    console.log('------------------------------------------------');
+
+
     const browser = await chromium.launch({
       headless: false,
+      executablePath: executablePath,
       args: ['--disable-blink-features=AutomationControlled']
     })
+
+
+
+
 
     const context = await browser.newContext({
       userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
     })
+
 
     const page = await context.newPage()
     const interceptedData = []
@@ -107,7 +123,6 @@ ipcMain.handle('initlollomusicApi', async () => {
 
     page.route('**/*', async (route, request) => {
       if (request.url().includes('log_event?alt=json')) {
-
         const headers = await request.allHeaders()
         const data = {
           url: request.url(),
@@ -118,9 +133,11 @@ ipcMain.handle('initlollomusicApi', async () => {
         }
 
         interceptedData.push(data)
+
         console.log('🎯 INTERCEPTED LOG_EVENT REQUEST:', request.url())
 
         // Salva immediatamente
+
         require('fs').writeFileSync('playwright-headers.json', JSON.stringify(interceptedData, null, 2))
 
         found = true
@@ -130,7 +147,9 @@ ipcMain.handle('initlollomusicApi', async () => {
     })
 
     await page.goto('https://music.youtube.com')
+
     await page.waitForURL('**/music.youtube.com/**', { timeout: 300000 })
+
 
     while (!found) {
       await new Promise(resolve => setTimeout(resolve, 100))
@@ -138,7 +157,6 @@ ipcMain.handle('initlollomusicApi', async () => {
 
     await browser.close()
     return interceptedData
-
   }
 
   const ConsolidateHeaders = async (headers) => {
@@ -148,18 +166,17 @@ ipcMain.handle('initlollomusicApi', async () => {
   }
 
   const fullPath = join(dataFolder, 'LMAPIDATA')
+
   console.log('Percorso completo:', fullPath);
   console.log('Esiste?', fs.existsSync(fullPath));
 
   if (fs.existsSync(fullPath)) {
-
     LMapi = await new LMAPI({
       workspace: dataFolder,
     })
+
     LMapi.inizialize()
-
   } else {
-
     const response = await OpenBrowser()
     const header = response[0].headers
     const Raw = await ConsolidateHeaders(header)
@@ -168,14 +185,18 @@ ipcMain.handle('initlollomusicApi', async () => {
       workspace: dataFolder,
       header: Raw
     })
-    LMapi.inizialize()
 
+    LMapi.inizialize()
   }
 
   setTimeout(() => {
     return true
   }, 1000);
+})
 
+ipcMain.handle('LogOut', async () => {
+  await LMapi.Logout()
+  mainWindow.reload()
 })
 
 
@@ -410,25 +431,17 @@ app.whenReady().then(async () => {
   // Set app user model id for windows
 
   try {
-    let imagePath
-    if (app.isPackaged) {
-      // In modalità packaged, usa il percorso delle risorse
-      imagePath = path.join(process.resourcesPath, 'main', 'appLabel.png')
-    } else {
-      // In modalità sviluppo, usa il percorso diretto
-      imagePath = path.join(__dirname, '..\\..\\src\\renderer\\src\\assets\\appLabel.png')
-    }
+    // Costruisce un percorso affidabile per l'icona, che funziona sia in sviluppo che in produzione.
+    // 'appLabel.png' deve trovarsi nella stessa cartella di questo script (src/main).
+    const iconPath = path.join(__dirname, 'appLabel.png');
 
-    const LABEL = new URL(imagePath).href
-
-    let tray = new Tray(LABEL)
+    const tray = new Tray(iconPath);
 
     // Crea il menu contestuale della tray
     const contextMenu = Menu.buildFromTemplate([
       {
         label: 'Show window',
         click: () => {
-
           mainWindow.show()
 
           WinTransitions.AnimateAll(mainWindow, {
@@ -604,46 +617,6 @@ ipcMain.handle('GetTracks', async () => {
   return separateObj(JSON.parse(fs.readFileSync(localDataDir + '\\tracks.json')))
 })
 
-//axios
-//
-//
-//
-//
-//
-//
-//
-
-async function getVideoInfo(videoId) {
-  try {
-    const youtube = await Innertube.create()
-
-    // Ottieni le informazioni dettagliate del video usando l'ID
-    const info = await youtube.getInfo(videoId)
-    const streamingData = await youtube.getStreamingData(videoId)
-
-    // Estrai solo i dati che ti servono
-    const videoDetails = {
-      title: info.basic_info.title || '',
-      artist: info.basic_info.author || '',
-      description: info.basic_info.short_description || '',
-      duration: info.basic_info.duration || '',
-      views: info.basic_info.view_count || 0,
-      published: info.basic_info.published || '',
-      likes: info.basic_info.like_count || 0,
-      thumbnails: info.basic_info.thumbnail?.map((thumb) => thumb.url) || [],
-      // Estrai altre informazioni che potrebbero servirti
-      isLiveContent: info.basic_info.is_live_content || false,
-      category: info.basic_info.category || '',
-      tags: info.basic_info.tags || [],
-      vidourl: streamingData.url || ''
-    }
-
-    return videoDetails
-  } catch (error) {
-    console.error('Errore durante il recupero delle informazioni del video:', error)
-    return null
-  }
-}
 
 async function SearchYtVideos(query) {
   try {
@@ -797,17 +770,6 @@ ipcMain.handle('GetArtPage', async (event, name, id) => {
 
 })
 
-const ytLinkCache = {}
-
-// Inizializza ytmusic-api
-let ytmInitialized = false
-async function ensureYtmInitialized() {
-  if (!ytmInitialized) {
-    await ytm.initialize()
-    ytmInitialized = true
-  }
-}
-
 // Funzione migliorata per normalizzare il testo
 const normalizeText = (text) => {
   if (!text) return ''
@@ -821,13 +783,6 @@ const normalizeText = (text) => {
     .trim() // Normalizza spazi
 }
 
-// Funzione per conservare i caratteri speciali in modo controllato
-const preserveSpecialChars = (text) => {
-  if (!text) return ''
-
-  // Converti in lowercase ma mantieni i caratteri speciali
-  return text.toLowerCase().trim()
-}
 
 const youtubeUrls = new ytUrls(binPath)
 
@@ -840,378 +795,6 @@ async function getStreamingUrl(videoId) {
     throw error
   }
 }
-
-// Funzione per calcolare la somiglianza tra due stringhe
-function calculateSimilarity(str1, str2) {
-  const a = normalizeText(str1)
-  const b = normalizeText(str2)
-
-  // Implementazione semplice della distanza di Levenshtein
-  if (a.length === 0) return b.length === 0 ? 1 : 0
-  if (b.length === 0) return 0
-
-  const matrix = []
-
-  // Inizializza la matrice
-  for (let i = 0; i <= b.length; i++) {
-    matrix[i] = [i]
-  }
-  for (let j = 0; j <= a.length; j++) {
-    matrix[0][j] = j
-  }
-
-  // Riempi la matrice
-  for (let i = 1; i <= b.length; i++) {
-    for (let j = 1; j <= a.length; j++) {
-      if (b.charAt(i - 1) === a.charAt(j - 1)) {
-        matrix[i][j] = matrix[i - 1][j - 1]
-      } else {
-        matrix[i][j] = Math.min(
-          matrix[i - 1][j - 1] + 1, // sostituzione
-          matrix[i][j - 1] + 1, // inserimento
-          matrix[i - 1][j] + 1 // eliminazione
-        )
-      }
-    }
-  }
-
-  // Calcola la similarità come percentuale
-  const maxLength = Math.max(a.length, b.length)
-  const distance = matrix[b.length][a.length]
-  return 1 - distance / maxLength
-}
-
-// Funzione per verificare se una stringa è contenuta in un'altra
-function isSubstring(needle, haystack) {
-  return normalizeText(haystack).includes(normalizeText(needle))
-}
-
-// Funzione per creare query di ricerca ottimizzate
-function createSearchQueries(title, artist) {
-  const queries = [
-    // Query esatta con caratteri speciali
-    `${title} ${artist}`,
-
-    // Query con titolo tra virgolette per corrispondenza esatta
-    `"${title}" ${artist}`,
-
-    // Versione normalizzata
-    `${normalizeText(title)} ${normalizeText(artist)}`
-  ]
-
-  // Se il titolo ha caratteri speciali, aggiungi una versione senza di essi
-  if (title !== normalizeText(title)) {
-    queries.push(`${normalizeText(title)} ${artist}`)
-  }
-
-  return queries
-}
-
-async function PerformBasicSearch(query) {
-  const newQuary = normalizeText(query)
-
-  const risultati = await ytengine.search(newQuary)
-  const videos = risultati.results
-  //console.log(videos)
-
-  return videos[0].id || videos[1].id
-}
-
-ipcMain.handle('basicSearch', async (event, query) => {
-  const id = await PerformBasicSearch(query)
-
-  console.log(id)
-
-  return await getStreamingUrl(id)
-})
-
-// Funzione per trovare la migliore corrispondenza tra i risultati
-function findBestMatch(results, title, artist, album) {
-  // Versioni normalizzate e preservate dei termini di ricerca
-  const normalizedTitle = normalizeText(title)
-  const normalizedArtist = normalizeText(artist)
-  const normalizedAlbum = album ? normalizeText(album) : ''
-  const preservedTitle = preserveSpecialChars(title)
-  const preservedArtist = preserveSpecialChars(artist)
-  const preservedAlbum = album ? preserveSpecialChars(album) : ''
-
-  console.log(
-    `Cerco corrispondenza per: "${preservedTitle}" di "${preservedArtist}"${album ? ` dall'album "${preservedAlbum}"` : ''}`
-  )
-  console.log(
-    `Versione normalizzata: "${normalizedTitle}" di "${normalizedArtist}"${album ? ` dall'album "${normalizedAlbum}"` : ''}`
-  )
-
-  // Assegna un punteggio a ciascun risultato
-  const scoredResults = results.map((result) => {
-    const resultTitle = normalizeText(result.name)
-    const resultArtist = normalizeText(result.artist.name)
-    // Utilizza la descrizione se disponibile, altrimenti stringa vuota
-    const resultDescription = result.description ? normalizeText(result.description) : ''
-    // Utilizza anche il campo subtitle se disponibile (potrebbe contenere info sull'album)
-    const resultSubtitle = result.subtitle ? normalizeText(result.subtitle) : ''
-    const preservedResultTitle = preserveSpecialChars(result.name)
-    const preservedResultArtist = preserveSpecialChars(result.artist.name)
-
-    // Calcola la somiglianza del titolo e dell'artista
-    const titleSimilarity = calculateSimilarity(normalizedTitle, resultTitle)
-    const artistSimilarity = calculateSimilarity(normalizedArtist, resultArtist)
-
-    // Verifica corrispondenze esatte con caratteri speciali
-    const exactPreservedTitleMatch = preservedTitle === preservedResultTitle ? 0.3 : 0
-    const exactPreservedArtistMatch = preservedArtist === preservedResultArtist ? 0.3 : 0
-
-    // Verifica se il titolo originale è contenuto nel risultato e viceversa
-    const titleInResult = isSubstring(preservedTitle, preservedResultTitle) ? 0.15 : 0
-    const resultInTitle = isSubstring(preservedResultTitle, preservedTitle) ? 0.1 : 0
-
-    // Punteggio complessivo (pesa di più la corrispondenza dell'artista)
-    const baseSimilarityScore = titleSimilarity * 0.6 + artistSimilarity * 0.4
-
-    // Bonus per corrispondenze esatte normalizzate
-    const exactNormalizedTitleMatch = normalizedTitle === resultTitle ? 0.2 : 0
-    const exactNormalizedArtistMatch = normalizedArtist === resultArtist ? 0.2 : 0
-
-    // Penalità per risultati con titoli molto più lunghi (potrebbero essere remix o versioni estese)
-    const lengthPenalty = resultTitle.length > normalizedTitle.length * 1.5 ? 0.1 : 0
-
-    // Penalità per risultati con titoli troppo brevi rispetto alla ricerca
-    const shortTitlePenalty = resultTitle.length < normalizedTitle.length * 0.7 ? 0.15 : 0
-
-    // NUOVO: Bonus per album nella descrizione o nel sottotitolo
-    let albumInDescriptionBonus = 0
-    if (normalizedAlbum) {
-      // Controlla se l'album è menzionato nella descrizione
-      if (resultDescription && isSubstring(normalizedAlbum, resultDescription)) {
-        // Assegna un bonus significativo (0.4 punti) se l'album è menzionato nella descrizione
-        albumInDescriptionBonus = 0.4
-        console.log(`Album "${album}" trovato nella descrizione di "${result.name}": +0.4 punti`)
-      }
-      // Controlla anche nel sottotitolo (spesso contiene info sull'album)
-      else if (resultSubtitle && isSubstring(normalizedAlbum, resultSubtitle)) {
-        // Bonus più piccolo per album nel sottotitolo
-        albumInDescriptionBonus = 0.2
-        console.log(`Album "${album}" trovato nel sottotitolo di "${result.name}": +0.2 punti`)
-      }
-    }
-
-    const finalScore =
-      baseSimilarityScore +
-      exactNormalizedTitleMatch +
-      exactNormalizedArtistMatch +
-      exactPreservedTitleMatch +
-      exactPreservedArtistMatch +
-      titleInResult +
-      resultInTitle +
-      albumInDescriptionBonus - // Aggiungi il bonus per l'album nella descrizione
-      lengthPenalty -
-      shortTitlePenalty
-
-    return {
-      ...result,
-      score: finalScore,
-      debug: {
-        titleSimilarity,
-        artistSimilarity,
-        exactNormalizedTitleMatch,
-        exactNormalizedArtistMatch,
-        exactPreservedTitleMatch,
-        exactPreservedArtistMatch,
-        titleInResult,
-        resultInTitle,
-        albumInDescriptionBonus, // Aggiungi il debug per il bonus album
-        lengthPenalty,
-        shortTitlePenalty
-      }
-    }
-  })
-
-  // Ordina i risultati per punteggio
-  scoredResults.sort((a, b) => b.score - a.score)
-
-  console.log('Risultati ordinati per rilevanza:')
-  scoredResults.slice(0, 3).forEach((r, i) => {
-    console.log(`${i + 1}. "${r.name}" di "${r.artist.name}" (Score: ${r.score.toFixed(2)})`)
-    console.log(`   Debug: ${JSON.stringify(r.debug)}`)
-    // Evidenzia se l'album è stato trovato nella descrizione
-    if (r.debug.albumInDescriptionBonus > 0) {
-      console.log(`   ✓ Album "${album}" trovato nella descrizione/sottotitolo`)
-    }
-  })
-
-  return scoredResults[0]
-}
-
-async function GetYoutubeLink(title, artist, album) {
-  try {
-    console.log(`Ricerca per: Titolo="${title}", Artista="${artist}", Album="${album}"`)
-
-    // Verifica se la query è già in cache
-    const cacheKey = `${artist} - ${title}`
-    if (
-      ytLinkCache[cacheKey] &&
-      ytLinkCache[cacheKey].timestamp > Date.now() - 7 * 24 * 60 * 60 * 1000
-    ) {
-      console.log(`Usando risultato in cache per "${cacheKey}"`)
-      // Estrai l'ID dal link in cache (assumendo che sia memorizzato l'URL completo)
-      return ytLinkCache[cacheKey].videoId
-    }
-
-    // Assicurati che ytmusic-api sia inizializzato
-    await ensureYtmInitialized()
-
-    // Crea diverse query di ricerca
-    const searchQueries = createSearchQueries(title, artist)
-    let allResults = []
-
-    // NUOVO: Crea una query specifica che includa l'album se disponibile
-    if (album) {
-      searchQueries.unshift(`${title} ${artist} ${album}`) // Aggiungi in prima posizione
-      console.log(`Aggiunta query con album: "${title} ${artist} ${album}"`)
-    }
-
-    // Esegui le ricerche con diverse query
-    for (const query of searchQueries) {
-      console.log(`Cercando con query: "${query}"`)
-      const results = await ytm.searchSongs(query)
-
-      if (results && results.length > 0) {
-        // Aggiungi i risultati all'array complessivo, evitando duplicati
-        results.forEach((result) => {
-          if (!allResults.some((r) => r.videoId === result.videoId)) {
-            allResults.push(result)
-          }
-        })
-      }
-    }
-
-    if (allResults.length === 0) {
-      throw new Error('Nessun risultato trovato con nessuna delle query')
-    }
-
-    // NUOVO: Se abbiamo l'album, proviamo a cercare informazioni aggiuntive
-    if (album) {
-      // Crea una query specifica per trovare video con l'album nella descrizione
-      const albumQuery = `${title} ${artist} ${album} "album"`
-      console.log(`Cercando video con album nella descrizione: "${albumQuery}"`)
-
-      try {
-        const albumResults = await ytm.searchSongs(albumQuery)
-        if (albumResults && albumResults.length > 0) {
-          console.log(
-            `Trovati ${albumResults.length} risultati con possibile riferimento all'album`
-          )
-
-          // Aggiungi questi risultati all'array principale, evitando duplicati
-          albumResults.forEach((result) => {
-            if (!allResults.some((r) => r.videoId === result.videoId)) {
-              // Aggiungi un campo per indicare che questo risultato è stato trovato con la query album
-              result.fromAlbumQuery = true
-              allResults.push(result)
-            }
-          })
-        }
-      } catch (albumSearchError) {
-        console.warn(`Errore nella ricerca con album: ${albumSearchError}`)
-      }
-    }
-
-    // Trova la migliore corrispondenza tra tutti i risultati raccolti
-    // Passa anche l'album alla funzione findBestMatch
-    const bestMatch = findBestMatch(allResults, title, artist, album)
-    let videoID = bestMatch.videoId
-
-    if (bestMatch.name !== title || bestMatch.artist.name !== artist) {
-      videoID = await PerformBasicSearch(searchQueries[0])
-    } else {
-      console.log(
-        `Miglior risultato trovato: "${bestMatch.name}" di "${bestMatch.artist.name}" (Score: ${bestMatch.score.toFixed(2)})`
-      )
-      // Se il risultato è stato trovato con la query album, evidenzialo
-      if (bestMatch.fromAlbumQuery) {
-        console.log(
-          `✓ Questo risultato è stato trovato usando la query che include l'album "${album}"`
-        )
-      }
-      // Se l'album è stato trovato nella descrizione, evidenzialo
-      if (bestMatch.debug && bestMatch.debug.albumInDescriptionBonus > 0) {
-        console.log(`✓ Album "${album}" rilevato nei metadati del video`)
-      }
-    }
-
-    // Salva l'ID in cache
-    if (!ytLinkCache[cacheKey]) {
-      ytLinkCache[cacheKey] = {
-        videoId: videoID,
-        timestamp: Date.now()
-      }
-    }
-
-    return videoID
-  } catch (error) {
-    console.error('Errore nella ricerca YouTube Music:', error)
-
-    // Fallback: prova una ricerca estrema con caratteri speciali preservati
-    try {
-      console.log('Tentativo di fallback con ricerca speciale')
-
-      // Assicurati che ytmusic-api sia inizializzato
-      await ensureYtmInitialized()
-
-      // Costruisci una query estremamente specifica
-      const fallbackQuery = `"${preserveSpecialChars(title)}" "${preserveSpecialChars(artist)}"`
-      console.log(`Query fallback: ${fallbackQuery}`)
-
-      const fallbackResults = await ytm.searchSongs(fallbackQuery)
-
-      if (fallbackResults && fallbackResults.length > 0) {
-        // Usa ancora findBestMatch anche per i risultati del fallback
-        const bestFallbackMatch = findBestMatch(fallbackResults, title, artist, album)
-        return bestFallbackMatch.videoId
-      } else {
-        // Ultimo tentativo: cerca solo per artista e filtra manualmente
-        const artistResults = await ytm.searchSongs(artist)
-        if (artistResults && artistResults.length > 0) {
-          // Filtra manualmente per trovare corrispondenze del titolo
-          const filteredResults = artistResults.filter((result) =>
-            isSubstring(normalizeText(title), normalizeText(result.name))
-          )
-
-          if (filteredResults.length > 0) {
-            const bestArtistMatch = findBestMatch(filteredResults, title, artist, album)
-            return bestArtistMatch.videoId
-          }
-        }
-
-        throw new Error('Nessun risultato trovato anche con tutti i fallback')
-      }
-    } catch (fallbackError) {
-      console.error('Errore anche nel fallback:', fallbackError)
-      throw fallbackError
-    }
-  }
-}
-
-async function GetCanvas(title, artist) {
-  const result = await PerformBasicSearch(`${artist} - ${title}`)
-
-  console.log('Risultati  ricerca--------------------------------------------\n' + result + '-----')
-
-  if (result) {
-    const youtube = await Innertube.create()
-
-    const streamingData = await youtube.getStreamingData(result)
-
-    return streamingData.url
-  } else {
-    return null // Or throw an error or handle as needed
-  }
-}
-
-ipcMain.handle('GetCanvas', async (event, title, artist) => {
-  return await GetCanvas(title, artist)
-})
-
 // Handler principale
 ipcMain.handle('GetYTlink', async (event, SearchD, id) => {
   console.log('---------------------------------------------------------------------------------')
@@ -1264,7 +847,7 @@ ipcMain.handle('GetYTlink', async (event, SearchD, id) => {
       if (ID) {
         return await getStreamingUrl(ID)
       } else {
-        const video = await PerformBasicSearch(`${title}`)
+        const video = await await SearchYtVideos(`${title}`)
         console.log('------------------------------------------------------')
         console.log(video)
         console.log('------------------------------------------------------')
@@ -1279,24 +862,6 @@ ipcMain.handle('GetYTlink', async (event, SearchD, id) => {
       }
     }
   }
-})
-
-ipcMain.handle('GetYTID', async (event, SearchD) => {
-  let infos = SearchD.split(' | ')
-
-  const title = infos[0] || ''
-  const artist = infos[1] || ''
-  const album = infos[2] || ''
-
-  return await GetYoutubeLink(title, artist, album)
-})
-
-ipcMain.handle('SearchYTVideo', async (event, query) => {
-  return await PerformBasicSearch(query)
-})
-
-ipcMain.handle('GetYTlinkFromID', async (event, id) => {
-  return await getVideoInfo(id)
 })
 //
 //
@@ -1378,16 +943,16 @@ const addToLocalLikde = async (data) => {
   try {
     let likedSongs = []
 
-    // Leggiamo il file se esiste
+   
     if (fs.existsSync(LikedsongsPath)) {
       const fileContent = fs.readFileSync(LikedsongsPath, 'utf8')
 
       if (fileContent && fileContent.trim() !== '') {
         try {
-          // Proviamo a parsare il JSON
+         
           const parsedContent = JSON.parse(fileContent)
 
-          // Convertiamo in array se necessario usando separateObj
+         
           likedSongs = await separateObj(parsedContent)
         } catch (parseError) {
           console.error('Errore nel parsing del file JSON:', parseError)
@@ -1396,28 +961,25 @@ const addToLocalLikde = async (data) => {
       }
     }
 
-    // Verifichiamo se la canzone è già presente
+
     const isDuplicate = likedSongs.some(
       (song) => song.title === Song.title && song.artist === Song.artist
     )
 
     if (!isDuplicate) {
-      // Aggiungiamo la nuova canzone
+
       likedSongs.push(Song)
       console.log('Aggiunta nuova canzone ai preferiti')
     } else {
       console.log('Canzone già presente nei preferiti')
     }
 
-    // Convertiamo l'array in oggetto e lo salviamo
     const objectToSave = joinObj(likedSongs, 'song')
     fs.writeFileSync(LikedsongsPath, JSON.stringify(objectToSave, null, 2), 'utf8')
 
     return { success: true, message: 'Operazione completata' }
   } catch (error) {
     console.error("Errore durante l'aggiunta della canzone ai preferiti:", error)
-
-    // In caso di errore, creiamo un nuovo file con solo questa canzone
     try {
       const newObject = joinObj([Song], 'song')
       fs.writeFileSync(LikedsongsPath, JSON.stringify(newObject, null, 2), 'utf8')
@@ -1430,7 +992,6 @@ const addToLocalLikde = async (data) => {
 }
 
 ipcMain.handle('LikeSong', async (event, data) => {
-  // Creiamo l'oggetto canzone con valori predefiniti per campi mancanti
 
 
 
@@ -1512,22 +1073,22 @@ ipcMain.handle('checkIfLiked', async (event, title, artist, album) => {
 
 //album
 ipcMain.handle('LikeAlbum', async (event, data) => {
-  // Creiamo l'oggetto canzone con valori predefiniti per campi mancanti
+
   const Album = data
 
   try {
     let likedAlbums = []
 
-    // Leggiamo il file se esiste
+
     if (fs.existsSync(LikedalbumsPath)) {
       const fileContent = fs.readFileSync(LikedalbumsPath, 'utf8')
 
       if (fileContent && fileContent.trim() !== '') {
         try {
-          // Proviamo a parsare il JSON
+
           const parsedContent = JSON.parse(fileContent)
 
-          // Convertiamo in array se necessario usando separateObj
+
           likedAlbums = await separateObj(parsedContent)
         } catch (parseError) {
           console.error('Errore nel parsing del file JSON:', parseError)
@@ -1536,20 +1097,17 @@ ipcMain.handle('LikeAlbum', async (event, data) => {
       }
     }
 
-    // Verifichiamo se la canzone è già presente
     const isDuplicate = likedAlbums.some(
       (album) => album.name === Album.name && album.artist.name === Album.artist.name
     )
 
     if (!isDuplicate) {
-      // Aggiungiamo la nuova canzone
       likedAlbums.push(Album)
       console.log('Aggiunta nuova canzone ai preferiti')
     } else {
       console.log('Canzone già presente nei preferiti')
     }
 
-    // Convertiamo l'array in oggetto e lo salviamo
     const objectToSave = joinObj(likedAlbums, 'album')
     fs.writeFileSync(LikedalbumsPath, JSON.stringify(objectToSave, null, 2), 'utf8')
 
@@ -1557,7 +1115,6 @@ ipcMain.handle('LikeAlbum', async (event, data) => {
   } catch (error) {
     console.error("Errore durante l'aggiunta della canzone ai preferiti:", error)
 
-    // In caso di errore, creiamo un nuovo file con solo questa canzone
     try {
       const newObject = joinObj([Album], 'album')
       fs.writeFileSync(LikedalbumsPath, JSON.stringify(newObject, null, 2), 'utf8')
@@ -1628,7 +1185,7 @@ ipcMain.handle('checkIfLikedAlbum', async (event, artist, album) => {
 
 //artist
 ipcMain.handle('LikeArtist', async (event, data) => {
-  // Creiamo l'oggetto canzone con valori predefiniti per campi mancanti
+
   const Artist = {
     artist: data.artist || '',
     img: data.img || '',
@@ -1638,16 +1195,16 @@ ipcMain.handle('LikeArtist', async (event, data) => {
   try {
     let likedArtists = []
 
-    // Leggiamo il file se esiste
+
     if (fs.existsSync(LikedartistsPath)) {
       const fileContent = fs.readFileSync(LikedartistsPath, 'utf8')
 
       if (fileContent && fileContent.trim() !== '') {
         try {
-          // Proviamo a parsare il JSON
+
           const parsedContent = JSON.parse(fileContent)
 
-          // Convertiamo in array se necessario usando separateObj
+
           likedArtists = await separateObj(parsedContent)
         } catch (parseError) {
           console.error('Errore nel parsing del file JSON:', parseError)
@@ -1656,18 +1213,16 @@ ipcMain.handle('LikeArtist', async (event, data) => {
       }
     }
 
-    // Verifichiamo se la canzone è già presente
     const isDuplicate = likedArtists.some((artist) => artist.artist === Artist.artist)
 
     if (!isDuplicate) {
-      // Aggiungiamo la nuova canzone
+
       likedArtists.push(Artist)
       console.log('Aggiunta nuova canzone ai preferiti')
     } else {
       console.log('Canzone già presente nei preferiti')
     }
 
-    // Convertiamo l'array in oggetto e lo salviamo
     const objectToSave = joinObj(likedArtists, 'artist')
     fs.writeFileSync(LikedartistsPath, JSON.stringify(objectToSave, null, 2), 'utf8')
 
@@ -1675,7 +1230,6 @@ ipcMain.handle('LikeArtist', async (event, data) => {
   } catch (error) {
     console.error("Errore durante l'aggiunta della canzone ai preferiti:", error)
 
-    // In caso di errore, creiamo un nuovo file con solo questa canzone
     try {
       const newObject = joinObj([Artist], 'artist')
       fs.writeFileSync(LikedartistsPath, JSON.stringify(newObject, null, 2), 'utf8')
@@ -1811,10 +1365,10 @@ ipcMain.handle('writeRecent', async (event, data) => {
       console.log('path non esistente')
     }
 
-    // Aggiungi la nuova canzone all'inizio dell'array
+
     listens.unshift(data)
 
-    // Mantieni solo gli ultimi 50 brani
+
     const objectToSave = listens.slice(0, 50)
 
     fs.writeFileSync(recentListens, JSON.stringify(joinObj(objectToSave, 'song'), null, 2), 'utf8')
@@ -2158,7 +1712,6 @@ async function ScanForMedia() {
 
 async function LoadAlbumCover(img, path) {
   try {
-    // Verifica se il file NON esiste prima di elaborarlo
     if (!fs.existsSync(path)) {
       await sharp(img)
         .png()
@@ -2170,7 +1723,7 @@ async function LoadAlbumCover(img, path) {
           console.error("Errore durante il salvataggio dell'immagine:", err)
         })
     } else {
-      // Il file esiste già, lo saltiamo
+
       console.log(`La copertina esiste già in ${path}`)
     }
   } catch (error) {
@@ -2181,20 +1734,17 @@ async function LoadAlbumCover(img, path) {
 async function CreateLocalLibrary() {
   const tracks = await ReadLocalTraks()
 
-  // Oggetto per rappresentare il file system
   let fileSystem = {
     folders: []
   }
 
-  // Primo passaggio: creare la struttura delle cartelle
-
   for (const song of tracks) {
     try {
-      // Controlla se la cartella esiste già nel fileSystem
+
       let folderIndex = fileSystem.folders.findIndex((folder) => folder.path === song.dir)
 
       if (folderIndex === -1) {
-        // Se la cartella non esiste, aggiungila
+
         fileSystem.folders.push({
           path: song.dir,
           name: getLastFolderName(song.dir),
@@ -2203,12 +1753,10 @@ async function CreateLocalLibrary() {
         folderIndex = fileSystem.folders.length - 1
       }
 
-      // Controlla se l'album esiste già nella cartella
       const folder = fileSystem.folders[folderIndex]
       let albumIndex = folder.albums.findIndex((album) => album.name === song.album)
 
       if (albumIndex === -1) {
-        // Se l'album non esiste, aggiungilo
         folder.albums.push({
           name: song.album || 'Unknown Album',
           artist: song.artist || 'Unknown Artist',
@@ -2218,7 +1766,7 @@ async function CreateLocalLibrary() {
         albumIndex = folder.albums.length - 1
       }
 
-      // Aggiungi la traccia all'album
+
       folder.albums[albumIndex].tracks.push({
         title: song.title || getFileName(song.path),
         artist: song.artist || 'Unknown Artist',
@@ -2233,27 +1781,26 @@ async function CreateLocalLibrary() {
     }
   }
 
-  // Ordina le cartelle alfabeticamente
+
   fileSystem.folders.sort((a, b) => a.name.localeCompare(b.name))
 
-  // Ordina gli album all'interno di ogni cartella
+
   fileSystem.folders.forEach((folder) => {
     folder.albums.sort((a, b) => a.name.localeCompare(b.name))
 
-    // Ordina le tracce all'interno di ogni album (se hanno numeri di traccia)
+
     folder.albums.forEach((album) => {
       album.tracks.sort((a, b) => {
         // Se hanno numeri di traccia, usa quelli
         if (a.trackNumber && b.trackNumber) {
           return a.trackNumber - b.trackNumber
         }
-        // Altrimenti ordina per titolo
+
         return a.title.localeCompare(b.title)
       })
     })
   })
 
-  // Aggiungi statistiche
   fileSystem.stats = {
     totalFolders: fileSystem.folders.length,
     totalAlbums: fileSystem.folders.reduce((count, folder) => count + folder.albums.length, 0),
@@ -2277,20 +1824,16 @@ async function CreateLocalLibrary() {
 
 // Funzione per ottenere il nome dell'ultima cartella da un percorso
 function getLastFolderName(path) {
-  // Normalizza il separatore di percorso
   const normalizedPath = path.replace(/\\/g, '/')
-  // Dividi il percorso e prendi l'ultimo elemento non vuoto
   const parts = normalizedPath.split('/').filter((part) => part.length > 0)
   return parts.length > 0 ? parts[parts.length - 1] : 'Root'
 }
 
 // Funzione per ottenere il nome del file senza estensione
 function getFileName(path) {
-  // Normalizza il separatore di percorso
+
   const normalizedPath = path.replace(/\\/g, '/')
-  // Ottieni il nome del file con estensione
   const fileName = normalizedPath.split('/').pop()
-  // Rimuovi l'estensione
   return fileName ? fileName.replace(/\.[^/.]+\$/, '') : 'Unknown'
 }
 
@@ -2491,7 +2034,6 @@ ipcMain.handle('togleMiniPLayer', async (event, condition) => {
   setTimeout(() => {
     try {
       if (condition) {
-        // Salva lo stato attuale
         const bounds = mainWindow.getBounds()
         windowState.beforewidth = bounds.width
         windowState.beforeheight = bounds.height
@@ -2499,55 +2041,46 @@ ipcMain.handle('togleMiniPLayer', async (event, condition) => {
 
         console.log(windowState)
 
-
-        // Posiziona in alto al centro, 50px fuori dallo schermo
         const { width: screenWidth } = require('electron').screen.getPrimaryDisplay().workAreaSize
         const x = Math.floor((screenWidth - 200) / 2)
 
         mainWindow.setMinimumSize(10, 10)
 
-        WinTransitions.AnimateAll(mainWindow, {
-          height: 100,
+        mainWindow.setBounds({
+          x: x,
+          y: -50,
           width: 200,
-          X: x,
-          Y: -50,
-          duration: 300,
-          framerate: 240,
-          animtype: 'ease'
-        })
+          height: 100
+        });
 
         setTimeout(() => {
           mainWindow.setAlwaysOnTop(true, 'floating')
           mainWindow.setSkipTaskbar(true)
-
           mainWindow.setResizable(false)
           mainWindow.setFullScreenable(false)
         }, 1000);
 
       } else {
-        // Ripristina le dimensioni minime normali
-
-        // Ripristina la possibilità di resize e fullscreen
-
-
-        mainWindow.setResizable(true)
-        mainWindow.setFullScreenable(true)
-        WinTransitions.AnimateAll(mainWindow, {
-          height: windowState.beforeheight || 600,
-          width: windowState.beforewidth || 800,
-          X: windowState.beforePosition.x,
-          Y: windowState.beforePosition.y,
-          duration: 300,
-          framerate: 240,
-          animtype: 'ease'
-        })
 
         mainWindow.setAlwaysOnTop(false)
         mainWindow.setSkipTaskbar(false)
+        
+
+        mainWindow.setResizable(true)
+        mainWindow.setFullScreenable(true)
+        
 
         mainWindow.setMinimumSize(1215, 700)
+        
 
-        // Ripristina posizione
+        mainWindow.setBounds({
+          x: windowState.beforePosition.x,
+          y: windowState.beforePosition.y,
+          width: windowState.beforewidth || 800,
+          height: windowState.beforeheight || 600
+        });
+
+        // Ripristina posizione se necessario
         if (!windowState.beforePosition) {
           mainWindow.center()
         }
@@ -2558,6 +2091,7 @@ ipcMain.handle('togleMiniPLayer', async (event, condition) => {
   }, 50)
 })
 
+
 ipcMain.handle('GetSearchSuggestion', async (event, key) => {
   try {
     const suggestions = await ytengine.music.getSearchSuggestions(key)
@@ -2567,7 +2101,6 @@ ipcMain.handle('GetSearchSuggestion', async (event, key) => {
 
     let result = []
 
-    // Estrai i suggerimenti dal primo blocco (SearchSuggestion)
     if (suggestions[0]?.type === 'SearchSuggestionsSection' && suggestions[0]?.contents) {
       const firstBlockSuggestions = suggestions[0].contents.map((item) => {
         if (item.type === 'SearchSuggestion' && item.suggestion?.text) {
@@ -2578,7 +2111,7 @@ ipcMain.handle('GetSearchSuggestion', async (event, key) => {
       result = [...result, ...firstBlockSuggestions]
     }
 
-    // Estrai i suggerimenti dal secondo blocco (MusicResponsiveListItem)
+
     if (suggestions[1]?.type === 'SearchSuggestionsSection' && suggestions[1]?.contents) {
       const secondBlockSuggestions = suggestions[1].contents.map((item) => {
         if (

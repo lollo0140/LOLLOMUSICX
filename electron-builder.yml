@@ -37,6 +37,9 @@ linux:
 appImage:
   artifactName: ${name}-${version}.${ext}
 npmRebuild: false
+extraResources:
+  - from: 'node_modules/playwright-core/.local-browsers'
+    to: 'extraResources/.local-browsers'
 publish:
   provider: generic
   url: https://example.com/auto-updates

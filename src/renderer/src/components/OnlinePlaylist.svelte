@@ -38,6 +38,7 @@
 </script>
 
 <script>
+  import { addDownloadTraksquewe } from './pagesElements/DownloadPannel.svelte'
   let { quary } = $props()
 
   shared = renderer.default.shared
@@ -105,6 +106,17 @@
       IsLiked = !IsLiked
     }
   }
+
+  async function Download() {
+    const tracksToDownload = data.songs.map((track) => ({
+      id: track.id,
+      title: track.title,
+      artist: track.artist.name,
+      album: track.album.name,
+      img: track.album.thumbnail
+    }))
+    addDownloadTraksquewe(tracksToDownload)
+  }
 </script>
 
 {#if !loading}
@@ -116,7 +128,7 @@
     artist={data.info.author?.name || undefined}
     playAction={play}
     playAction2={playShuffled}
-    dwnAction={undefined}
+    dwnAction={Download}
     likeAction={savePlaylist}
     LikeOrPin={IsLiked}
   />

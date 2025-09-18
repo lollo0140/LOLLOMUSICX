@@ -10,13 +10,14 @@
   const ipcRenderer = window.electron.ipcRenderer
 
   let loading = $state()
-  let LoadingImg = $state()
+  //let LoadingImg = $state()
 
   let canShowCanva = $state()
 
   import { fade, fly, slide } from 'svelte/transition'
   import LyricPannel from './pagesElements/LyricPannel.svelte'
   import QueweButton from './pagesElements/QueweButton.svelte'
+  import LoadingScreen from './pagesElements/LoadingScreen.svelte'
 
   const QUEWEimg = new URL('../assets/quewe.png', import.meta.url).href
   const LIKEimg = new URL('../assets/like.png', import.meta.url).href
@@ -158,7 +159,7 @@
 
       playngIndex = await shared.GetPIndex()
       loading = shared.LOADING
-      LoadingImg = shared.LoadingImg
+      //LoadingImg = shared.LoadingImg
       //console.log(LoadingImg)
     }, 100)
 
@@ -293,7 +294,9 @@
     </button>
 
     {#if loading}
-      <img transition:fade class="ImmageOfLoadingSong" src={LoadingImg} alt="img" />
+      <div class="ImmageOfLoadingSong" transition:fade>
+        <LoadingScreen/>
+      </div>
     {/if}
 
     <div class="moreInfoDiv">

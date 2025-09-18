@@ -5,6 +5,9 @@
 
   const ipcRenderer = window.electron.ipcRenderer
 
+
+  import { addDownloadTraksquewe } from './pagesElements/DownloadPannel.svelte'
+
   import { fade } from 'svelte/transition'
   import SongButton from './pagesElements/SongButton.svelte'
   import PlaylistsHeade from './pagesElements/PlaylistsHeade.svelte'
@@ -197,6 +200,18 @@
 
     shared.PlayPlaylistSshuffled(tracce, i)
   }
+
+  async function Download() {
+    const tracksToDownload = Alldata.tracks.map(track => ({
+        id: track.id,
+        title: track.title,
+        artist: Alldata.artist.name,
+        album: Alldata.name,
+        img: Alldata.img,
+      }));
+      addDownloadTraksquewe(tracksToDownload);
+  }
+
 </script>
 
 <div style="overflow-x: hidden;">
@@ -212,7 +227,7 @@
         artist={Alldata.artist.name}
         playAction={Play}
         playAction2={PlayShuffle}
-        dwnAction={undefined}
+        dwnAction={Download}
         likeAction={LikeAction}
         LikeOrPin={Saved}
         artistId={Alldata.artist.id}

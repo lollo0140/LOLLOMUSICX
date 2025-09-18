@@ -1,5 +1,4 @@
-<script module>
-  /* eslint-disable prettier/prettier */
+<script module>/* eslint-disable prettier/prettier */
   //setMiniplayer()
   var MINIPLAYER = $state(false)
 
@@ -141,6 +140,11 @@
   import LoadingScreen from './components/pagesElements/LoadingScreen.svelte'
   import Logger from './Logger.svelte'
   import { logger } from './stores/loggerStore.js'
+  import ManualLogin from './components/ManualLogin.svelte'
+  import DownloadPannel from './components/pagesElements/DownloadPannel.svelte'
+  import UserPannel from './components/pagesElements/UserPannel.svelte'
+
+  import { ReloadLibrary } from './components/UserLibrary.svelte'
 
   //imports
 
@@ -194,9 +198,7 @@
 
     logger.show('Welcome to LollomusicX!')
 
-    console.log('loading library');
-    
-    
+    console.log('loading library')
 
     shared = renderer.default.shared
     playerLocal = renderer.default.shared.Player
@@ -219,11 +221,15 @@
       //console.log(e)
     }
 
+    
+
     intervalId = setInterval(() => {
       playerLocal = renderer.default.shared.Player
     }, 100)
 
     //shared.genCmenu()
+
+    ReloadLibrary(true)
 
     Pageloading = false
   })
@@ -515,7 +521,7 @@
 
 {#if !MINIPLAYER}
   {#if logging}
-    <p>Log in the browser window</p>
+    <ManualLogin />
   {:else}
     <Background img={playerLocal?.img || ''} />
 
@@ -537,6 +543,8 @@
                   on:cambia-variabile={(e) => CallItem(e.detail)}
                   {pagindex}
                 />
+
+                <UserPannel />
 
                 <div id="toBlur" style="transition: all 200ms;">
                   {#if pagindex === 0}
@@ -630,13 +638,13 @@
       onclick={() => {
         console.log($SETTINGS)
 
-        if ($SETTINGS.playerSettings.general.killLollomusicOnClose === true) {
+        if ($SETTINGS?.playerSettings?.general?.killLollomusicOnClose === true) {
           //killLollomusicOnClose
           //miniPlayerWhenClosed
 
           ipcRenderer.invoke('closeApp')
         } else {
-          if ($SETTINGS.playerSettings.general.miniPlayerWhenClosed === true) {
+          if ($SETTINGS?.playerSettings?.general?.miniPlayerWhenClosed === true) {
             setMiniplayer()
           } else {
             ipcRenderer.invoke('closeWin')
@@ -666,17 +674,20 @@
       <img class="MinImg img" src={MINIMIZE} alt="palle" />
     </button>
 
-    <button
-      onclick={() => (FullScreen = !FullScreen)}
-      style="-webkit-app-region: no-drag;"
-      class="windowBarButton"
-    >
-      <img class="img" src={EXPAND} alt="palle" />
-    </button>
+    {#if !logging}
+      <button
+        onclick={() => (FullScreen = !FullScreen)}
+        style="-webkit-app-region: no-drag;"
+        class="windowBarButton"
+      >
+        <img class="img" src={EXPAND} alt="palle" />
+      </button>
+
+      <DownloadPannel />
+    {/if}
   </dir>
 
   <Logger />
-
 {:else}
   <div class="MiniPlayerContainer">
     <p class="MiniPlayerTitle">{playerLocal.title}</p>

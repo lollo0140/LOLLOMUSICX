@@ -115,6 +115,8 @@
   .editPannel {
     z-index: 9999;
 
+    overflow: hidden;
+
     transition: all 600ms;
   }
 
@@ -145,9 +147,9 @@
   }
 
   .closed {
-    right: 50px;
+    right: 420px;
 
-    position: absolute;
+    position: fixed;
 
     background-color: transparent;
     border: none;
@@ -155,7 +157,7 @@
     width: 50px;
     height: 50px;
 
-    top: 105px;
+    top: 160px;
   }
 
   .opened {

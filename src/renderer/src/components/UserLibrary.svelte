@@ -16,6 +16,8 @@
 
   let shared
 
+  import { SetFullLibrary } from './NavBar.svelte'
+
   let playlists = $state()
   let Savedplaylists = $state()
   let albums = $state()
@@ -63,6 +65,12 @@
         YTdata = await ipcRenderer.invoke('GetYTLybrary')
       }
 
+      SetFullLibrary({
+        YTplaylists: YTdata?.playlists,
+        playlists,
+        albums,
+      })
+
       //console.log(albums);
       //console.log(artists);
 
@@ -71,7 +79,7 @@
 
       loading = false
     } catch {
-      if (playlists && playlists) {
+      if (YTdata?.playlists && playlists) {
         loading = false
       }
     }
@@ -116,7 +124,8 @@
       return {
         YTplaylists: YTdata.playlists,
         albums: albums,
-        artists: YTdata.artists
+        artists: YTdata.artists,
+        playlists
       }
     } else {
       await ReloadLibrary(true)
@@ -124,7 +133,8 @@
       return {
         YTplaylists: YTdata.playlists,
         albums: albums,
-        artists: YTdata.artists
+        artists: YTdata.artists,
+        playlists
       }
     }
   }
@@ -399,17 +409,17 @@
   .New {
     margin-bottom: 5px;
 
-    position: absolute;
+    position: fixed;
 
-    left: 217px;
-    top: 40px;
+    left: 309px;
+    top: 96px;
 
     background: var(--main-bg);
     border: var(--main-border);
 
     height: 40px;
 
-    transition: all 600ms;
+    transition: all 800ms;
 
     border-radius: 9px;
 

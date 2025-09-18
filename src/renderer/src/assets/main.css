@@ -20,6 +20,9 @@ body {
 }
 
 * {
+
+    transition-timing-function: cubic-bezier(0.1, 0.885, 0.2, 1.05) !important;
+
     font-family: 'Lexend';
     color: white;
 
@@ -1032,8 +1035,6 @@ body {
     padding: 0px;
 
     background: transparent;
-
-    cursor: move;
 }
 
 .windowBarButton {
@@ -1843,33 +1844,19 @@ body {
 .ImmageOfLoadingSong {
     position: absolute;
 
-    width: 70px;
-    width: 70px;
+    width: 276px;
+    height: 276px;
 
     object-fit: cover;
 
-    top: 216px;
+    top: 12px;
     left: 12px;
+
+    backdrop-filter: blur(10px);
 
     border: var(--main-border);
     border-radius: 5px;
 
-    animation: LOD 2000ms infinite linear;
-
-}
-
-@keyframes LOD {
-    0% {
-        opacity: 0.5;
-    }
-
-    50% {
-        opacity: 0;
-    }
-
-    100% {
-        opacity: 0.5;
-    }
 }
 
 #welcome {
@@ -1989,8 +1976,6 @@ body {
 
 
 .SettingTogleBase {
-    border: var(--main-border);
-    background: var(--main-bg);
     border-radius: 10px;
 
     min-width: 550px;
@@ -2001,7 +1986,9 @@ body {
 
 .SettingName {
     float: left;
-    margin-left: 15px;
+    margin-left: 55px;
+
+    font-weight: 600;
 
     text-wrap: none;
     text-align: left;
@@ -2500,6 +2487,10 @@ body {
 
     cursor: pointer;
 
+    margin-top: 5px;
+
+    margin-left: 6px;
+
     padding: 0px;
 
     width: 40px;
@@ -2511,10 +2502,13 @@ body {
 
     transition: all 200ms;
 
+    pointer-events: all;
+    backdrop-filter: blur(30px) brightness(0.8);
 }
 
 .PlbuttonNav:hover {
     transform: scale(1.1);
+    opacity: 1;
 }
 
 .Plimg {
@@ -2530,13 +2524,18 @@ body {
 
     width: 40px;
     height: 40px;
+    opacity: 0.5;
+}
+
+.Plimg:hover {
+    opacity: 1;
 }
 
 .Plabel {
     position: absolute;
     transform: translate(0px, -52px);
 
-    padding: 5px;
+    padding: 7px;
 
     border: var(--main-border);
     background: var(--main-bg);
@@ -2548,7 +2547,11 @@ body {
 
     pointer-events: none;
 
-    backdrop-filter: blur(10px);
+    backdrop-filter: blur(30px) brightness(0.8);
+
+
+    font-weight: 800;
+
 
 }
 

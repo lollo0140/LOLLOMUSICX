@@ -49,7 +49,8 @@
         album: item.album,
         img: item.img,
         video: item.video | false,
-        path: destinationPath
+        path: destinationPath,
+        id: item.id
       }
 
       TosendObj.push(data)

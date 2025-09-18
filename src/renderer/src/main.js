@@ -20,6 +20,8 @@ const settings = {
   buttonClass: 'contextMenuButton'
 }
 
+import {addDownloadTraksquewe} from './components/pagesElements/DownloadPannel.svelte'
+
 let statoOnline
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -94,62 +96,6 @@ class shared {
     }
   }
 
-  //downloader`
-
-  async addDownloadTraksquewe(tracks) {
-    // Aggiungi i nuovi brani alla coda
-    this.downloadQuewe.push(...tracks)
-
-    // Avvia il download se non è già in corso
-    if (!this.downloading) {
-      this.downloading = true
-      await this.startDownloadProcess()
-    }
-  }
-
-  async startDownloadProcess() {
-    try {
-      while (this.downloadQuewe.length > 0) {
-        const track = this.downloadQuewe[0]
-        try {
-          let metadata
-
-          let URL
-
-          console.log(`Elaborazione di: ${track.title} - ${track.artist}`)
-          metadata = {
-            title: track.title,
-            artist: track.artist,
-            album: track.album,
-            img: track.img
-          }
-
-          if (track.video === false || track.video === undefined) {
-            URL = await ipcRenderer.invoke('SearchYTVideo', track.artist + ' ' + metadata.title)
-            console.log('ricerca base' + URL)
-          } else {
-            URL = await ipcRenderer.invoke(
-              'GetYTID',
-              `${metadata.title} | ${metadata.artist} | ${metadata.album}`
-            )
-            console.log('ricerca avanzata' + URL)
-          }
-
-          await ipcRenderer.invoke('downloadTrack', URL, metadata, track.path)
-        } catch (err) {
-          console.log(err)
-        } finally {
-          this.downloadQuewe.shift()
-        }
-        await new Promise((resolve) => setTimeout(resolve, 3000))
-      }
-    } catch (error) {
-      console.error('Errore generale nel processo di download:', error)
-    } finally {
-      // Assicurati che lo stato di download venga sempre reimpostato
-      this.downloading = false
-    }
-  }
 
   async LoadSettings() {
     this.settings = await ipcRenderer.invoke('readSettings')
@@ -1165,6 +1111,15 @@ class shared {
     } else {
       const LOCALimg = new URL('./assets/download.png', import.meta.url).href;
       downloadButton.style.backgroundImage = `url('${LOCALimg}')`;
+      downloadButton.addEventListener('click', () => {
+        addDownloadTraksquewe([{
+          id: data.songID,
+          title: data.title,
+          artist: data.artist,
+          album: data.album,
+          img: data.img,
+        }])
+      })
     }
 
     if (!liked) {
@@ -1179,12 +1134,14 @@ class shared {
           data.artID,
           data.albID
         );
+        logger.show('Added to liked')
       });
 
       LikeButton.style.opacity = '0.4';
     } else {
       LikeButton.addEventListener('click', () => {
         this.dislikeTrackExt(data.title, data.artist, data.album, data.img, data.id);
+        logger.show('Removed from liked')
       });
       LikeButton.style.opacity = '1';
     }
@@ -1213,6 +1170,7 @@ class shared {
             data.artID,
             data.albID
           );
+          logger.show('Added to playlist')
         }
       });
       index++;
@@ -1230,6 +1188,7 @@ class shared {
           icon: playlist.img,
           action: () => {
             ipcRenderer.invoke('AddToYTPlist', playlist.id, data.songID);
+            logger.show('Added to playlist')
           }
         });
 
@@ -1251,6 +1210,7 @@ class shared {
             data.artID,
             data.albID
           );
+          logger.show('Added to quewe')
         }
       },
       {
@@ -1286,6 +1246,7 @@ class shared {
         text: 'Remove from playlist',
         action: () => {
           this.removeFromPlaylist(data.songIndex, data.PlaylistIndex, data.setvideoid);
+          logger.show('Removed from playlist')
         }
       });
     }
@@ -1303,6 +1264,7 @@ class shared {
 
           await ipcRenderer.invoke('RemFromYTPlist', Ids);
           LoadPlaylist()
+          logger.show('Removed from playlist')
         }
       });
     }
@@ -1323,6 +1285,23 @@ class shared {
 
     const LikeButton = document.createElement('button');
     LikeButton.id = 'LikeButton';
+
+    const downloadButton = document.createElement('button');
+    downloadButton.id = 'downloadButton';
+    const LOCALimg = new URL('./assets/download.png', import.meta.url).href;
+    downloadButton.style.backgroundImage = `url('${LOCALimg}')`;
+    downloadButton.addEventListener('click', () => {
+      const tracksToDownload = Albuminfo.tracks.map(track => ({
+        id: track.id,
+        title: track.title,
+        artist: Albuminfo.artist.name,
+        album: Albuminfo.name,
+        img: Albuminfo.img,
+      }));
+      addDownloadTraksquewe(tracksToDownload);
+      logger.show('Album added to download queue');
+    });
+    LikeButtonConteiner.appendChild(downloadButton);
 
     CmenuImg.id = 'CmenuImg';
     infoContainer.id = 'infoContainer';
@@ -1346,6 +1325,7 @@ class shared {
           }))
         };
         await ipcRenderer.invoke('LikeAlbum', cleanAlbum)
+        logger.show('Album added to library')
         ReloadLibrary()
       });
 
@@ -1367,6 +1347,7 @@ class shared {
           }))
         };
         await ipcRenderer.invoke('DisLikeAlbum', cleanAlbum)
+        logger.show('Album removed from library')
         ReloadLibrary()
       });
       LikeButton.style.opacity = '1';
@@ -1392,6 +1373,7 @@ class shared {
 
               await ipcRenderer.invoke('AddToYTPlist', playlist.id, song.id);
             }
+            logger.show('Album added to playlist')
           }
         });
 
@@ -1426,6 +1408,7 @@ class shared {
               song.album.id
             );
           }
+          logger.show('Album added to playlist')
         }
       });
       index++;
@@ -1451,6 +1434,7 @@ class shared {
               song.album.id
             );
           }
+          logger.show('Album added to quewe')
         }
       },
       {
@@ -1493,12 +1477,14 @@ class shared {
     if (!liked) {
       LikeButton.addEventListener('click', () => {
         this.SaveArtist(data.name, data.img, data.id);
+        logger.show('Artist added to library')
       });
 
       LikeButton.style.opacity = '0.4';
     } else {
       LikeButton.addEventListener('click', () => {
         this.dislikeArtist(data.name);
+        logger.show('Artist removed from library')
       });
       LikeButton.style.opacity = '1';
     }
@@ -1517,6 +1503,23 @@ class shared {
 
     CmenuImg.id = 'CmenuImg';
     infoContainer.id = 'infoContainer';
+
+    const downloadButton = document.createElement('button');
+    downloadButton.id = 'downloadButton';
+    const LOCALimg = new URL('./assets/download.png', import.meta.url).href;
+    downloadButton.style.backgroundImage = `url('${LOCALimg}')`;
+    downloadButton.addEventListener('click', () => {
+      const tracksToDownload = data.tracks.map(track => ({
+        id: track.id,
+        title: track.title,
+        artist: track.artist,
+        album: track.album,
+        img: track.img,
+      }));
+      addDownloadTraksquewe(tracksToDownload);
+      logger.show('Playlist added to download queue');
+    });
+    infoContainer.appendChild(downloadButton);
 
     const pinned = await this.checkpin(data.index);
 
@@ -1562,6 +1565,7 @@ class shared {
             for (const song of data.tracks) {
               await ipcRenderer.invoke('AddToYTPlist', playlist.id, song.id);
             }
+            logger.show('Album added to playlist')
           }
         });
 
@@ -1589,6 +1593,7 @@ class shared {
         action: async () => {
           const random = Math.floor(Math.random() * data.tracks.length);
           await this.PlayPlaylistSshuffled(data.tracks, random);
+          logger.show('Playng the playlist in shuffled mode')
         }
       },
       {
@@ -1605,6 +1610,7 @@ class shared {
               song.albID || ''
             );
           }
+          logger.show('Playlist added to quewe')
         }
       },
       {
@@ -1619,6 +1625,7 @@ class shared {
         text: 'Delete playlist',
         action: () => {
           this.DeletePlaylist(data.index);
+          logger.show('Playlist deleted')
         }
       }
     ];
@@ -1635,6 +1642,24 @@ class shared {
 
     CmenuImg.id = 'CmenuImg';
     infoContainer.id = 'infoContainer';
+
+    const downloadButton = document.createElement('button');
+    downloadButton.id = 'downloadButton';
+    const LOCALimg = new URL('./assets/download.png', import.meta.url).href;
+    downloadButton.style.backgroundImage = `url('${LOCALimg}')`;
+    downloadButton.addEventListener('click', async () => {
+      const tracks = await this.GetLiked();
+      const tracksToDownload = tracks.map(track => ({
+        id: track.id,
+        title: track.title,
+        artist: track.artist,
+        album: track.album,
+        img: track.img,
+      }));
+      addDownloadTraksquewe(tracksToDownload);
+      logger.show('Liked songs added to download queue');
+    });
+    infoContainer.appendChild(downloadButton);
 
     const playlists = await this.ReadPlaylist();
 
@@ -1661,6 +1686,7 @@ class shared {
               song.albID || ''
             );
           }
+          logger.show('added to playlist')
         }
       });
       index++;
@@ -1679,7 +1705,9 @@ class shared {
           action: () => {
             for (const song of tracks) {
               ipcRenderer.invoke('AddToYTPlist', playlist.id, song.id);
+
             }
+            logger.show('added to playlist')
           }
         });
 
@@ -1694,6 +1722,7 @@ class shared {
         action: async () => {
           const random = Math.floor(Math.random() * tracks.length);
           await this.PlayPlaylistSshuffled(tracks, random);
+          logger.show('Playng the playlist in shuffled mode')
         }
       },
       {
@@ -1710,6 +1739,7 @@ class shared {
               song.albID || ''
             );
           }
+          logger.show('added to quewe')
         }
       },
       {
@@ -1792,12 +1822,13 @@ class shared {
           data.albID
         );
       });
-
+      logger.show('added to liked')
       LikeButton.style.opacity = '0.4';
     } else {
       LikeButton.addEventListener('click', () => {
         this.dislikeTrackExt(data.title, data.artist, data.album, data.img);
       });
+      logger.show('removed from liked')
       LikeButton.style.opacity = '1';
     }
 
@@ -1825,6 +1856,7 @@ class shared {
             data.artID,
             data.albID
           );
+          logger.show('added to playlist')
         }
       });
       index++;
@@ -1842,6 +1874,7 @@ class shared {
           icon: playlist.img,
           action: () => {
             ipcRenderer.invoke('AddToYTPlist', playlist.id, data.id);
+            logger.show('added to playlist')
           }
         });
 
@@ -1856,6 +1889,7 @@ class shared {
         text: 'Remove from quewe',
         action: () => {
           this.SongsQuewe.splice(data.songIndex, 1);
+          logger.show('removed from quewe')
         }
       },
       {
@@ -1899,6 +1933,23 @@ class shared {
     CmenuImg.id = 'CmenuImg';
     infoContainer.id = 'infoContainer';
 
+    const downloadButton = document.createElement('button');
+    downloadButton.id = 'downloadButton';
+    const LOCALimg = new URL('./assets/download.png', import.meta.url).href;
+    downloadButton.style.backgroundImage = `url('${LOCALimg}')`;
+    downloadButton.addEventListener('click', () => {
+      const tracksToDownload = tracks.songs.map(track => ({
+        id: track.id,
+        title: track.title,
+        artist: track.artist.name,
+        album: track.album.name,
+        img: track.album.thumbnail,
+      }));
+      addDownloadTraksquewe(tracksToDownload);
+      logger.show('Playlist added to download queue');
+    });
+    infoContainer.appendChild(downloadButton);
+
     const playlists = await this.ReadPlaylist();
 
     let index = 0;
@@ -1922,6 +1973,7 @@ class shared {
               song.album.id || ''
             );
           }
+          logger.show('added to playlist')
         }
       });
       index++;
@@ -1939,6 +1991,7 @@ class shared {
             for (const song of tracks.songs) {
               await ipcRenderer.invoke('AddToYTPlist', playlist.id, song.id);
             }
+            logger.show('added to playlist')
           }
         });
       }
@@ -1962,7 +2015,7 @@ class shared {
               albumID: song.album.id || '',
               artistID: song.artist.id || ''
             };
-
+            logger.show('Playng in shuffled mode')
             tracce.push(item);
           }
 
@@ -1983,6 +2036,7 @@ class shared {
               song.album.id || ''
             );
           }
+          logger.show('added to quewe')
         }
       },
       {
@@ -2001,6 +2055,7 @@ class shared {
         action: async () => {
           await ipcRenderer.invoke('DelYTPlaylist', data.id);
           ReloadLibrary(true);
+          logger.show('playlist deleted')
         }
       });
     }

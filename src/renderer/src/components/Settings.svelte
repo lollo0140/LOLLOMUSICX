@@ -1,10 +1,10 @@
-<script>/* eslint-disable prettier/prettier */
+<script>
+  /* eslint-disable prettier/prettier */
 
   import { onMount } from 'svelte'
   import * as renderer from '../main.js'
-  import { fade } from 'svelte/transition'
+  import { fade, slide } from 'svelte/transition'
   import Togle from './pagesElements/Togle.svelte'
-  import Slider from './pagesElements/Slider.svelte'
   import DropDownMenu from './pagesElements/DropDownMenu.svelte'
   const ipcRenderer = window.electron.ipcRenderer
 
@@ -14,259 +14,183 @@
 
   const backgmenuitems = ['dynamic', 'static', 'custom']
 
-  let custombg = $state(defBG)
-
   let shared
-
-  let paths = $state([])
-
-  let settings = $state()
-
-  let loading = $state(true)
 
   onMount(async () => {
     shared = renderer.default.shared
-
-    settings = shared.settings.playerSettings
-
-    paths = settings.library.scanPaths
-
-    custombg = shared.settings.playerSettings.interface.BackgroundImage
-
-    loading = false
   })
 
   async function ADDPATH() {
     const path = await ipcRenderer.invoke('PathSelector')
-    shared.settings.playerSettings.library.scanPaths.push(path)
-    paths = shared.settings.playerSettings.library.scanPaths
+    let temp = $SETTINGS
+    temp.playerSettings.library.scanPaths.push(path)
+    SetSettings(temp)
     await ipcRenderer.invoke('scan')
-
-    ApplyMod()
   }
 
   async function REMOVEPATH(i) {
-    shared.settings.playerSettings.library.scanPaths.splice(i, 1)
-    paths = shared.settings.playerSettings.library.scanPaths
-
-    ApplyMod()
-  }
-
-  async function ApplyMod() {
-    await shared.APPLYSETTINGS()
-    settings = shared.settings.playerSettings
-  }
-
-  async function SetstartMinimized() {
-    if (settings.general.startMinimized) {
-      shared.settings.playerSettings.general.startMinimized = false
-    } else {
-      shared.settings.playerSettings.general.startMinimized = true
-    }
-
-    ApplyMod()
-    console.log(settings.general.startMinimized)
-  }
-
-  async function SetminimizeToTray() {
-    if (settings.general.minimizeToTray) {
-      shared.settings.playerSettings.general.minimizeToTray = false
-    } else {
-      shared.settings.playerSettings.general.minimizeToTray = true
-    }
-
-    ApplyMod()
-    console.log(settings.general.minimizeToTray)
-  }
-
-  async function SetautoPlayOnStart() {
-    if (settings.general.autoPlayOnStart) {
-      shared.settings.playerSettings.general.autoPlayOnStart = false
-    } else {
-      shared.settings.playerSettings.general.autoPlayOnStart = true
-    }
-
-    ApplyMod()
-    console.log(settings.general.autoPlayOnStart)
+    let temp = $SETTINGS
+    temp.playerSettings.library.scanPaths.splice(i, 1)
+    SetSettings(temp)
   }
 
   async function SetminiPlayerWhenClosed() {
-    if (settings.general.miniPlayerWhenClosed) {
-      shared.settings.playerSettings.general.miniPlayerWhenClosed = false
-    } else {
-      shared.settings.playerSettings.general.miniPlayerWhenClosed = true
-    }
-
-    ApplyMod()
-    console.log(settings.general.miniPlayerWhenClosed)
+    let temp = $SETTINGS
+    temp.playerSettings.general.miniPlayerWhenClosed =
+      !temp.playerSettings.general.miniPlayerWhenClosed
+    SetSettings(temp)
   }
 
   async function SetkillLollomusicOnClose() {
-    if (settings.general.killLollomusicOnClose) {
-      shared.settings.playerSettings.general.killLollomusicOnClose = false
-    } else {
-      shared.settings.playerSettings.general.killLollomusicOnClose = true
-    }
-
-    ApplyMod()
-    console.log(settings.general.killLollomusicOnClose)
+    let temp = $SETTINGS
+    temp.playerSettings.general.killLollomusicOnClose =
+      !temp.playerSettings.general.killLollomusicOnClose
+    SetSettings(temp)
   }
 
   async function SetrememberListen() {
-    if (settings.audio.rememberListen) {
-      shared.settings.playerSettings.audio.rememberListen = false
-    } else {
-      shared.settings.playerSettings.audio.rememberListen = true
-    }
-
-    ApplyMod()
-    console.log(settings.audio.rememberListen)
-  }
-
-  async function SetrememberShuffle() {
-    if (settings.audio.rememberListen) {
-      shared.settings.playerSettings.audio.rememberListen = false
-    } else {
-      shared.settings.playerSettings.audio.rememberListen = true
-    }
-
-    ApplyMod()
-    console.log(settings.audio.rememberListen)
+    let temp = $SETTINGS
+    temp.playerSettings.audio.rememberListen = !temp.playerSettings.audio.rememberListen
+    SetSettings(temp)
   }
 
   async function SetshowVideo() {
-    if (settings.interface.showVideo) {
-      shared.settings.playerSettings.interface.showVideo = false
-    } else {
-      shared.settings.playerSettings.interface.showVideo = true
-    }
-
-    ApplyMod()
-    console.log(settings.audio.rememberListen)
+    let temp = $SETTINGS
+    temp.playerSettings.interface.showVideo = !temp.playerSettings.interface.showVideo
+    SetSettings(temp)
   }
 
-  async function SetZoom(addremove) {
-    if (addremove) {
-      shared.settings.playerSettings.interface.Zoom += 0.1
-      shared.settings.playerSettings.interface.Zoom = parseFloat(
-        shared.settings.playerSettings.interface.Zoom.toFixed(2)
-      )
-    } else {
-      shared.settings.playerSettings.interface.Zoom -= 0.1
-      shared.settings.playerSettings.interface.Zoom = parseFloat(
-        shared.settings.playerSettings.interface.Zoom.toFixed(2)
-      )
-    }
-
-    ApplyMod()
-    console.log(shared.settings.playerSettings.interface.Zoom)
-  }
-
-  async function SetBackground(keyword) {
+  async function SetBackgournd(keyword) {
     let temp = $SETTINGS
     temp.playerSettings.interface.Background = keyword
-
     SetSettings(temp)
-
   }
 
   async function SetCustomImg() {
-
     const imgpath = await shared.SelectFile()
     const imageSrc = `local:///` + imgpath
-
-    shared.settings.playerSettings.interface.BackgroundImage = imageSrc
-
-    ApplyMod()
-    console.log(shared.settings.playerSettings.interface.BackgroundImage)
+    let temp = $SETTINGS
+    temp.playerSettings.interface.BackgroundImage = imageSrc
+    SetSettings(temp)
   }
-
 </script>
 
-{#if !loading}
-  <div transition:fade>
-    <p>settings</p>
-
-    <div>
-      <p>System</p>
-
-      <Togle
-        SettingName={'Show miniplayer when closing the main app'}
-        Value={settings.general.miniPlayerWhenClosed}
-        Click={SetminiPlayerWhenClosed}
-      />
-
-      <Togle
-        SettingName={'Exit the app proces when closing the main app'}
-        Value={settings.general.killLollomusicOnClose}
-        Click={SetkillLollomusicOnClose}
-      />
-
-      <p>Audio</p>
-
-      <Togle
-        SettingName={'Remember last quewe when opened'}
-        Value={settings.audio.rememberListen}
-        Click={SetrememberListen}
-      />
-
-      <p>Appearence</p>
-
-      <Togle
-        SettingName={'Show videos (like canvas in Spotify)'}
-        Value={settings.interface.showVideo}
-        Click={SetshowVideo}
-      />
-
-      <Slider SettingName={'Zoom'} Value={settings.interface.Zoom} Click={SetZoom} />
+<div class="settingsDiv">
+  {#if $SETTINGS.playerSettings}
+    <div transition:fade>
+      <p class="settingsTitle">Settings</p>
 
       <div>
+        <p class="settingsSubTitle">System</p>
 
-        <DropDownMenu SettingName={'Background'} Values={backgmenuitems} Current={settings.interface.Background} Click={SetBackground}/>
+        <Togle
+          SettingName={'Show miniplayer when closing the main app'}
+          Value={$SETTINGS.playerSettings.general.miniPlayerWhenClosed}
+          Click={SetminiPlayerWhenClosed}
+        />
 
-        {#if settings.interface.Background === 'custom'}
+        <Togle
+          SettingName={'Exit the app proces when closing the main app'}
+          Value={$SETTINGS.playerSettings.general.killLollomusicOnClose}
+          Click={SetkillLollomusicOnClose}
+        />
 
-          <img alt="bg" src="{custombg}">
+        <p class="settingsSubTitle">Audio</p>
 
-          <button onclick={() => SetCustomImg()} type="button">chose background</button>
+        <Togle
+          SettingName={'Remember last quewe when opened'}
+          Value={$SETTINGS.playerSettings.audio.rememberListen}
+          Click={SetrememberListen}
+        />
 
-        {/if}
+        <p class="settingsSubTitle">Appearence</p>
 
+        <Togle
+          SettingName={'Show videos (like canvas in Spotify)'}
+          Value={$SETTINGS.playerSettings.interface.showVideo}
+          Click={SetshowVideo}
+        />
+
+        <br />
+
+        <div>
+          <DropDownMenu
+            SettingName={'Background'}
+            Values={backgmenuitems}
+            Current={$SETTINGS.playerSettings.interface.Background}
+            Click={SetBackgournd}
+          />
+
+          {#if $SETTINGS.playerSettings.interface.Background === 'custom'}
+            <img alt="bg" src={$SETTINGS.playerSettings.interface.BackgroundImage || defBG} />
+
+            <button onclick={() => SetCustomImg()} type="button">chose background</button>
+          {/if}
+        </div>
+
+        <p class="settingsSubTitle">Local paths</p>
+
+        <div class="pathsList">
+          {#each $SETTINGS.playerSettings.library.scanPaths as path, i}
+            <div in:slide class="pathButton">
+              <p class="Pathdisplay">{path}</p>
+              <p class="IndexIndicator">{i + 1}</p>
+              <button class="removeButton" onclick={() => REMOVEPATH(i)}>remove</button>
+            </div>
+          {/each}
+
+            <br>
+            <button class="PathButton" onclick={async () => await ipcRenderer.invoke('scan')}>rescan</button>
+            <button class="PathButton" onclick={() => ADDPATH()}>add</button>
+
+
+        </div>
 
       </div>
 
-
-
-      <p>Paths locali</p>
-
-      <div class="pathsList">
-        {#each paths as path, i}
-          <div class="pathButton">
-            <p class="Pathdisplay">{path}</p>
-            <button class="removeButton" onclick={REMOVEPATH(i)}>remove</button>
-            <p style="margin:0px; float: right;">{i + 1}</p>
-          </div>
-        {/each}
-
-        <button onclick={async () => await ipcRenderer.invoke('scan')}>rescan</button>
-      </div>
-
-      <button onclick={() => ADDPATH()}>aggiungi</button>
+      <button onclick={() => ipcRenderer.invoke('RELAPPLICATION')}>Reload app</button>
     </div>
-
-
-    <button onclick={ () => ipcRenderer.invoke('RELAPPLICATION')}>Reload app</button>
-
-
-  </div>
-{/if}
+  {/if}
+</div>
 
 <style>
+  .settingsSubTitle {
+    font-size: 30px;
+    font-weight: 900;
+    color: rgba(255, 255, 255, 0.4);
+    margin-left: 30px;
+  }
+
+  .settingsTitle {
+    font-size: 60px;
+    font-weight: 900;
+    color: white;
+
+    margin-left: 30px;
+    line-height: 10px;
+  }
+
+  .settingsDiv {
+    position: absolute;
+
+    left: 0px;
+    top: 0px;
+
+    width: 750px;
+    height: 100%;
+
+    overflow-x: hidden;
+    overflow-y: scroll;
+  }
+
   .pathButton {
-    background: grey;
-    width: 100%;
+    background: var(--main-bg);
+    border: var(--main-border);
+    border-radius: 9px;
+
     height: 40px;
-    margin-bottom: 10px;
+    margin: 10px;
+    margin-bottom: 0px;
   }
 
   .removeButton {
@@ -276,6 +200,72 @@
 
   .Pathdisplay {
     float: left;
-    margin: 0px;
+
+    font-size: 20px;
+    font-weight: 900;
+    color: white;
+
+    margin-top: 7px;
+    margin-left: 10px;
   }
+
+  .removeButton {
+    background: var(--main-bg);
+    border: var(--main-border);
+    border-radius: 9px;
+
+    margin-top: 6px;
+    margin-right: 10px;
+
+    padding: 5px;
+
+    transition: all 200ms;
+  }
+
+  .removeButton:hover {
+    background: rgba(255, 255, 255, 0.3);
+  }
+
+  .IndexIndicator {
+    margin-top: 10px;
+
+    float: right;
+
+    font-size: 15px;
+    font-weight: 900;
+    color: rgba(255, 255, 255, 0.4);
+    margin-right: 10px;
+
+  }
+
+  .pathsList {
+    background: var(--main-bg);
+    border: var(--main-border);
+    border-radius: 18px;
+
+    margin-left: 35px;
+    margin-right: 35px;
+
+    margin-bottom: 20px;
+  }
+
+  .PathButton {
+    background: var(--main-bg);
+    border: var(--main-border);
+    border-radius: 9px;
+
+    padding: 5px;
+
+    margin: 10px;
+    margin-right: 0px;
+
+    cursor: pointer;
+
+    transition: all 200ms;
+  }
+
+  .PathButton:hover {
+    background: rgba(255, 255, 255, 0.3);
+  }
+
 </style>

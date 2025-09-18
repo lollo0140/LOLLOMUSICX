@@ -32,6 +32,7 @@
 </script>
 
 <script>
+  import { addDownloadTraksquewe } from './pagesElements/DownloadPannel.svelte'
   import { fade } from 'svelte/transition'
   import PlaylistsHeade from './pagesElements/PlaylistsHeade.svelte'
   import LoadingScreen from './pagesElements/LoadingScreen.svelte'
@@ -105,6 +106,18 @@
     }
     Pinned = !Pinned
   }
+
+  async function Download() {
+    const tracksToDownload =  Playlist.tracks.map((track) => ({
+      id: track.id,
+      title: track.title,
+      artist: track.artist.name,
+      album: track.album.name,
+      img: track.album.thumbnail
+    }))
+    addDownloadTraksquewe(tracksToDownload)
+  }
+
 </script>
 
 <div>
@@ -119,7 +132,7 @@
           artist=""
           playAction={PlayTraks}
           playAction2={PlayTraksShuffled}
-          dwnAction={undefined}
+          dwnAction={Download}
           likeAction={PIN}
           LikeOrPin={Pinned}
         />
