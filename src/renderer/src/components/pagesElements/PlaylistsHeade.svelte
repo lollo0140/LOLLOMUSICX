@@ -115,7 +115,7 @@
   {/if}
 
   {#if Type !== 'artist'}
-    <button class="downloadButton" onclick={() => dwnAction()}>
+    <button style="{totalDownload === Tracks.length ? 'opacity:1;' : 'opacity:0.3;'}" class="downloadButton" onclick={() => dwnAction()}>
       <img src={totalDownload === Tracks.length ? DOWNLOADED : DOWNLOAD} alt="action" />
     </button>
   {/if}

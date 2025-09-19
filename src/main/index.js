@@ -903,15 +903,17 @@ ipcMain.handle('GetYTLybrary', async () => {
   let playlists, albums, artists
 
   let error = true
+  let maxRetries = 3
+  let retryCount = 0
 
 
-
-  while (error) {
+  while (error && retryCount < maxRetries) {
     try {
       [playlists, albums, artists] = await Promise.all([LMapi.getAllPlaylists(), LMapi.getLibraryAlbums(), LMapi.getLibraryArtists()])
       error = false
     } catch {
 
+      retryCount++
       setTimeout(() => {
         console.log('error while getting the user library retryng');
       }, 500);
@@ -919,10 +921,15 @@ ipcMain.handle('GetYTLybrary', async () => {
     }
   }
 
-
-  return {
-    playlists, albums, artists
+  if (retryCount >= maxRetries) {
+    throw new Error('error while loading library')
+  } else {
+    return {
+      playlists, albums, artists
+    }
   }
+
+
 
 })
 
@@ -943,16 +950,16 @@ const addToLocalLikde = async (data) => {
   try {
     let likedSongs = []
 
-   
+
     if (fs.existsSync(LikedsongsPath)) {
       const fileContent = fs.readFileSync(LikedsongsPath, 'utf8')
 
       if (fileContent && fileContent.trim() !== '') {
         try {
-         
+
           const parsedContent = JSON.parse(fileContent)
 
-         
+
           likedSongs = await separateObj(parsedContent)
         } catch (parseError) {
           console.error('Errore nel parsing del file JSON:', parseError)
@@ -2064,14 +2071,14 @@ ipcMain.handle('togleMiniPLayer', async (event, condition) => {
 
         mainWindow.setAlwaysOnTop(false)
         mainWindow.setSkipTaskbar(false)
-        
+
 
         mainWindow.setResizable(true)
         mainWindow.setFullScreenable(true)
-        
+
 
         mainWindow.setMinimumSize(1215, 700)
-        
+
 
         mainWindow.setBounds({
           x: windowState.beforePosition.x,

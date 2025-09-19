@@ -68,7 +68,7 @@
       SetFullLibrary({
         YTplaylists: YTdata?.playlists,
         playlists,
-        albums,
+        albums
       })
 
       //console.log(albums);
@@ -212,19 +212,19 @@
           <button
             onclick={() => ShowOnly('playlist')}
             bind:this={SelectorButton1}
-            class="CtypeSelector">Playlists</button
+            class="CtypeSelector PL">Playlists</button
           >
 
           <button
             onclick={() => ShowOnly('album')}
             bind:this={SelectorButton2}
-            class="CtypeSelector">Album</button
+            class="CtypeSelector ALB">Album</button
           >
 
           <button
             onclick={() => ShowOnly('artist')}
             bind:this={SelectorButton3}
-            class="CtypeSelector">Artists</button
+            class="CtypeSelector ART">Artists</button
           >
 
           <div
@@ -343,22 +343,37 @@
     background: rgba(255, 255, 255, 0.3);
   }
 
+  .PL {
+    top: 96px;
+  }
+
+  .ART {
+    top: 96px;
+    left: 240px;
+  }
+
+  .ALB {
+    top: 96px;
+    left: 172px;
+  }
+
   .CtypeSelector {
+    position: fixed;
+
     border-radius: 9px;
     height: 42px;
-
-    padding-left: 10px;
-    padding-right: 10px;
-    margin-top: 3px;
-    margin-bottom: 5px;
 
     background: var(--main-bg);
     border: var(--main-border);
     cursor: pointer;
 
+    padding: 0px 10px 0px 10px;
+
     transition: all 200ms;
 
-    margin-right: 5px;
+    z-index: 99;
+
+    backdrop-filter: blur(20px);
   }
 
   .CtypeSelector:hover {
@@ -367,6 +382,8 @@
 
   .container {
     width: 100%;
+
+    margin-top: 50px;
 
     overflow-x: hidden;
 

@@ -148,7 +148,7 @@
 
     overflow: hidden;
 
-    backdrop-filter: blur(30px) brightness(0.8);
+    backdrop-filter: blur(30px);
   }
 
   .usercontentClosed {
@@ -171,6 +171,6 @@
 
     overflow: hidden;
 
-    backdrop-filter: blur(30px) brightness(0.8);
+    backdrop-filter: blur(30px);
   }
 </style>

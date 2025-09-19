@@ -4,6 +4,8 @@
   const ipcRenderer = window.electron.ipcRenderer
   import { SETTINGS } from './ElementsStores/Settings.js'
 
+  import { logger } from '../../stores/loggerStore.js'
+
   let currentPath = $state(undefined)
 
   let DonwloadedTraks = $state([])
@@ -21,22 +23,30 @@
   }
 
   export async function addDownloadTraksquewe(tracks) {
-    // Aggiungi i nuovi brani alla coda
-    downloadQuewe.push(...tracks)
-    length = downloadQuewe.length
 
-    // Avvia il download se non è già in corso
+    console.log(currentPath);
+    
 
-    try {
-      if (!downloading) {
-        downloading = true
-        await startDownloadProcess()
+    if (currentPath === undefined) {
+      logger.show('No path for download added, add one in the settings')
+    } else {
+      // Aggiungi i nuovi brani alla coda
+      downloadQuewe.push(...tracks)
+      length = downloadQuewe.length
+
+      // Avvia il download se non è già in corso
+
+      try {
+        if (!downloading) {
+          downloading = true
+          await startDownloadProcess()
+        }
+      } catch {
+        downloading = false
+        completed = 0
+        length = 0
+        ipcRenderer.invoke('scan')
       }
-    } catch {
-      downloading = false
-      completed = 0
-      length = 0
-      ipcRenderer.invoke('scan')
     }
   }
 
@@ -106,7 +116,6 @@
   })
 
   $effect(() => {
-
     if ($SETTINGS?.playerSettings?.library?.scanPaths?.[0]) {
       currentPath = $SETTINGS.playerSettings.library.scanPaths[0]
     }
@@ -147,7 +156,9 @@
         <div>
           <p class="sectionSubTitle">Download paths</p>
 
-          <p class="currentPath">Donwload path: <span style="opacity: 0.4; font-size:20px;">{currentPath}</span></p>
+          <p class="currentPath">
+            Donwload path: <span style="opacity: 0.4; font-size:20px;">{currentPath}</span>
+          </p>
 
           {#each $SETTINGS.playerSettings.library.scanPaths as path}
             <button

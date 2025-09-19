@@ -4,6 +4,8 @@
   import { onMount } from 'svelte'
   import * as renderer from '../main.js'
 
+  import { addDownloadTraksquewe } from './pagesElements/DownloadPannel.svelte'
+
   import { fade } from 'svelte/transition'
   import SongButton from './pagesElements/SongButton.svelte'
   const ipcRenderer = window.electron.ipcRenderer
@@ -29,15 +31,11 @@
   import PlaylistsHeade from './pagesElements/PlaylistsHeade.svelte'
   import LoadingScreen from './pagesElements/LoadingScreen.svelte'
 
-  
-
   onMount(async () => {
     loading = true
     shared = renderer.default.shared
 
-    
     if (firstLoad) {
-
       songs = await shared.GetLiked()
 
       for (const element of songs) {
@@ -91,17 +89,30 @@
 
     for (const song of LocalLikedSongs) {
       tracce.push({
-        title: song.title,
-        artist: song.artist.name,
-        img: song.album.thumbnail,
-        album: song.album.name,
-        id: song.id,
-        albumid: song.album.id,
-        artistid: song.artist.id
+        title: song.title || undefined,
+        artist: song.artist || undefined,
+        img: song.img || undefined,
+        album: song.album || undefined,
+        id: song.id || undefined,
+        albumid: song.albumID || undefined,
+        artistid: song.artistID || undefined
       })
     }
 
     shared.PlayPlaylistSshuffled(tracce, index)
+  }
+
+  async function dwnAction() {
+    const tracksToDownload = LocalLikedSongs.map((track) => ({
+      title: track.title || undefined,
+      artist: track.artist || undefined,
+      img: track.img || undefined,
+      album: track.album || undefined,
+      id: track.id || undefined,
+      albumid: track.albumID || undefined,
+      artistid: track.artistID || undefined
+    }))
+    addDownloadTraksquewe(tracksToDownload)
   }
 </script>
 
@@ -116,7 +127,7 @@
         artist=""
         playAction={PlayTraks}
         playAction2={playShuffled}
-        dwnAction={undefined}
+        {dwnAction}
       />
 
       <div id="likedListDiv">

@@ -131,6 +131,24 @@
       ]}
       version="LOLLOMUSICX BETA 0.9.85"
     />
+
+    <VersionLog
+      changes={[
+        {
+          desc: 'Fixed the shuffle button in the liked tracks page.',
+          state: 'FIXED'
+        },
+        {
+          desc: 'Fixed download in the liked tracks page.',
+          state: 'FIXED'
+        },
+        {
+          desc: 'There will be a warning if the user tries to download content without choosing a location.',
+          state: 'CHANGED'
+        },
+      ]}
+      version="LOLLOMUSICX BETA 0.9.86"
+    />
   </div>
 </div>
 
