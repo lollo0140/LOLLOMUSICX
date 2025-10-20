@@ -8,7 +8,6 @@ import * as MM from 'node-id3'
 import { Innertube } from 'youtubei.js'
 const sharp = require('sharp')
 import fetch from 'node-fetch'
-import { ytUrls } from './yt-urls.js'
 import { lollomusicxapi } from './lollomusicxapi.js'
 import { WindowManager } from './WindowManager.js'
 const WinTransitions = new WindowManager()
@@ -53,8 +52,6 @@ var ytengine
 
 const userDataPath = app.getPath('userData')
 const dataFolder = path.join(userDataPath, 'data')
-
-const binPath = app.isPackaged ? process.resourcesPath : app.getAppPath()
 
 // Assicurati che la directory data esista
 if (!fs.existsSync(dataFolder)) {
@@ -784,17 +781,6 @@ const normalizeText = (text) => {
 }
 
 
-const youtubeUrls = new ytUrls(binPath)
-
-async function getStreamingUrl(videoId) {
-  try {
-    const url = await youtubeUrls.GetUrl(videoId)
-    return url
-  } catch (error) {
-    console.error('Errore nel recupero URL:', error)
-    throw error
-  }
-}
 // Handler principale
 ipcMain.handle('GetYTlink', async (event, SearchD, id) => {
   console.log('---------------------------------------------------------------------------------')
@@ -808,7 +794,7 @@ ipcMain.handle('GetYTlink', async (event, SearchD, id) => {
     const Return = {
       quary: SearchD,
       id: id,
-      url: await getStreamingUrl(id)
+      url: await LMapi.getStreamingUrl(id)
     }
 
     return Return
@@ -835,7 +821,7 @@ ipcMain.handle('GetYTlink', async (event, SearchD, id) => {
     console.log('ID del video:', ID)
 
     if (ID) {
-      return await getStreamingUrl(ID)
+      return await LMapi.getStreamingUrl(ID)
     } else {
       for (const song of songs) {
         if (song.title === title && artist === song.artists[0].name) {
@@ -845,7 +831,7 @@ ipcMain.handle('GetYTlink', async (event, SearchD, id) => {
       }
 
       if (ID) {
-        return await getStreamingUrl(ID)
+        return await LMapi.getStreamingUrl(ID)
       } else {
         const video = await await SearchYtVideos(`${title}`)
         console.log('------------------------------------------------------')
@@ -855,7 +841,7 @@ ipcMain.handle('GetYTlink', async (event, SearchD, id) => {
         const Return = {
           quary: SearchD,
           id: id,
-          url: await getStreamingUrl(await video)
+          url: await LMapi.getStreamingUrl(await video)
         }
 
         return Return
@@ -1888,17 +1874,11 @@ ipcMain.handle('readLocalLibrary', async () => {
   return await readLocalLibrary()
 })
 
-ipcMain.handle('downloadTrack', async (event, URL, data, savePath) => {
-  DownloadTrack(URL, data, savePath)
+ipcMain.handle('downloadTrack', async (event, id, savePath) => {
+
+  await LMapi.download(id, savePath)
+
 })
-
-async function DownloadTrack(URL, data, savePath) {
-  const safeArtist = normalizeText(data.artist)
-  const safeTitle = normalizeText(data.title)
-  const videoPath = path.join(savePath, `${safeArtist} - ${safeTitle}`)
-
-  await youtubeUrls.DownloadFromUrl(URL, videoPath, data)
-}
 
 //pin playlists
 
@@ -2191,6 +2171,11 @@ rpc.on('ready', () => {
 rpc.login({ clientId }).catch(console.error)
 
 
+
+
+
+
+//-------------------------
 ipcMain.handle('GetAccountInfo', async () => {
   return await LMapi.getAccountInfo()
 })

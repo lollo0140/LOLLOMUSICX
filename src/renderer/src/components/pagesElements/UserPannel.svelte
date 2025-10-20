@@ -1,5 +1,15 @@
+<script module>/* eslint-disable prettier/prettier */
+
+  let compact_mode = $state(false)
+
+  export function toggleUserPannelCompactMode(CM) {
+    compact_mode = CM
+  }
+
+</script>
+
 <script>
-  /* eslint-disable prettier/prettier */
+  
   import { onMount } from 'svelte'
   const CLOSEimg = new URL('../../assets/new.png', import.meta.url).href
   const gradient = new URL('../../assets/cardgradient.png', import.meta.url).href
@@ -18,10 +28,23 @@
      await ipcRenderer.invoke('LogOut')
   }
 
+  let openClass = $state('usercontent')
+  let closeClass = $state('usercontentClosed')
+
+  $effect(() => {
+    if (compact_mode) {
+      closeClass = 'usercontentClosed_compact'
+      openClass = 'usercontent_compact'
+    } else {
+      openClass = 'usercontent'
+      closeClass = 'usercontentClosed'
+    }
+  })
+
 </script>
 
 {#if accountinfo}
-  <div class={userPannelOpen ? 'usercontent' : 'usercontentClosed'}>
+  <div class={userPannelOpen ? openClass : closeClass}>
     <button class="UserInfoButton" onclick={() => (userPannelOpen = !userPannelOpen)}>
       <img
         style="transform: rotateZ({userPannelOpen ? '45deg' : '0deg'});"
@@ -151,14 +174,14 @@
     backdrop-filter: blur(30px);
   }
 
-  .usercontentClosed {
-    width: 34px;
-    height: 34px;
+  .usercontent_compact {
+    width: 200px;
+    height: 124px;
 
     position: fixed;
 
-    right: 355px;
-    top: 56px;
+    right: 75px;
+    top: 76px;
 
     background: var(--main-bg);
     border: var(--main-border);
@@ -173,4 +196,51 @@
 
     backdrop-filter: blur(30px);
   }
+
+  .usercontentClosed {
+    width: 34px;
+    height: 34px;
+
+    position: fixed;
+
+    right: 355px;
+    top: 56px;
+
+    background: var(--main-bg);
+    border: var(--main-border);
+    border-radius: 9px;
+    z-index: 999;
+
+    transition: all 600ms;
+
+    left: none;
+
+    overflow: hidden;
+
+    backdrop-filter: blur(30px);
+  }
+
+  .usercontentClosed_compact {
+    width: 34px;
+    height: 34px;
+
+    position: fixed;
+
+    right: 31px;
+    top: 56px;
+
+    background: var(--main-bg);
+    border: var(--main-border);
+    border-radius: 9px;
+    z-index: 999;
+
+    transition: all 600ms;
+
+    left: none;
+
+    overflow: hidden;
+
+    backdrop-filter: blur(30px);
+  }
+
 </style>

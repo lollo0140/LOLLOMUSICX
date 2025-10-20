@@ -1,4 +1,9 @@
 <script>/* eslint-disable prettier/prettier */
+
+  import { setCompactMode } from './Controls.svelte'
+  import { toggleMainCompactMode } from '../App.svelte'
+  import {toggleUserPannelCompactMode} from './pagesElements/UserPannel.svelte'
+
   import { createEventDispatcher } from 'svelte'
   import { onMount } from 'svelte'
   import * as renderer from '../main.js'
@@ -13,6 +18,8 @@
   //let LoadingImg = $state()
 
   let canShowCanva = $state()
+
+  let conpact_mode = $state(false)
 
   import { fade, fly, slide } from 'svelte/transition'
   import LyricPannel from './pagesElements/LyricPannel.svelte'
@@ -112,14 +119,10 @@
 
   async function GetLyric() {
     try {
-      
       return await shared.GetLyrics(playerLocal.title, playerLocal.artist, playerLocal.album)
     } catch {
-    
-      console.log('no lyrics found');
-      
+      console.log('no lyrics found')
     }
-      
   }
 
   function isSongChanged(title, artist, album) {
@@ -149,7 +152,6 @@
   }
 
   onMount(async () => {
-
     shared = renderer.default.shared
 
     canShowCanva = shared.settings.playerSettings.interface.showVideo
@@ -227,9 +229,20 @@
   }
 </script>
 
+<!-- svelte-ignore a11y_consider_explicit_label -->
+<button
+  class="CompactModeBtn"
+  onclick={() => {
+    conpact_mode = !conpact_mode
+    setCompactMode(conpact_mode)
+    toggleMainCompactMode(conpact_mode)
+    toggleUserPannelCompactMode(conpact_mode)
+  }}
+></button>
+
 <dir
   transition:fly={{ x: 500, duration: 600 }}
-  class={FullScreen ? 'FSNowPlayng' : 'NowPlayng'}
+  class={conpact_mode ? 'NowPlayng_compact' : 'NowPlayng'}
   style="transition: all 600ms;"
 >
   <div
@@ -259,7 +272,7 @@
     <img
       in:fade
       id="Img"
-      class="PLAYERimg contextMenuSong --IMGDATA"
+      class={conpact_mode ? 'PLAYERimg_compact contextMenuSong' : 'PLAYERimg contextMenuSong'}
       style="object-fit: cover; pointer-events: none;"
       src={immagine}
       onerror={() => {
@@ -273,12 +286,12 @@
       style="transition: all 200ms; display: {canShowCanva ? 'block' : 'none'};"
     ></div>
 
-    <p class="--TITLEDATA PLAYERtitle" style="pointer-events: none;">{playerLocal.title}</p>
+    <p class={conpact_mode ? 'PLAYERtitle_compact' : 'PLAYERtitle'} style="pointer-events: none;">{playerLocal.title}</p>
     <button
       style="pointer-events: all;"
       onclick={() =>
         CallItem({ query: playerLocal.artist + '||' + playerLocal.artistID, type: 'artist' })}
-      class="--ARTISTDATA PLAYERart"
+      class={conpact_mode ? 'PLAYERart_compact' : 'PLAYERart'}
       >{playerLocal.artist}
     </button>
 
@@ -294,8 +307,8 @@
     </button>
 
     {#if loading}
-      <div class="ImmageOfLoadingSong" transition:fade>
-        <LoadingScreen/>
+      <div class={conpact_mode ? 'ImmageOfLoadingSong_compact' : 'ImmageOfLoadingSong'} transition:fade>
+        <LoadingScreen />
       </div>
     {/if}
 
@@ -405,12 +418,31 @@
     </div>
   </div>
 
-  <button class="TogleQueweButton" onclick={() => togleQuewePannel()}>
+  <button style={conpact_mode ? 'display:none;' : ''} class="TogleQueweButton" onclick={() => togleQuewePannel()}>
     <img class="TogleQueweButtonimg" src={QUEWEimg} alt="palle" />
   </button>
 </dir>
 
 <style>
+
+  .ImmageOfLoadingSong_compact {
+    position: absolute;
+
+
+    object-fit: cover;
+
+    left: 6px;
+    top: 5.5px;
+    right: 6px;
+    
+    height: 47px;
+
+    backdrop-filter: blur(10px);
+
+    border: var(--main-border);
+    border-radius: 7px;
+  }
+
   .FSNowPlayng {
     position: absolute;
     background: transparent;
@@ -430,6 +462,57 @@
     border-radius: 15px;
 
     transition: all 600ms;
+  }
+
+  .CompactModeBtn {
+    position: fixed;
+
+    top: 50%;
+    transform: translateY(-50%);
+
+    right: 6px;
+
+    color: transparent;
+
+    background: white;
+    border: none;
+
+
+
+    height: 20px;
+    width: 2px;
+
+    border: none;
+
+    transition: all 300ms;
+
+    border-radius: 5px;
+
+    opacity: 0.05;
+
+    cursor: pointer;
+  }
+
+  .CompactModeBtn:hover {
+    opacity: 0.7;
+    height: 70px;
+  }
+
+  .NowPlayng_compact {
+    position: absolute;
+
+    overflow: hidden;
+
+    background: var(--main-bg);
+    border: var(--main-border);
+
+    right: calc(100% - 267px);
+    top: calc(100% - 103px);
+    bottom: 9px;
+
+    width: 200px;
+
+    border-radius: 15px;
   }
 
   @media only screen and (max-width: 600px) {

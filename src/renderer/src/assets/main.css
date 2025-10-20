@@ -43,12 +43,24 @@ body {
     outline: none;
 }
 
-#mainContent {
+.mainContent {
     position: absolute;
     left: 25px;
     top: 50px;
     bottom: 110px;
     right: 349px;
+    border-radius: 15px;
+    background: var(--main-bg);
+    border: var(--main-border);
+    transition: all 500ms;
+}
+
+.mainContent_compact {
+    position: absolute;
+    left: 25px;
+    top: 50px;
+    bottom: 110px;
+    right: 25px;
     border-radius: 15px;
     background: var(--main-bg);
     border: var(--main-border);
@@ -107,6 +119,18 @@ body {
     border-radius: 10px;
 
     z-index: 999;
+
+    overflow: hidden;
+
+}
+
+#NavBar:hover {
+    left: -4px;
+    top: -4px;
+    bottom: -4px;
+    width: 185px;
+
+    backdrop-filter: blur(30px) brightness(0.8);
 }
 
 ::-webkit-scrollbar {
@@ -528,6 +552,33 @@ body {
     object-fit: cover;
 }
 
+.PLAYERimg_compact {
+    margin: 0px;
+
+    border: 1px solid rgba(255, 255, 255, 0.27);
+
+    position: absolute;
+
+    left: 6px;
+    top: 5.5px;
+
+
+    height: 47px;
+    width: 47px;
+
+    opacity: 1;
+
+    background-position: center;
+    background-size: cover;
+
+    border-radius: 8px;
+
+    transition: all 600ms;
+
+    object-fit: cover;
+}
+
+
 .PLAYERtitle {
     position: absolute;
     top: 311px;
@@ -542,6 +593,26 @@ body {
     text-overflow: ellipsis;
 
     width: 246px;
+
+    color: white;
+
+    pointer-events: none;
+}
+
+.PLAYERtitle_compact {
+    position: absolute;
+    top: -4px;
+    left: 62px;
+    font-size: 15px;
+    font-weight: bold;
+
+    text-wrap: none;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    width: 170px;
 
     color: white;
 
@@ -565,6 +636,29 @@ body {
     border: none;
 
     cursor: pointer;
+
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.PLAYERart_compact {
+    position: absolute;
+    top: 30px;
+    left: 57px;
+    font-size: 15px;
+    font-weight: 600;
+
+    text-wrap: none;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    background: transparent;
+    border: none;
+
+    cursor: pointer;
+
+    width: 170px;
 
     color: rgba(255, 255, 255, 0.6);
 }
@@ -2483,77 +2577,7 @@ body {
     order: 1;
 }
 
-.PlbuttonNav {
 
-    cursor: pointer;
-
-    margin-top: 5px;
-
-    margin-left: 6px;
-
-    padding: 0px;
-
-    width: 40px;
-    height: 40px;
-
-    background: transparent;
-
-    border: none;
-
-    transition: all 200ms;
-
-    pointer-events: all;
-    backdrop-filter: blur(30px) brightness(0.8);
-}
-
-.PlbuttonNav:hover {
-    transform: scale(1.1);
-    opacity: 1;
-}
-
-.Plimg {
-
-    border: 1px rgba(255, 255, 255, 0.27) solid;
-
-    border-radius: 3px;
-
-    position: relative;
-
-    left: -0.5px;
-    top: 0px;
-
-    width: 40px;
-    height: 40px;
-    opacity: 0.5;
-}
-
-.Plimg:hover {
-    opacity: 1;
-}
-
-.Plabel {
-    position: absolute;
-    transform: translate(0px, -52px);
-
-    padding: 7px;
-
-    border: var(--main-border);
-    background: var(--main-bg);
-    border-radius: 14px;
-
-    transition: all 300ms;
-
-    z-index: 999;
-
-    pointer-events: none;
-
-    backdrop-filter: blur(30px) brightness(0.8);
-
-
-    font-weight: 800;
-
-
-}
 
 .RecentSearch {
 
@@ -2705,4 +2729,4 @@ body {
     border: var(--main-border);
     border-radius: 15px;
 
-  }
+}

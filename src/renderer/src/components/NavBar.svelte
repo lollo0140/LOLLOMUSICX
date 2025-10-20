@@ -10,9 +10,6 @@
     console.log(FullLibrary)
   }
 
-  export function closeSettings() {
-    settingOpen = false
-  }
 </script>
 
 <script>
@@ -21,21 +18,21 @@
   let { pag } = $props()
 
   import { ChangePag, callItemFunction } from './../App.svelte'
-  import Settings from './Settings.svelte'
 
   import { CloseDownloadButton } from './pagesElements/DownloadPannel.svelte'
+  import { closeSettings } from './Settings.svelte'
+
 
   const SEARCHimg = new URL('../assets/search.png', import.meta.url).href
   const HOMEimg = new URL('../assets/home.png', import.meta.url).href
   const LIBRARYimg = new URL('../assets/library.png', import.meta.url).href
   const FILESimg = new URL('../assets/files.png', import.meta.url).href
-  const SETTINGSimg = new URL('../assets/settings.png', import.meta.url).href
-  const CLOSEimg = new URL('../assets/new.png', import.meta.url).href
 
   let statoOnline = $state()
 
-  const dispatch2 = createEventDispatcher()
+  let PlaylistsContainer = $state(null)
 
+  const dispatch2 = createEventDispatcher()
 
   onMount(() => {
     statoOnline = navigator.onLine
@@ -56,12 +53,13 @@
   }
 </script>
 
-<div id="NavBar">
+<div id="NavBar" style="transition: all 400ms;">
   <button
     style="left:2.5px ; top:2.5px ;"
     class="navButton {pag === 2 ? 'ActivenavButton' : ''}"
     onclick={() => {
       ChangePag(2)
+      closeSettings()
       CloseDownloadButton()
       if (settingOpen) {
         settingOpen = false
@@ -76,6 +74,7 @@
     class="navButton {pag === 0 ? 'ActivenavButton' : ''}"
     onclick={() => {
       CloseDownloadButton()
+      closeSettings()
       ChangePag(0)
       if (settingOpen) {
         settingOpen = false
@@ -90,6 +89,7 @@
     class="navButton {pag === 3 ? 'ActivenavButton' : ''}"
     onclick={() => {
       CloseDownloadButton()
+      closeSettings()
       ChangePag(3)
       if (settingOpen) {
         settingOpen = false
@@ -104,6 +104,7 @@
     class="navButton {pag === 5 ? 'ActivenavButton' : ''}"
     onclick={() => {
       CloseDownloadButton()
+      closeSettings()
       ChangePag(5)
       if (settingOpen) {
         settingOpen = false
@@ -116,7 +117,9 @@
 
   <div style="left: 18.5px; top: 220px;" class="divider"></div>
 
-  <div class="PlaylistsContainer">
+  <div aria-label="PlaylistsContainer" role="region" bind:this={PlaylistsContainer} class="PlaylistsContainer" onmouseleave={() => {
+    PlaylistsContainer.scrollTop = 0
+  }}>
     {#each FullLibrary?.YTplaylists as P, i}
       {#if P.id !== 'SE'}
         <PlaylistMiniButton
@@ -152,106 +155,13 @@
       />
     {/each}
   </div>
-
-  <div style="left: 18.5px; bottom: 57.5px;" class="divider"></div>
-
-  <button
-    class="navButton {pag === 8 ? 'ActivenavButton' : ''}"
-    onclick={() => {
-      settingOpen = !settingOpen
-      CloseDownloadButton()
-    }}
-    style="position:absolute; bottom:2.5px; left:2.5px;"
-  >
-    <img class="buttonImg" src={SETTINGSimg} alt="" />
-  </button>
-
-  <div
-    style="transition-property: all;
-  transition-duration: 800ms;
-  transition-timing-function: cubic-bezier(0.1, 0.885, 0.2, 1.05);"
-    class={!settingOpen ? 'settingsDivClosed' : 'settingsDiv'}
-  >
-    {#if settingOpen}
-      <button class="closeButton" onclick={closeSettings}>
-        <img src={CLOSEimg} alt="" />
-      </button>
-
-      <Settings />
-    {/if}
-  </div>
 </div>
 
+
+  
+
 <style>
-  .closeButton {
-    position: absolute;
-    top: 10px;
-    right: 10px;
 
-    z-index: 99;
-
-    opacity: 0.4;
-    cursor: pointer;
-
-    padding: 0px;
-
-    transition: all 200ms;
-
-    background: transparent;
-    border: none;
-  }
-
-  .closeButton:hover {
-    opacity: 1;
-    transform: scale(1.1);
-  }
-
-  .closeButton img {
-    width: 20px;
-
-    transform: rotateZ(45deg);
-  }
-
-  .settingsDivClosed {
-    position: fixed;
-
-    width: 0px;
-    height: 0px;
-
-    bottom: 142px;
-    left: 58px;
-
-    background: transparent;
-    border: none;
-    z-index: 999;
-
-    pointer-events: none;
-    opacity: 0;
-
-    backdrop-filter: blur(10px);
-
-    overflow: hidden;
-  }
-
-  .settingsDiv {
-    position: fixed;
-
-    width: 750px;
-    height: 600px;
-
-    bottom: 50%;
-    left: 50%;
-    transform: translate(-50%, 50%);
-
-    background: var(--main-bg);
-    border: var(--main-border);
-    border-radius: 9px;
-    z-index: 999;
-
-    overflow: hidden;
-
-    backdrop-filter: blur(30px) brightness(0.8);
-  }
 
   .divider {
     position: absolute;
@@ -269,47 +179,28 @@
 
     display: flex;
     flex-direction: column;
-    flex-shrink: none;
+    flex-shrink: 0;
     flex-flow: column;
 
-    
     left: 0px;
-    width: 55px;
+    right: 0px;
 
     top: 235px;
-    bottom: 80px;
-
+    bottom: 6px;
 
     overflow-y: scroll;
     scrollbar-width: none;
 
     padding: 0px;
-    -webkit-mask-image: linear-gradient(to bottom, black 90%, transparent 100%);
-    mask-image: linear-gradient(to bottom, black 90%, transparent 100%);
+
+    gap: 6px;
 
     transition: all 600ms;
-    
+
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 5%, black 95%, transparent 100%);
+    mask-image: linear-gradient(to bottom, transparent 0%, black 5%, black 95%, transparent 100%);
   }
 
-  .PlaylistsContainer:hover {
-
-    left: 5px;
-    top: 240px;
-
-    width: 200px;
-
-    background: var(--main-bg);
-    border: var(--main-border);
-    border-radius: 9px;
-
-
-    -webkit-mask-image: linear-gradient(to right, black 70%, transparent 100%);
-    mask-image: linear-gradient(to right, black 70%, transparent 100%);
-
-    padding-bottom: 48px;
-
-    backdrop-filter: blur(30px) brightness(0.8);
-  }
 
   .PlaylistsContainer::-webkit-scrollbar {
     display: none;
@@ -321,7 +212,7 @@
     padding: 0px;
 
     height: 50px;
-    width: 50px;
+    width: 100%;
 
     border: none;
     background: transparent;
@@ -331,31 +222,18 @@
     opacity: 0.2;
 
     transition: all 200ms;
+
+    background: transparent;
+
   }
 
-  .navButton .navButtonLabel {
-    position: absolute;
-    left: 60px; /* Adjust as needed */
-    top: 50%;
-    transform: translateY(-50%);
-    padding: 5px 10px;
-    
-    background: var(--main-bg);
-    border: var(--main-border);
-    border-radius: 9px;
-    
-    color: white;
-    white-space: nowrap;
-    opacity: 0; /* Hidden by default */
-    visibility: hidden;
-    transition: opacity 200ms, visibility 200ms;
-    backdrop-filter: blur(5px); /* The blur effect */
-    -webkit-backdrop-filter: blur(5px);
-    z-index: 10;
-  }
-
+  
   .navButtonLabel {
-    opacity: 0;
+    position: absolute;
+    left: 60px;
+    top: 16px;
+    font-size: 16px;
+    font-weight: 800;
   }
 
   .navButton:hover .navButtonLabel {
@@ -375,11 +253,13 @@
     margin: 0px;
     padding: 0px;
 
-    position: relative;
+    position: absolute;
     left: 0px;
     top: 0px;
 
     height: 50px;
     width: 50px;
   }
+
+  
 </style>

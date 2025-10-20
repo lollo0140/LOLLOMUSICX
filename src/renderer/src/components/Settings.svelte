@@ -1,5 +1,13 @@
+<script module>/* eslint-disable prettier/prettier */
+
+  let settingOpen = $state(false)
+  export async function closeSettings() {
+    settingOpen = false
+  }
+</script>
+
 <script>
-  /* eslint-disable prettier/prettier */
+  import { CloseDownloadButton } from './pagesElements/DownloadPannel.svelte'
 
   import { onMount } from 'svelte'
   import * as renderer from '../main.js'
@@ -14,7 +22,12 @@
 
   const backgmenuitems = ['dynamic', 'static', 'custom']
 
-  let shared
+  const CLOSEimg = new URL('../assets/new.png', import.meta.url).href
+  const SETTINGSimg = new URL('../assets/settings.png', import.meta.url).href
+
+  let shared = null
+
+  
 
   onMount(async () => {
     shared = renderer.default.shared
@@ -75,85 +88,171 @@
   }
 </script>
 
-<div class="settingsDiv">
-  {#if $SETTINGS.playerSettings}
-    <div transition:fade>
-      <p class="settingsTitle">Settings</p>
+<div class={settingOpen ? 'settingsDivOpen' : 'settingsDivClosed'} style="transition: all 800ms;">
+  <button
+    class="closeButton"
+    onclick={() => {
+      settingOpen = !settingOpen
+      CloseDownloadButton()
+    }}
+  >
+    <img
+      class={settingOpen ? 'closeButtonImg' : 'closeButtonImgClosed'}
+      src={settingOpen ? CLOSEimg : SETTINGSimg}
+      alt=""
+    />
+  </button>
 
-      <div>
-        <p class="settingsSubTitle">System</p>
+  {#if settingOpen}
+    <div class="settingsDiv">
+      {#if $SETTINGS.playerSettings}
+        <div transition:fade>
+          <p class="settingsTitle">Settings</p>
 
-        <Togle
-          SettingName={'Show miniplayer when closing the main app'}
-          Value={$SETTINGS.playerSettings.general.miniPlayerWhenClosed}
-          Click={SetminiPlayerWhenClosed}
-        />
+          <div>
+            <p class="settingsSubTitle">System</p>
 
-        <Togle
-          SettingName={'Exit the app proces when closing the main app'}
-          Value={$SETTINGS.playerSettings.general.killLollomusicOnClose}
-          Click={SetkillLollomusicOnClose}
-        />
+            <Togle
+              SettingName={'Show miniplayer when closing the main app'}
+              Value={$SETTINGS.playerSettings.general.miniPlayerWhenClosed}
+              Click={SetminiPlayerWhenClosed}
+            />
 
-        <p class="settingsSubTitle">Audio</p>
+            <Togle
+              SettingName={'Exit the app proces when closing the main app'}
+              Value={$SETTINGS.playerSettings.general.killLollomusicOnClose}
+              Click={SetkillLollomusicOnClose}
+            />
 
-        <Togle
-          SettingName={'Remember last quewe when opened'}
-          Value={$SETTINGS.playerSettings.audio.rememberListen}
-          Click={SetrememberListen}
-        />
+            <p class="settingsSubTitle">Audio</p>
 
-        <p class="settingsSubTitle">Appearence</p>
+            <Togle
+              SettingName={'Remember last quewe when opened'}
+              Value={$SETTINGS.playerSettings.audio.rememberListen}
+              Click={SetrememberListen}
+            />
 
-        <Togle
-          SettingName={'Show videos (like canvas in Spotify)'}
-          Value={$SETTINGS.playerSettings.interface.showVideo}
-          Click={SetshowVideo}
-        />
+            <p class="settingsSubTitle">Appearence</p>
 
-        <br />
+            <Togle
+              SettingName={'Show videos (like canvas in Spotify)'}
+              Value={$SETTINGS.playerSettings.interface.showVideo}
+              Click={SetshowVideo}
+            />
 
-        <div>
-          <DropDownMenu
-            SettingName={'Background'}
-            Values={backgmenuitems}
-            Current={$SETTINGS.playerSettings.interface.Background}
-            Click={SetBackgournd}
-          />
+            <br />
 
-          {#if $SETTINGS.playerSettings.interface.Background === 'custom'}
-            <img alt="bg" src={$SETTINGS.playerSettings.interface.BackgroundImage || defBG} />
+            <div>
+              <DropDownMenu
+                SettingName={'Background'}
+                Values={backgmenuitems}
+                Current={$SETTINGS.playerSettings.interface.Background}
+                Click={SetBackgournd}
+              />
 
-            <button onclick={() => SetCustomImg()} type="button">chose background</button>
-          {/if}
-        </div>
+              {#if $SETTINGS.playerSettings.interface.Background === 'custom'}
+                <img alt="bg" src={$SETTINGS.playerSettings.interface.BackgroundImage || defBG} />
 
-        <p class="settingsSubTitle">Local paths</p>
-
-        <div class="pathsList">
-          {#each $SETTINGS.playerSettings.library.scanPaths as path, i}
-            <div in:slide class="pathButton">
-              <p class="Pathdisplay">{path}</p>
-              <p class="IndexIndicator">{i + 1}</p>
-              <button class="removeButton" onclick={() => REMOVEPATH(i)}>remove</button>
+                <button onclick={() => SetCustomImg()} type="button">chose background</button>
+              {/if}
             </div>
-          {/each}
 
-            <br>
-            <button class="PathButton" onclick={async () => await ipcRenderer.invoke('scan')}>rescan</button>
-            <button class="PathButton" onclick={() => ADDPATH()}>add</button>
+            <p class="settingsSubTitle">Local paths</p>
 
+            <div class="pathsList">
+              {#each $SETTINGS.playerSettings.library.scanPaths as path, i}
+                <div in:slide class="pathButton">
+                  <p class="Pathdisplay">{path}</p>
+                  <p class="IndexIndicator">{i + 1}</p>
+                  <button class="removeButton" onclick={() => REMOVEPATH(i)}>remove</button>
+                </div>
+              {/each}
 
+              <br />
+              <button class="PathButton" onclick={async () => await ipcRenderer.invoke('scan')}
+                >rescan</button
+              >
+              <button class="PathButton" onclick={() => ADDPATH()}>add</button>
+            </div>
+          </div>
+
+          <button onclick={() => ipcRenderer.invoke('RELAPPLICATION')}>Reload app</button>
         </div>
-
-      </div>
-
-      <button onclick={() => ipcRenderer.invoke('RELAPPLICATION')}>Reload app</button>
+      {/if}
     </div>
   {/if}
 </div>
 
 <style>
+  .closeButtonImg {
+    transform: translate(3px, 6px) rotateZ(45deg);
+    width: 20px;
+    height: 20px;
+  }
+
+  .closeButtonImgClosed {
+    width: 32px;
+    height: 32px;
+  }
+
+  .settingsDivOpen {
+    background: var(--main-bg);
+    border: var(--main-border);
+    border-radius: 9px;
+
+    position: fixed;
+    z-index: 9999;
+
+    right: 50%;
+    top: 50%;
+    transform: translate(50%, -50%);
+
+    width: 750px;
+    height: 600px;
+
+    backdrop-filter: blur(30px) brightness(0.8);
+
+    overflow-y: scroll;
+    overflow-x: hidden;
+  }
+
+  .settingsDivClosed {
+    position: fixed;
+    z-index: 999;
+
+    right: 200px;
+    top: 10px;
+
+    width: 32px;
+    height: 32px;
+  }
+
+  .closeButton {
+    padding: 0px;
+
+    position: absolute;
+    top: 0px;
+    right: 0px;
+
+    width: 30px;
+    height: 30px;
+
+    -webkit-app-region: no-drag;
+    cursor: pointer;
+
+    background: transparent;
+    border: none;
+
+    opacity: 0.4;
+
+    transition: all 200ms;
+  }
+
+  .closeButton:hover {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+
   .settingsSubTitle {
     font-size: 30px;
     font-weight: 900;
@@ -171,16 +270,6 @@
   }
 
   .settingsDiv {
-    position: absolute;
-
-    left: 0px;
-    top: 0px;
-
-    width: 750px;
-    height: 100%;
-
-    overflow-x: hidden;
-    overflow-y: scroll;
   }
 
   .pathButton {
@@ -235,7 +324,6 @@
     font-weight: 900;
     color: rgba(255, 255, 255, 0.4);
     margin-right: 10px;
-
   }
 
   .pathsList {
@@ -267,5 +355,4 @@
   .PathButton:hover {
     background: rgba(255, 255, 255, 0.3);
   }
-
 </style>

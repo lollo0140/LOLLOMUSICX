@@ -1,4 +1,5 @@
-<script module>/* eslint-disable prettier/prettier */
+<script module>
+  /* eslint-disable prettier/prettier */
   //setMiniplayer()
   var MINIPLAYER = $state(false)
 
@@ -41,6 +42,14 @@
   let STARTUP = 0
 
   let logging = $state()
+
+  let compact_mode = $state(false)
+  let compact_mode_togled = $state(false)
+
+  export function toggleMainCompactMode(CM) {
+    compact_mode = CM
+    compact_mode_togled = true
+  }
 
   const ipcRenderer = window.electron.ipcRenderer
 
@@ -221,8 +230,6 @@
       //console.log(e)
     }
 
-    
-
     intervalId = setInterval(() => {
       playerLocal = renderer.default.shared.Player
     }, 100)
@@ -249,14 +256,14 @@
     try {
       const mainContent = document.getElementById('mainContent')
 
-      if (playerLocal.title) {
-        CanShowCurrentSong = true
-        mainContent.style.right = '349px'
-        mainContent.style.bottom = '110px'
-      } else {
-        CanShowCurrentSong = false
-        mainContent.style.bottom = '25px'
-        mainContent.style.right = '25px'
+      if (!compact_mode_togled) {
+        if (playerLocal.title) {
+          CanShowCurrentSong = true
+          compact_mode = false
+        } else {
+          CanShowCurrentSong = false
+          compact_mode = true
+        }
       }
     } catch {
       //initial quewe
@@ -529,7 +536,7 @@
       {#if !ChangelogShowing}
         {#if !FullScreen}
           <div transition:fade={{ duration: 200 }}>
-            <div id="mainContent">
+            <div class={compact_mode ? 'mainContent_compact' : 'mainContent'} id="mainContent">
               <NavBar
                 {LoadingImg}
                 pag={pagindex}
@@ -684,6 +691,8 @@
       </button>
 
       <DownloadPannel />
+
+      <Settings />
     {/if}
   </dir>
 

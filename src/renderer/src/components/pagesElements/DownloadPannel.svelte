@@ -1,5 +1,5 @@
-<script module>
-  /* eslint-disable prettier/prettier */
+<script module>/* eslint-disable prettier/prettier */
+  
 
   const ipcRenderer = window.electron.ipcRenderer
   import { SETTINGS } from './ElementsStores/Settings.js'
@@ -14,6 +14,7 @@
   let length = $state(0)
 
   let downloadQuewe = $state([])
+  let downloadingTracks = $state([])
 
   let downloading = $state(false)
   let PannelOpen = $state(false)
@@ -23,16 +24,14 @@
   }
 
   export async function addDownloadTraksquewe(tracks) {
-
-    console.log(currentPath);
-    
+    console.log(currentPath)
 
     if (currentPath === undefined) {
       logger.show('No path for download added, add one in the settings')
     } else {
       // Aggiungi i nuovi brani alla coda
       downloadQuewe.push(...tracks)
-      length = downloadQuewe.length
+      length += tracks.length
 
       // Avvia il download se non è già in corso
 
@@ -51,40 +50,45 @@
   }
 
   export async function startDownloadProcess() {
+    const MAX_CONCURRENT_DOWNLOADS = 4
+
     try {
       while (downloadQuewe.length > 0) {
-        const track = downloadQuewe[0]
+        const batch = downloadQuewe.splice(0, Math.min(MAX_CONCURRENT_DOWNLOADS, downloadQuewe.length))
 
-        let metadata = {
-          id: track.id,
-          title: track.title,
-          artist: track.artist,
-          album: track.album,
-          img: track.img
-        }
+        downloadingTracks.push(...batch)
 
-        if (
-          await ipcRenderer.invoke(
-            'SearchLocalSong',
-            metadata.title,
-            metadata.artist,
-            metadata.album
-          )
-        ) {
-          downloadQuewe.shift()
-          continue
-        }
+        const downloadPromises = batch.map(async (track) => {
+          const metadata = {
+            id: track.id,
+            title: track.title,
+            artist: track.artist,
+            album: track.album,
+            img: track.img
+          }
 
-        try {
-          await ipcRenderer.invoke('downloadTrack', metadata.id, metadata, currentPath)
-          completed++
-          DonwloadedTraks.push(metadata)
-        } catch (err) {
-          console.log(err)
-        } finally {
-          downloadQuewe.shift()
+          try {
+            await ipcRenderer.invoke('downloadTrack', metadata.id, currentPath)
+            completed++
+            DonwloadedTraks.push(metadata)
+            return { success: true, metadata }
+          } catch (err) {
+            console.log('Errore download:', err)
+            return { success: false, metadata, error: err }
+          } finally {
+            // Rimuovi la traccia da downloadingTracks
+            const index = downloadingTracks.findIndex((t) => t.id === track.id)
+            if (index !== -1) {
+              downloadingTracks.splice(index, 1)
+            }
+          }
+        })
+
+        await Promise.all(downloadPromises)
+
+        if (downloadQuewe.length > 0) {
+          await new Promise((resolve) => setTimeout(resolve, 1000))
         }
-        await new Promise((resolve) => setTimeout(resolve, 3000))
       }
     } catch (error) {
       console.error('Errore generale nel processo di download:', error)
@@ -101,7 +105,7 @@
 </script>
 
 <script>
-  import { closeSettings } from '../NavBar.svelte'
+  import { closeSettings } from '../Settings.svelte'
   import { onMount } from 'svelte'
 
   const DOWNICON = new URL('../../assets/download.png', import.meta.url).href
@@ -170,9 +174,22 @@
           {/each}
         </div>
 
+        {#if downloadingTracks.length > 0}
+          <div>
+            <p class="sectionSubTitle">Downloading</p>
+            {#each downloadingTracks as track}
+              <div class="songBase">
+                <img class="songImg" src={track.img} alt="" />
+                <p class="songTitle">{track.title}</p>
+                <p class="songArtist">{track.artist}</p>
+              </div>
+            {/each}
+          </div>
+        {/if}
+
         {#if downloadQuewe.length > 0}
           <div>
-            <p class="sectionSubTitle">Donwloading</p>
+            <p class="sectionSubTitle">In quewe</p>
             {#each downloadQuewe as track}
               <div class="songBase">
                 <img class="songImg" src={track.img} alt="" />
@@ -181,7 +198,7 @@
               </div>
             {/each}
           </div>
-        {:else}
+        {:else if downloadingTracks.length === 0}
           <p class="sectionSubTitle">No active downloads at the moment</p>
         {/if}
 
@@ -388,7 +405,7 @@
 
   .idleHidden {
     position: fixed;
-    right: 200px;
+    right: 240px;
 
     left: none;
     top: 11px;

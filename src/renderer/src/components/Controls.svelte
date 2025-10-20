@@ -1,4 +1,14 @@
-<script>/* eslint-disable prettier/prettier */
+<script module>
+  /* eslint-disable prettier/prettier */
+
+  let conpact_mode = $state(false)
+
+  export function setCompactMode(compact_mode) {
+    conpact_mode = compact_mode
+  }
+</script>
+
+<script>
   import { onMount } from 'svelte'
   import * as renderer from '../main.js'
   import { fade, fly } from 'svelte/transition'
@@ -112,7 +122,7 @@
   }
 </script>
 
-<div transition:fly={{ y: 500, duration: 600 }} class={!FullScreen ? "Controlls" : "ControllsFS"}  >
+<div transition:fly={{ y: 500, duration: 600 }} class={!conpact_mode ? 'Controlls' : 'ControllsCM'}>
   <p id="SECONDS"></p>
 
   <p id="DURATION"></p>
@@ -139,7 +149,6 @@
     {#if nextLoaded}
       <div transition:fade class="NextLoadedIndicator"></div>
     {/if}
-    
   </button>
 
   <button class="Cbutton rpbutton" onclick={() => shared.setrepeat()}>
@@ -173,6 +182,20 @@
 </div>
 
 <style>
+  .ControllsCM {
+    background: var(--main-bg);
+    border: var(--main-border);
+    border-radius: 15px;
+    position: absolute;
+    height: 60px;
+    left: 290px;
+    bottom: 25px;
+    right: 25px;
+    border-radius: 15px;
+
+    transition: all 500ms;
+  }
+
   .volimg {
     position: absolute;
     width: 30px;

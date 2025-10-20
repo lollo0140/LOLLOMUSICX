@@ -8,28 +8,13 @@
 
   let { name, img, id, artist, index, click, type } = $props()
 
-  let nameshowing = $state(false)
-
-  async function Showname() {
-    nameshowing = true
-  }
-
-  async function Hidename() {
-    nameshowing = false
-  }
-
   onMount(() => {
     image = img
   })
 </script>
 
 {#if type === 'playlist'}
-  <button
-    onmouseleave={() => Hidename()}
-    onmouseenter={() => Showname()}
-    class="PlbuttonNav"
-    onclick={() => click(index)}
-  >
+  <button class="PlbuttonNav" onclick={() => click(index)}>
     <img
       onerror={() => {
         image = DEFIMGPlaylist
@@ -39,19 +24,12 @@
       src={image}
       alt="pimg"
     />
-    <p
-      style="transform: {nameshowing
-        ? 'translate(60px,-52px)'
-        : 'translate(0px,-52px)'}; opacity: {nameshowing ? '1' : '0'};"
-      class="Plabel"
-    >
+    <p class="Plabel">
       {name}
     </p>
   </button>
 {:else if type === 'album'}
   <button
-    onmouseleave={() => Hidename()}
-    onmouseenter={() => Showname()}
     class="PlbuttonNav"
     onclick={() =>
       click({
@@ -68,23 +46,12 @@
       src={image}
       alt="pimg"
     />
-    <p
-      style="transform: {nameshowing
-        ? 'translate(60px,-52px)'
-        : 'translate(0px,-52px)'}; opacity: {nameshowing ? '1' : '0'};"
-      class="Plabel"
-    >
+    <p class="Plabel">
       {name}
     </p>
   </button>
 {:else if type === 'Onplaylist'}
-  <button
-    onmouseleave={() => Hidename()}
-    onmouseenter={() => Showname()}
-    class="PlbuttonNav"
-    onclick={() =>
-      click({ query: id, type: 'ONplaylist' })}
-  >
+  <button class="PlbuttonNav" onclick={() => click({ query: id, type: 'ONplaylist' })}>
     <img
       onerror={() => {
         image = DEFIMGPlaylist
@@ -94,13 +61,52 @@
       src={image}
       alt="pimg"
     />
-    <p
-      style="transform: {nameshowing
-        ? 'translate(60px,-52px)'
-        : 'translate(0px,-52px)'}; opacity: {nameshowing ? '1' : '0'};"
-      class="Plabel"
-    >
+    <p class="Plabel">
       {name}
     </p>
   </button>
 {/if}
+
+<style>
+  .PlbuttonNav {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    padding: 0px 6px;
+    height: 52px;
+    background: transparent;
+    border: none;
+    transition: all 200ms;
+    pointer-events: all;
+    opacity: 0.5;
+    width: 100%;
+  }
+
+  .PlbuttonNav:hover {
+    opacity: 1;
+  }
+
+  .Plimg {
+    border: 1px rgba(255, 255, 255, 0.27) solid;
+    border-radius: 3px;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+  }
+
+  .Plabel {
+    background: transparent;
+    text-align: left;
+    font-weight: 800;
+    overflow: hidden;
+    font-size: 16px;
+    text-overflow: ellipsis;
+    margin: 0;
+    color: white;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+
+  }
+</style>
