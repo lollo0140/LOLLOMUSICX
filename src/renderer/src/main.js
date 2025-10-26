@@ -14,13 +14,15 @@ import { SetSettings } from './components/pagesElements/ElementsStores/Settings.
 
 import { logger } from './stores/loggerStore.js'
 
+import { setCurrentSong, setSongsQuewe } from './stores/current_song.js'
+
 const settings = {
   submenuClass: 'contextSubMenu',
   menuClass: 'contextMenu',
   buttonClass: 'contextMenuButton'
 }
 
-import {addDownloadTraksquewe} from './components/pagesElements/DownloadPannel.svelte'
+import { addDownloadTraksquewe } from './components/pagesElements/DownloadPannel.svelte'
 
 let statoOnline
 
@@ -40,7 +42,7 @@ const app = mount(App, {
 
 const ipcRenderer = window.electron.ipcRenderer
 
-import { callItemFunction, setMiniplayer, shuffleonNext } from './App.svelte'
+import { callItemFunction, setMiniplayer } from './App.svelte'
 
 import { LoadPlaylist } from './components/OnlinePlaylist.svelte'
 
@@ -260,7 +262,7 @@ class shared {
         if (statoOnline) {
           const data = await ipcRenderer.invoke('GetYTlink', query, ID)
           console.log(data);
-          
+
           return data
         } else {
           return undefined
@@ -304,6 +306,7 @@ class shared {
 
       // Ricostruisci la coda con la canzone corrente all'inizio
       this.SongsQuewe = [currentSong, ...remainingSongs]
+      setSongsQuewe(this.SongsQuewe)
       this.PlayngIndex = 0
 
       this.Shuffled = true
@@ -318,6 +321,7 @@ class shared {
       }
 
       this.SongsQuewe = this.nonShufledSongQuewe
+      setSongsQuewe(this.SongsQuewe)
       this.Shuffled = false
       logger.show('Quewe unshuffled')
     }
@@ -357,12 +361,14 @@ class shared {
 
     this.SongsQuewe = []
     this.SongsQuewe = object.Quewe
+    setSongsQuewe(this.SongsQuewe)
+    setCurrentSong(this.SongsQuewe[this.PlayngIndex])
     this.PlayngIndex = object.index || 0
     await this.preloadAndUpdatePlayer(this.PlayngIndex)
   }
 
   async PlayPlaylistS(Tracks, index) {
-    console.log(Tracks, index)
+    //console.log(Tracks, index)
 
     try {
       // Attendi che la Promise di Tracks si risolva
@@ -374,7 +380,7 @@ class shared {
       // Usa i tracks risolti
       for (const item of resolvedTracks) {
         try {
-          console.log(item)
+          //console.log(item)
 
           if (item.artists[0].name !== undefined) {
             this.SongsQuewe.push({
@@ -403,7 +409,8 @@ class shared {
         }
       }
 
-      console.log(this.SongsQuewe)
+      //console.log(this.SongsQuewe)
+      setSongsQuewe(this.SongsQuewe)
 
       this.Shuffled = false
 
@@ -457,11 +464,18 @@ class shared {
       }
 
       console.log(this.SongsQuewe)
-
-      this.Shuffled = false
-
+      
       this.PlayngIndex = index
-      await this.preloadAndUpdatePlayer(this.PlayngIndex, true)
+      setCurrentSong(this.SongsQuewe[index], true)
+
+
+      setTimeout(async () => {
+        this.Shuffled = false
+        await this.ShuffleQuewe()
+        setSongsQuewe(this.SongsQuewe)
+
+        await this.preloadAndUpdatePlayer(this.PlayngIndex, true)
+      }, 500);
 
     } catch (error) {
       console.error('Errore nel caricamento della playlist:', error)
@@ -485,9 +499,11 @@ class shared {
 
       this.SongsQuewe = []
       this.SongsQuewe.push(songMeta)
+      setSongsQuewe(this.SongsQuewe)
       this.PlayngIndex = 0
       this.paused = false
       this.Player = this.SongsQuewe[0]
+      setCurrentSong(this.Player)
 
       if (this.onUpdate) this.onUpdate()
       console.log(this.Player)
@@ -653,7 +669,7 @@ class shared {
     }
   }
 
-  async preloadAndUpdatePlayer(index, shuffle = false) {
+  async preloadAndUpdatePlayer(index) {
     if (!this.SongsQuewe[index]) {
       console.error("Nessuna canzone all'indice:", index)
       return
@@ -710,12 +726,7 @@ class shared {
 
     // Aggiorna il Player solo dopo che l'URL è stato caricato
     this.Player = this.SongsQuewe[index]
-
-    if (shuffle) {
-      shuffleonNext(true)
-    } else {
-      shuffleonNext(false)
-    }
+    setCurrentSong(this.Player)
 
     // Notifica gli osservatori del cambio
     if (this.onUpdate) this.onUpdate()
@@ -754,8 +765,6 @@ class shared {
       if (player.currentTime > 5) {
         const temp = this.Player
 
-        player.pause()
-
         this.Player = {
           title: '',
           album: '',
@@ -768,6 +777,7 @@ class shared {
 
         setTimeout(() => {
           this.Player = temp
+          setCurrentSong(this.Player)
         }, 200)
       }
     }
@@ -804,6 +814,7 @@ class shared {
 
         setTimeout(() => {
           this.Player = temp
+          setCurrentSong(this.Player)
         }, 200)
       }
     }
@@ -1071,11 +1082,6 @@ class shared {
 
   async addRecentSearchs(keyword) {
     await ipcRenderer.invoke('addtorecentSearchs', keyword)
-  }
-
-  async getExactVideoMilliseconds() {
-    const videoElement = document.getElementById('MediaPlayer')
-    return Math.floor(videoElement.currentTime * 1000)
   }
 
   //menu

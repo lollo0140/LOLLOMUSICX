@@ -15,7 +15,7 @@
     listening,
     listened
   } = $props()
-  console.log(songID)
+  //console.log(songID)
 </script>
 
 {#if listening}

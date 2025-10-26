@@ -1,16 +1,21 @@
-<script>/* eslint-disable prettier/prettier */
+<script module>
+  /* eslint-disable prettier/prettier */
+  import { compactMode, set_compact_mode } from '../stores/current_song'
 
-  import { setCompactMode } from './Controls.svelte'
-  import { toggleMainCompactMode } from '../App.svelte'
-  import {toggleUserPannelCompactMode} from './pagesElements/UserPannel.svelte'
+  export function togleCM(state) {
+    set_compact_mode(state)
+  }
+</script>
 
+<script>
   import { createEventDispatcher } from 'svelte'
   import { onMount } from 'svelte'
   import * as renderer from '../main.js'
   const DEFIMG = new URL('../assets/defaultSongCover.png', import.meta.url).href
-  let { playerLocal, FullScreen } = $props()
 
   import { updateTrackLikeStatus } from '../../stores/trackLikesStore.js'
+
+  import { current, SongsQuewe, playerState } from '../stores/current_song.js'
 
   const ipcRenderer = window.electron.ipcRenderer
 
@@ -18,8 +23,6 @@
   //let LoadingImg = $state()
 
   let canShowCanva = $state()
-
-  let conpact_mode = $state(false)
 
   import { fade, fly, slide } from 'svelte/transition'
   import LyricPannel from './pagesElements/LyricPannel.svelte'
@@ -35,7 +38,6 @@
   let oldtitle, oldartist, oldalbum
 
   let shared = $state()
-  let quewe = $state()
   let quewewPannel = true
   let playngIndex = $state()
   let saved = $state(false)
@@ -52,24 +54,43 @@
 
   let nextSongLoad = $state(false)
 
+  let shuffleBefore = $state($playerState.shuffle)
+
+  $effect(async () => {
+    if (shuffleBefore !== $playerState.shuffle) {
+      try {
+        nextSongLoad = false
+
+        const quewe = await shared.GetQuewe()
+        const Pindex = await shared.GetPIndex()
+        nextSong = await quewe[Pindex + 1]
+
+        nextSongLoad = true
+        shuffleBefore = $playerState.shuffle
+      } catch {
+        nextSongLoad = false
+      }
+    }
+  })
+
   $effect(async () => {
     checkSaved()
 
     //console.log(playerLocal.img)
 
-    if (Array.isArray(playerLocal.img)) {
-      immagine = playerLocal.img[1]
+    if (Array.isArray($current.img)) {
+      immagine = $current.img[1]
     } else {
-      immagine = playerLocal.img
+      immagine = $current.img
     }
 
     //console.log(playerLocal)
 
-    Visible = playerLocal.title !== playerLocal.album
+    Visible = $current.title !== $current.album
 
     //console.log(immagine)
 
-    if (isSongChanged(playerLocal.title, playerLocal.artist, playerLocal.album)) {
+    if (isSongChanged($current.title, $current.artist, $current.album)) {
       LyricPannelVisible = false
 
       Lyric = await GetLyric()
@@ -86,40 +107,27 @@
         nextSongLoad = false
       }
 
-      if ('mediaSession' in navigator) {
-        navigator.mediaSession.metadata = new window.MediaMetadata({
-          title: playerLocal.title,
-          artist: playerLocal.artist,
-          album: playerLocal.album,
-          artwork: [{ src: playerLocal.img, sizes: '512x512', type: 'image/png' }]
-        })
-
-        navigator.mediaSession.setActionHandler('previoustrack', () => {
-          shared.previous() // vai alla traccia precedente
-        })
-
-        navigator.mediaSession.setActionHandler('nexttrack', () => {
-          shared.next() // vai alla traccia successiva
-        })
-      }
-
       const data = {
-        title: playerLocal.title,
-        artist: playerLocal.artist,
-        id: playerLocal.id || undefined
+        title: $current.title,
+        artist: $current.artist,
+        id: $current.id || undefined
       }
 
       ipcRenderer.invoke('updateDiscordRPC', data)
 
-      if (Lyric.lyric !== undefined) {
-        LyricPannelVisible = true
+      try {
+        if (Lyric.lyric !== undefined) {
+          LyricPannelVisible = true
+        }
+      } catch {
+        LyricPannelVisible = false
       }
     }
   })
 
   async function GetLyric() {
     try {
-      return await shared.GetLyrics(playerLocal.title, playerLocal.artist, playerLocal.album)
+      return await shared.GetLyrics($current.title, $current.artist, $current.album)
     } catch {
       console.log('no lyrics found')
     }
@@ -141,7 +149,7 @@
 
   async function checkSaved() {
     try {
-      if (await shared.CheckIfLiked(playerLocal.title, playerLocal.artist, playerLocal.album)) {
+      if (await shared.CheckIfLiked($current.title, $current.artist, $current.album)) {
         saved = true
       } else {
         saved = false
@@ -157,8 +165,6 @@
     canShowCanva = shared.settings.playerSettings.interface.showVideo
 
     setInterval(async () => {
-      quewe = await shared.GetQuewe()
-
       playngIndex = await shared.GetPIndex()
       loading = shared.LOADING
       //LoadingImg = shared.LoadingImg
@@ -233,16 +239,13 @@
 <button
   class="CompactModeBtn"
   onclick={() => {
-    conpact_mode = !conpact_mode
-    setCompactMode(conpact_mode)
-    toggleMainCompactMode(conpact_mode)
-    toggleUserPannelCompactMode(conpact_mode)
+    togleCM(!$compactMode)
   }}
 ></button>
 
 <dir
   transition:fly={{ x: 500, duration: 600 }}
-  class={conpact_mode ? 'NowPlayng_compact' : 'NowPlayng'}
+  class={$compactMode ? 'NowPlayng_compact' : 'NowPlayng'}
   style="transition: all 600ms;"
 >
   <div
@@ -252,27 +255,27 @@
       renderer.default.shared.MenuContent = {
         type: 'song',
         songIndex: playngIndex,
-        title: playerLocal.title,
-        album: playerLocal.album,
-        artist: playerLocal.artist,
-        img: playerLocal.img,
+        title: $current.title,
+        album: $current.album,
+        artist: $current.artist,
+        img: $current.img,
         onclickEvent: undefined,
         removable: false,
         PlaylistIndex: undefined,
-        songID: playerLocal.id,
-        albID: playerLocal.albumID,
-        artID: playerLocal.artistID
+        songID: $current.id,
+        albID: $current.albumID,
+        artID: $current.artistID
       }
     }}
     role="button"
     aria-haspopup="true"
-    aria-label="Apri menu contestuale per {playerLocal.title}"
+    aria-label="Apri menu contestuale per {$current.title}"
     tabindex="0"
   >
     <img
       in:fade
       id="Img"
-      class={conpact_mode ? 'PLAYERimg_compact contextMenuSong' : 'PLAYERimg contextMenuSong'}
+      class={$compactMode ? 'PLAYERimg_compact contextMenuSong' : 'PLAYERimg contextMenuSong'}
       style="object-fit: cover; pointer-events: none;"
       src={immagine}
       onerror={() => {
@@ -286,28 +289,34 @@
       style="transition: all 200ms; display: {canShowCanva ? 'block' : 'none'};"
     ></div>
 
-    <p class={conpact_mode ? 'PLAYERtitle_compact' : 'PLAYERtitle'} style="pointer-events: none;">{playerLocal.title}</p>
+    <p class={$compactMode ? 'PLAYERtitle_compact' : 'PLAYERtitle'} style="pointer-events: none;">
+      {$current.title}
+    </p>
     <button
       style="pointer-events: all;"
-      onclick={() =>
-        CallItem({ query: playerLocal.artist + '||' + playerLocal.artistID, type: 'artist' })}
-      class={conpact_mode ? 'PLAYERart_compact' : 'PLAYERart'}
-      >{playerLocal.artist}
+      onclick={() => {
+        CallItem({ query: $current.artist + '||' + $current.artistID, type: 'artist' })
+      }}
+      class={$compactMode ? 'PLAYERart_compact' : 'PLAYERart'}
+      >{$current.artist}
     </button>
 
     <button
       style="pointer-events: all;"
       onclick={() =>
         CallItem({
-          query: playerLocal.albumID + ' - ' + playerLocal.artist + ' - ' + playerLocal.album,
+          query: $current.albumID + ' - ' + $current.artist + ' - ' + $current.album,
           type: 'album'
         })}
       class="--ALBUMDATA PLAYERalbum {!Visible ? 'hidden' : ''}"
-      >{playerLocal.album}
+      >{$current.album}
     </button>
 
     {#if loading}
-      <div class={conpact_mode ? 'ImmageOfLoadingSong_compact' : 'ImmageOfLoadingSong'} transition:fade>
+      <div
+        class={$compactMode ? 'ImmageOfLoadingSong_compact' : 'ImmageOfLoadingSong'}
+        transition:fade
+      >
         <LoadingScreen />
       </div>
     {/if}
@@ -328,6 +337,13 @@
           <p class="upNextTitle">{nextSong.title}</p>
           <p class="upNextArtist">{nextSong.artist}</p>
         </div>
+
+      {:else}
+        <p class="dividerP">Next up</p>
+
+        <div in:slide class="upNextDiv">
+          <p class="PlistEnd">End of the playlist</p>
+        </div>
       {/if}
 
       {#if LyricPannelVisible}
@@ -346,7 +362,7 @@
       style="position:absolute;"
       onclick={async () => {
         await delTrack()
-        updateTrackLikeStatus(playerLocal.title, playerLocal.artist, playerLocal.album)
+        updateTrackLikeStatus($current.title, $current.artist, $current.album)
       }}
     >
       <img class="likeNPbuttonImg" src={LIKEimg} alt="palle" />
@@ -357,7 +373,7 @@
       style="position:absolute;"
       onclick={async () => {
         await SaveTrack()
-        updateTrackLikeStatus(playerLocal.title, playerLocal.artist, playerLocal.album)
+        updateTrackLikeStatus($current.title, $current.artist, $current.album)
       }}
     >
       <img style="opacity: 0.4;" class="likeNPbuttonImg" src={LIKEimg} alt="palle" />
@@ -366,10 +382,8 @@
 
   <div id="quewePannel">
     <div style="position:absolute; width:100%;  top:21px;">
-      {#await quewe}
-        <p>Loading quewe...</p>
-      {:then result}
-        {#each result as item, i}
+      {#if $SongsQuewe}
+        {#each $SongsQuewe as item, i}
           {#if playngIndex === i}
             <QueweButton
               songIndex={i}
@@ -414,54 +428,53 @@
             />
           {/if}
         {/each}
-      {/await}
+      {/if}
     </div>
   </div>
 
-  <button style={conpact_mode ? 'display:none;' : ''} class="TogleQueweButton" onclick={() => togleQuewePannel()}>
+  <button
+    style={$compactMode ? 'display:none;' : ''}
+    class="TogleQueweButton"
+    onclick={() => togleQuewePannel()}
+  >
     <img class="TogleQueweButtonimg" src={QUEWEimg} alt="palle" />
   </button>
 </dir>
 
 <style>
 
+  .PlistEnd {
+    font-weight: 900;
+    opacity: 0.6;
+    position: relative;
+
+    left: 0px;
+    top: 9px;
+
+    
+
+    width: 100%;
+
+    text-align: center;
+    
+    
+  }
+
   .ImmageOfLoadingSong_compact {
     position: absolute;
-
 
     object-fit: cover;
 
     left: 6px;
     top: 5.5px;
     right: 6px;
-    
+
     height: 47px;
 
     backdrop-filter: blur(10px);
 
     border: var(--main-border);
     border-radius: 7px;
-  }
-
-  .FSNowPlayng {
-    position: absolute;
-    background: transparent;
-
-    overflow: hidden;
-
-    width: 100%;
-
-    margin: 0px;
-
-    bottom: 0px;
-    right: 0px;
-    top: 20px;
-
-    padding: 0px;
-
-    border-radius: 15px;
-
-    transition: all 600ms;
   }
 
   .CompactModeBtn {
@@ -476,8 +489,6 @@
 
     background: white;
     border: none;
-
-
 
     height: 20px;
     width: 2px;
@@ -555,18 +566,6 @@
 
     .likeButton {
       display: none;
-    }
-
-    .FSNowPlayng {
-      bottom: 0px;
-      right: 0px;
-      top: 0px;
-
-      background: transparent;
-      border: none;
-
-      height: 100%;
-      width: 100%;
     }
   }
 </style>

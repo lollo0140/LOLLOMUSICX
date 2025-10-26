@@ -108,5 +108,9 @@
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
 
+    text-wrap: none;
+
+    width: 110px;
+
   }
 </style>

@@ -5,6 +5,7 @@
   const ipcRenderer = window.electron.ipcRenderer
   const EDIT = new URL('../../assets/edit.png', import.meta.url).href
   const FOLDER = new URL('../../assets/folder.png', import.meta.url).href
+  const CLOSE = new URL('../../assets/new.png', import.meta.url).href
 
   let PrivacyButton1 = $state()
   let PrivacyButton2 = $state()
@@ -53,7 +54,7 @@
 
 <div class="editPannel {!opened ? 'closed' : 'opened'}">
   <button class="EditButton" onclick={() => (opened = !opened)}>
-    <img src={EDIT} alt="" />
+    <img src={ !opened ? EDIT : CLOSE} style={!opened ? '' : 'transform: rotateZ(45deg) translate(4px,0px); width: 20px; height: 20px;'} alt="" />
   </button>
 
   <div
@@ -114,19 +115,20 @@
 <style>
   .editPannel {
     z-index: 9999;
-
     overflow: hidden;
-
     transition: all 600ms;
+
+    
+
   }
 
   .EditButton {
     position: absolute;
 
-    width: 50px;
-    height: 50px;
+    width: 30px;
+    height: 30px;
 
-    top: 00px;
+    top: 0px;
     right: 30px;
 
     border: none;
@@ -137,27 +139,32 @@
 
   .EditButton img {
     position: absolute;
-    top: 0px;
-    right: 0px;
-    width: 50px;
-    height: 50px;
+    top: 5px;
+    right: 1px;
+    width: 24px;
+    height: 24px;
 
     background: none;
     border: none;
   }
 
   .closed {
-    right: 420px;
+    left: 348px;
+    top: 56px;
 
     position: fixed;
 
     background-color: transparent;
     border: none;
 
-    width: 50px;
-    height: 50px;
+    width: 33px;
+    height: 33px;
 
-    top: 160px;
+    background: var(--main-bg);
+    border: var(--main-border);
+    border-radius: 9px;
+    backdrop-filter: blur(20px);
+
   }
 
   .opened {
@@ -171,9 +178,9 @@
     width: 424px;
     height: 481px;
 
-    right: 50%;
+    left: 50%;
     top: 50%;
-    transform: translate(50%, -50%);
+    transform: translate(-50%, -50%);
   }
 
   @media only screen and (max-width: 1300px) {

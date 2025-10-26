@@ -1,19 +1,15 @@
-<script module>
-  /* eslint-disable prettier/prettier */
-
-  let conpact_mode = $state(false)
-
-  export function setCompactMode(compact_mode) {
-    conpact_mode = compact_mode
+<script module>/* eslint-disable prettier/prettier */
+  let nextLoaded = $state(false)
+  export function SetNextLoaded(state) {
+    nextLoaded = state
   }
+
 </script>
 
 <script>
   import { onMount } from 'svelte'
   import * as renderer from '../main.js'
   import { fade, fly } from 'svelte/transition'
-
-  let { sec, max, paused, FullScreen, nextLoaded } = $props()
 
   const PLAYimg = new URL('../assets/play.png', import.meta.url).href
   const PAUSEimg = new URL('../assets/pause.png', import.meta.url).href
@@ -29,16 +25,18 @@
   const VOLHALF = new URL('../assets/halfvolume.png', import.meta.url).href
   const VOLNONE = new URL('../assets/novolume.png', import.meta.url).href
 
-  let shuffled = $state()
-  let repeat = $state()
+  import { playerState, compactMode } from '../stores/current_song.js'
+  import { playPause, Next, Previus } from './pagesElements/Player.svelte'
 
   // Variabile temporanea per memorizzare il valore durante il trascinamento
-  let tempValue = $state(sec)
+  let tempValue = $state($playerState.time)
   let isDragging = $state(false)
 
   let VolumeImg = $state(VOLHALF)
 
   var shared
+
+  let pauseimg = $state()
   onMount(async () => {
     shared = renderer.default.shared
 
@@ -47,22 +45,23 @@
     console.log(shared.settings.playerSettings.audio.volume * 100)
 
     setInterval(() => {
-      shuffled = shared.Shuffled
-      repeat = shared.repeat
+      $playerState.shuffle = shared.Shuffled
+      $playerState.repeat = shared.repeat
     }, 100)
 
     //console.log(shared);
+    pauseimg.src = PLAYimg
   })
 
   $effect(() => {
-    document.getElementById('SECONDS').textContent = SecToTime(sec)
-    document.getElementById('DURATION').textContent = SecToTime(max)
+    document.getElementById('SECONDS').textContent = SecToTime($playerState.time)
+    document.getElementById('DURATION').textContent = SecToTime($playerState.audio_duration)
   })
 
   // Funzione chiamata quando inizia il trascinamento
   function handleDragStart() {
     isDragging = true
-    tempValue = sec // Memorizza il valore corrente
+    tempValue = $playerState.time // Memorizza il valore corrente
   }
 
   // Funzione chiamata durante il trascinamento
@@ -77,7 +76,7 @@
     isDragging = false
     // Aggiorna il tempo del video solo quando si rilascia
     //shared.setVideoTime(tempValue);
-    sec = tempValue // Aggiorna il valore di sec
+    $playerState.time = tempValue // Aggiorna il valore di sec
     shared.SetTime(tempValue)
   }
 
@@ -110,7 +109,7 @@
   async function SetVolume() {
     const volSlider = document.getElementById('volSlider').value
 
-    shared.SetVolume(volSlider / 100)
+    $playerState.volume = volSlider / 100
 
     if (volSlider < 1) {
       VolumeImg = VOLNONE
@@ -122,14 +121,14 @@
   }
 </script>
 
-<div transition:fly={{ y: 500, duration: 600 }} class={!conpact_mode ? 'Controlls' : 'ControllsCM'}>
+<div transition:fly={{ y: 500, duration: 600 }} class={!$compactMode ? 'Controlls' : 'ControllsCM'}>
   <p id="SECONDS"></p>
 
   <p id="DURATION"></p>
 
   <input
-    {max}
-    value={isDragging ? tempValue : sec}
+    max={$playerState.audio_duration}
+    value={isDragging ? tempValue : $playerState.time}
     onmousedown={handleDragStart}
     oninput={handleDrag}
     onmouseup={handleDragEnd}
@@ -137,13 +136,13 @@
     type="range"
   />
 
-  <button class="Cbutton PreviousButton" onclick={() => shared.previous()}
+  <button class="Cbutton PreviousButton" onclick={() => Previus()}
     ><img class="previous" src={PREVIOUSimg} alt="next" /></button
   >
-  <button class="Cbutton PlayButton" onclick={() => shared.PlayPause()}>
-    <img class="PlayPouse" src={!paused ? PAUSEimg : PLAYimg} alt="play" />
+  <button class="Cbutton PlayButton" onclick={() => playPause()}>
+    <img bind:this={pauseimg} class="PlayPouse" src={!$playerState.playing ? PLAYimg : PAUSEimg} alt="play" />
   </button>
-  <button class="Cbutton nextButton" onclick={() => shared.next()}>
+  <button class="Cbutton nextButton" onclick={() => Next()}>
     <img class="next" src={NEXTimg} alt="next" />
 
     {#if nextLoaded}
@@ -152,9 +151,9 @@
   </button>
 
   <button class="Cbutton rpbutton" onclick={() => shared.setrepeat()}>
-    {#if repeat === 0}
+    {#if $playerState.repeat === 0}
       <img class="repeatButton" src={REPEATimg} alt="shuff" />
-    {:else if repeat === 1}
+    {:else if $playerState.repeat === 1}
       <img class="shuffleButton" src={REPEATONEimg} alt="palle" />
     {:else}
       <img class="repeatButton" style="opacity: 0.2;" src={REPEATimg} alt="palle" />
@@ -162,7 +161,7 @@
   </button>
 
   <button class="Cbutton shbutton" onclick={() => shared.ShuffleQuewe()}>
-    {#if shuffled}
+    {#if $playerState.shuffle}
       <img class="shuffleButton" src={SHUFFLEDimg} alt="shuff" />
     {:else}
       <img class="shuffleButton" src={LINEARimg} alt="shuff" />

@@ -26,6 +26,8 @@
     flex-direction: column-reverse;
     gap: 10px;
     z-index: 9999;
+
+    pointer-events: none;
   }
 
   .logger-message {

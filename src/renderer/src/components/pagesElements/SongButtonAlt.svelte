@@ -11,7 +11,7 @@
   const gradient = new URL('../../assets/cardgradient.png', import.meta.url).href
   const DEFIMG = new URL('./../../assets/defaultSongCover.png', import.meta.url).href
 
-  import { CURRENTSONG } from './ElementsStores/CurrentPlayng.js'
+  import { current } from '../../stores/current_song.js'
 
   let local = $state(false)
 
@@ -40,9 +40,9 @@
     }
 
     if (
-      $CURRENTSONG.song.title === title &&
-      $CURRENTSONG.song.artist === artist &&
-      $CURRENTSONG.song.album === album
+      $current.title === title &&
+      $current.artist === artist &&
+      $current.album === album
     ) {
       matching = true
     } else {
@@ -56,9 +56,9 @@
     //console.log($CURRENTSONG);
 
     if (
-      $CURRENTSONG.song.title === title &&
-      $CURRENTSONG.song.artist === artist &&
-      $CURRENTSONG.song.album === album
+      $current.title === title &&
+      $current.artist === artist &&
+      $current.album === album
     ) {
       matching = true
     } else {
@@ -98,7 +98,7 @@
     src={currentIMG}
     onerror={(currentIMG = DEFIMG)}
     class="albumimg"
-    alt={title || 'Copertina brano'}
+    alt='Copertina brano'
   />
   <p class="albumtitle">{title}</p>
   <p class="albumartist">{artist}</p>

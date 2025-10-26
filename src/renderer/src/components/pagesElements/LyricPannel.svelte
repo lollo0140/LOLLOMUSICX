@@ -5,6 +5,8 @@
   import * as renderer from '../../main.js'
   import { fade } from 'svelte/transition'
 
+  import { getExactVideoMilliseconds } from './Player.svelte'
+
   let { testoCanzone, sync } = $props()
 
   let time = $state()
@@ -48,7 +50,7 @@
     console.log(sync)
 
     setInterval(async () => {
-      time = await shared.getExactVideoMilliseconds()
+      time = await getExactVideoMilliseconds()
 
       const reversedText = [...sclicedText].reverse()
 

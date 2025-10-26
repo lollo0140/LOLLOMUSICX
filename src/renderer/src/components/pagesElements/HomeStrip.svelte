@@ -6,7 +6,7 @@
 
   import { callItemFunction } from '../../App.svelte'
   import OnlinePlaylistButton from './OnlinePlaylistButton.svelte'
-  import SongButton from './SongButton.svelte'
+  //import SongButton from './SongButton.svelte'
   import SongButtonAlt from './SongButtonAlt.svelte'
 
   import * as renderer from '../../main.js'
@@ -26,88 +26,98 @@
     title = data.title
 
     for (const element of data.contents) {
-      if (!element?.podcastId) {
-        if (element?.type === 'Album' || element?.audioPlaylistId) {
-          result.push({
-            type: 'album',
-            id: element.browseId,
-            title: element.title,
-            artist: {
-              name: element.artists[0].name,
-              id: element.artists[0].id
-            },
-            img: element.thumbnails?.[1].url
-          })
-        } else {
-          if (element?.playlistId || element?.videoId) {
-            if (element?.videoId) {
-              let item
-
-              if (element?.playlistId) {
-                item = {
-                  type: 'songAlt',
-                  album: {
-                    name: element?.album?.name || element.title,
-                    thumbnail:
-                      element.thumbnails?.[1]?.url.replace(
-                        'w120-h120-l90-rj',
-                        'w544-h544-l90-rj'
-                      ) ||
-                      element.thumbnails?.[0]?.url.replace('w60-h60-l90-rj', 'w544-h544-l90-rj') ||
-                      undefined,
-                    id: element?.album?.id || undefined
-                  },
-                  id: element.videoId,
-                  title: element.title,
-                  artist: {
-                    name: element.artists[0].name,
-                    id: element.artists[0].id
-                  }
-                }
-              } else {
-                item = {
-                  type: 'song',
-                  album: {
-                    name: element?.album?.name || element.title,
-                    thumbnail:
-                      element.thumbnails?.[1]?.url.replace(
-                        'w120-h120-l90-rj',
-                        'w544-h544-l90-rj'
-                      ) ||
-                      element.thumbnails?.[0]?.url.replace('w60-h60-l90-rj', 'w544-h544-l90-rj') ||
-                      undefined,
-                    id: element?.album?.id || undefined
-                  },
-                  id: element.videoId,
-                  title: element.title,
-                  artist: {
-                    name: element?.artists?.[0]?.name || '',
-                    id: element?.artists?.[0]?.id || ''
-                  }
-                }
-              }
-
-              item.songIndex = songIndex++
-              SectionSongs.push(item)
-              result.push(item)
-            } else {
-              result.push({
-                type: 'playlist',
-                id: element.playlistId,
-                title: element.title,
-                img: element.thumbnails?.[1].url,
-                author: element?.artists?.[0]?.name || element?.author?.[0]?.name
-              })
-            }
-          } else {
+      try {
+        if (!element?.podcastId) {
+          if (element?.type === 'Album' || element?.audioPlaylistId) {
             result.push({
-              type: 'artist',
+              type: 'album',
               id: element.browseId,
               title: element.title,
-              img: element.thumbnails?.[1]?.url
+              artist: {
+                name: element.artists[0].name,
+                id: element.artists[0].id
+              },
+              img: element.thumbnails?.[1].url
             })
+          } else {
+            if (element?.playlistId || element?.videoId) {
+              if (element?.videoId) {
+                let item
+
+                if (element?.playlistId) {
+                  item = {
+                    type: 'songAlt',
+                    album: {
+                      name: element?.album?.name || element.title,
+                      thumbnail:
+                        element.thumbnails?.[1]?.url.replace(
+                          'w120-h120-l90-rj',
+                          'w544-h544-l90-rj'
+                        ) ||
+                        element.thumbnails?.[0]?.url.replace(
+                          'w60-h60-l90-rj',
+                          'w544-h544-l90-rj'
+                        ) ||
+                        undefined,
+                      id: element?.album?.id || undefined
+                    },
+                    id: element.videoId,
+                    title: element.title,
+                    artist: {
+                      name: element.artists[0].name,
+                      id: element.artists[0].id
+                    }
+                  }
+                } else {
+                  item = {
+                    type: 'song',
+                    album: {
+                      name: element?.album?.name || element.title,
+                      thumbnail:
+                        element.thumbnails?.[1]?.url.replace(
+                          'w120-h120-l90-rj',
+                          'w544-h544-l90-rj'
+                        ) ||
+                        element.thumbnails?.[0]?.url.replace(
+                          'w60-h60-l90-rj',
+                          'w544-h544-l90-rj'
+                        ) ||
+                        undefined,
+                      id: element?.album?.id || undefined
+                    },
+                    id: element.videoId,
+                    title: element.title,
+                    artist: {
+                      name: element?.artists?.[0]?.name || '',
+                      id: element?.artists?.[0]?.id || ''
+                    }
+                  }
+                }
+
+                item.songIndex = songIndex++
+                SectionSongs.push(item)
+                result.push(item)
+              } else {
+                result.push({
+                  type: 'playlist',
+                  id: element.playlistId,
+                  title: element.title,
+                  img: element.thumbnails?.[1].url,
+                  author: element?.artists?.[0]?.name || element?.author?.[0]?.name
+                })
+              }
+            } else {
+              result.push({
+                type: 'artist',
+                id: element.browseId,
+                title: element.title,
+                img: element.thumbnails?.[1]?.url
+              })
+            }
           }
         }
+      } catch {
+        continue
       }
     }
 
@@ -175,7 +185,7 @@
               name={item.title}
             />
           {:else if item.type === 'song'}
-            <SongButton
+            <SongButtonAlt
               albID={item.album.id}
               artID={item.artist?.id || ''}
               songID={item.id}

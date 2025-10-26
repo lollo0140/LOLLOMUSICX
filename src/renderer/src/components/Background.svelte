@@ -1,43 +1,35 @@
-<script>
-  /* eslint-disable prettier/prettier */
-
-  import { onMount } from 'svelte'
-  let { img } = $props()
+<script>/* eslint-disable prettier/prettier */
+  import { current } from '../stores/current_song.js'
 
   import { SETTINGS } from './pagesElements/ElementsStores/Settings.js'
 
   let bgType = $state()
   let bgImmage = $state()
-  
+
   // Variabili per la transizione
-  let currentImg = $state(img)
+  let currentImg = $state($current.img)
   let nextImg = $state('')
   let isTransitioning = $state(false)
 
-  onMount(async () => {
-    console.log(await $SETTINGS.playerSettings.interface)
-
-    bgType = $SETTINGS.playerSettings.interface.Background
-    bgImmage = $SETTINGS.playerSettings.interface.BackgroundImage
-    currentImg = img
-  })
-
   $effect(async () => {
-    console.log(await $SETTINGS.playerSettings.interface)
-
-    bgType = $SETTINGS.playerSettings.interface.Background
-    bgImmage = $SETTINGS.playerSettings.interface.BackgroundImage
+    try {
+      bgType = $SETTINGS.playerSettings.interface.Background
+      bgImmage = $SETTINGS.playerSettings.interface.BackgroundImage
+    } catch {
+      bgType = ''
+      bgImmage = ''
+    }
   })
 
   // Effetto per gestire il cambio immagine graduale
   $effect(() => {
-    if (img !== currentImg && !isTransitioning) {
+    if ($current.img !== currentImg && !isTransitioning) {
       isTransitioning = true
-      nextImg = img
-      
+      nextImg = $current.img
+
       // Dopo che la transizione è completata, aggiorna currentImg
       setTimeout(() => {
-        currentImg = img
+        currentImg = $current.img
         isTransitioning = false
         nextImg = ''
       }, 1000) // Stesso tempo dell'animazione CSS
@@ -48,25 +40,41 @@
 {#if bgType === 'dynamic'}
   <div class="background">
     <!-- Immagine corrente - rimane sempre visibile -->
-    <div class="backgroundimg current" 
-         style="left:0px; top:0px; background-image: url({currentImg})"></div>
-    <div class="backgroundimg current" 
-         style="left:1000px; top:0px; background-image: url({currentImg})"></div>
-    <div class="backgroundimg current" 
-         style="left:0px; top:1000px; background-image: url({currentImg})"></div>
-    <div class="backgroundimg current" 
-         style="left:1000px; top:1000px; background-image: url({currentImg})"></div>
+    <div
+      class="backgroundimg current"
+      style="left:0px; top:0px; background-image: url({currentImg})"
+    ></div>
+    <div
+      class="backgroundimg current"
+      style="left:1000px; top:0px; background-image: url({currentImg})"
+    ></div>
+    <div
+      class="backgroundimg current"
+      style="left:0px; top:1000px; background-image: url({currentImg})"
+    ></div>
+    <div
+      class="backgroundimg current"
+      style="left:1000px; top:1000px; background-image: url({currentImg})"
+    ></div>
 
     <!-- Immagine successiva - appare sopra quella corrente -->
     {#if isTransitioning && nextImg}
-      <div class="backgroundimg next fade-in" 
-           style="left:0px; top:0px; background-image: url({nextImg})"></div>
-      <div class="backgroundimg next fade-in" 
-           style="left:1000px; top:0px; background-image: url({nextImg})"></div>
-      <div class="backgroundimg next fade-in" 
-           style="left:0px; top:1000px; background-image: url({nextImg})"></div>
-      <div class="backgroundimg next fade-in" 
-           style="left:1000px; top:1000px; background-image: url({nextImg})"></div>
+      <div
+        class="backgroundimg next fade-in"
+        style="left:0px; top:0px; background-image: url({nextImg})"
+      ></div>
+      <div
+        class="backgroundimg next fade-in"
+        style="left:1000px; top:0px; background-image: url({nextImg})"
+      ></div>
+      <div
+        class="backgroundimg next fade-in"
+        style="left:0px; top:1000px; background-image: url({nextImg})"
+      ></div>
+      <div
+        class="backgroundimg next fade-in"
+        style="left:1000px; top:1000px; background-image: url({nextImg})"
+      ></div>
     {/if}
   </div>
 {:else if bgType === 'static'}

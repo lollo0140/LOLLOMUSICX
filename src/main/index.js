@@ -1851,8 +1851,7 @@ ipcMain.handle('SearchLocalSong', async (event, title, artist, album) => {
 
   for (const item of songs) {
     const match =
-      normalizeText(removeBrakets(item.title)).trim() ===
-      normalizeText(removeBrakets(title)).trim() &&
+      normalizeText(removeBrakets(item.title)).trim().includes(normalizeText(removeBrakets(title)).trim()) &&
       normalizeText(removeBrakets(item.artist)).trim() ===
       normalizeText(removeBrakets(artist)).trim() &&
       normalizeText(removeBrakets(item.album)).trim() === normalizeText(removeBrakets(album)).trim()
